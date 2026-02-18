@@ -1,0 +1,103 @@
+Task 3: Core Type Definitions & Data Models - QA Scenario Evidence
+======================================================================
+
+Date: 2026-02-19
+Status: PASSED
+
+Scenario 1: All Models Importable
+----------------------------------
+Command: python -c "from peripatos.models import PaperMetadata, DialogueTurn, DialogueScript, AudioSegment, ChapterMarker, GeneratedPodcast, PersonaType, SpeakerRole, LanguageMode; print('All models imported')"
+Output: All models imported
+Result: ✅ PASS
+
+Scenario 2: PersonaType Enum Values
+------------------------------------
+Command: python -c "from peripatos.models import PersonaType; print([p.name for p in PersonaType])"
+Output: ['SKEPTIC', 'ENTHUSIAST', 'TUTOR', 'PEER']
+Expected: ['SKEPTIC', 'ENTHUSIAST', 'TUTOR', 'PEER']
+Result: ✅ PASS
+
+Test Summary
+============
+Total Tests: 23
+Passed: 23
+Failed: 0
+Success Rate: 100%
+
+Test Breakdown by Category:
+- Enum Tests: 6/6 ✅
+  - PersonaType (4 values) ✅
+  - SpeakerRole (2 values) ✅
+  - SectionType (9 values) ✅
+  - LanguageMode (2 values) ✅
+  - TTSEngine (2 values) ✅
+  - LLMProvider (2 values) ✅
+
+- SectionInfo Tests: 2/2 ✅
+  - Instantiation ✅
+  - __repr__ ✅
+
+- PaperMetadata Tests: 3/3 ✅
+  - With arxiv_id ✅
+  - Without arxiv_id ✅
+  - __repr__ ✅
+
+- DialogueTurn Tests: 2/2 ✅
+  - Instantiation ✅
+  - __repr__ ✅
+
+- DialogueScript Tests: 2/2 ✅
+  - Instantiation ✅
+  - __repr__ ✅
+
+- AudioSegment Tests: 2/2 ✅
+  - Instantiation ✅
+  - __repr__ ✅
+
+- ChapterMarker Tests: 2/2 ✅
+  - Instantiation ✅
+  - __repr__ ✅
+
+- GeneratedPodcast Tests: 2/2 ✅
+  - Instantiation ✅
+  - __repr__ ✅
+
+- Integration Tests: 2/2 ✅
+  - All models importable ✅
+  - Full workflow models ✅
+
+Models Verified
+===============
+✅ PaperMetadata (7 dataclasses total)
+✅ SectionInfo
+✅ DialogueTurn
+✅ DialogueScript
+✅ AudioSegment
+✅ ChapterMarker
+✅ GeneratedPodcast
+
+Enums Verified
+==============
+✅ PersonaType (4 values: SKEPTIC, ENTHUSIAST, TUTOR, PEER)
+✅ SpeakerRole (2 values: HOST, EXPERT)
+✅ SectionType (9 values: ABSTRACT, INTRODUCTION, METHODOLOGY, EXPERIMENTS, RESULTS, DISCUSSION, CONCLUSION, REFERENCES, OTHER)
+✅ LanguageMode (2 values: EN, ZH_EN)
+✅ TTSEngine (2 values: OPENAI, EDGE_TTS)
+✅ LLMProvider (2 values: OPENAI, ANTHROPIC)
+
+Files Created
+=============
+- peripatos/models.py (core data models)
+- tests/test_models.py (comprehensive test suite)
+
+Compliance Checklist
+====================
+✅ Used stdlib dataclasses (NOT Pydantic)
+✅ Used stdlib Enum for all enums
+✅ Exact enum values from PRD matched
+✅ Proper type hints for all fields (list[...], Optional[...], Path, bytes, float, int)
+✅ __repr__ implemented for all dataclasses
+✅ Optional fields correctly handled (e.g., arxiv_id)
+✅ TDD approach: tests created before implementation
+✅ All imports work correctly
+✅ All enum values correct

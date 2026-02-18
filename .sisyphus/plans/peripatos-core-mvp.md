@@ -212,7 +212,7 @@ Max Concurrent: 6 (Wave 2)
 
 ### Wave 1 — Project Scaffolding & Foundation
 
-- [ ] 1. Project Scaffolding
+- [x] 1. Project Scaffolding
 
   **What to do**:
   - Create the project directory structure:
@@ -346,7 +346,7 @@ Max Concurrent: 6 (Wave 2)
   - Files: `pyproject.toml, peripatos/**, tests/**, LICENSE, .env.example, .gitignore`
   - Pre-commit: `pytest tests/test_package.py`
 
-- [ ] 2. Configuration System (.env + config.yaml)
+- [x] 2. Configuration System (.env + config.yaml)
 
   **What to do**:
   - Implement `peripatos/config.py`:
@@ -444,7 +444,7 @@ Max Concurrent: 6 (Wave 2)
   - Files: `peripatos/config.py, tests/test_config.py, .env.example`
   - Pre-commit: `pytest tests/test_config.py`
 
-- [ ] 3. Core Type Definitions & Data Models
+- [x] 3. Core Type Definitions & Data Models
 
   **What to do**:
   - Implement `peripatos/models.py` with Python dataclasses (or Pydantic if preferred for validation — but stdlib dataclasses preferred for fewer deps):
@@ -519,7 +519,7 @@ Max Concurrent: 6 (Wave 2)
   - Files: `peripatos/models.py, tests/test_models.py`
   - Pre-commit: `pytest tests/test_models.py`
 
-- [ ] 4. Test Infrastructure Setup
+- [x] 4. Test Infrastructure Setup
 
   **What to do**:
   - Set up `tests/conftest.py` with shared pytest fixtures:
