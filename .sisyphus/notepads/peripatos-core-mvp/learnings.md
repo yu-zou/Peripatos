@@ -75,3 +75,40 @@
 - Resource Cleanup: context managers for HTTP responses
 - Type Hints: Full type annotations for public API
 
+
+## Task 7: LaTeX Math Normalization
+
+### Implementation Approach
+- **TDD**: Wrote 30 comprehensive tests first, then implemented to make them pass
+- **Regex-based**: No external libraries, pure regex transformations
+- **Transformation order matters**: Process subscripts before exponents to handle bounds correctly (e.g., `\sum_{i=1}^{N}`)
+
+### Key Patterns Implemented
+1. **Fractions**: `\frac{a}{b}` → "a over b" (handles nested braces)
+2. **Exponents**: 
+   - `x^2` → "x squared"
+   - `x^3` → "x cubed"
+   - `x^n` → "x to the power of n"
+   - `x^{2n+1}` → "x to the power of 2n+1"
+3. **Greek letters**: `\alpha`, `\beta`, etc. → spelled out names
+4. **Operators**: `\sum`, `\prod`, `\int`, `\partial` → "the sum of", etc.
+5. **Comparisons**: `\leq`, `\geq` → "less than or equal to", etc.
+6. **Roots**: `\sqrt{x}` → "the square root of x"
+7. **Subscripts**: `x_i` → "x i" (simplified handling)
+
+### Delimiters Supported
+- Inline: `$...$`
+- Display: `$$...$$` and `\[...\]`
+
+### Test Coverage
+- Simple patterns (exponents, fractions, Greek)
+- Complex nested expressions (summations with bounds)
+- Edge cases (empty strings, no math, multiple expressions)
+- All delimiters
+- Non-math text preservation
+
+### Output Quality
+- QA scenario produces readable spoken approximations
+- Not perfect transcription, but conceptually clear
+- Example: `$\sum_{i=1}^{N} x_i$` → "the sum of i=1 to the power of N x i"
+

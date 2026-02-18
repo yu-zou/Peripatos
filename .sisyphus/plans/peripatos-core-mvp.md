@@ -812,7 +812,7 @@ Max Concurrent: 6 (Wave 2)
   - Files: `peripatos/eye/arxiv.py, tests/test_arxiv.py`
   - Pre-commit: `pytest tests/test_arxiv.py`
 
-- [ ] 7. Math Normalization (LaTeX → Spoken Text)
+- [x] 7. Math Normalization (LaTeX → Spoken Text)
 
   **What to do**:
   - Implement `peripatos/eye/math_normalize.py`:

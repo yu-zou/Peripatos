@@ -1,0 +1,4 @@
+The loss is 1 over N
+where x squared + y squared = r squared
+the sum of i=1 to the power of N x i
+No math here, just text.
