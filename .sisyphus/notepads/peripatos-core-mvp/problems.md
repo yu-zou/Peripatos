@@ -1,0 +1,1 @@
+- PDF parsing QA blocked by Docling model download in offline environment; verify in networked env.

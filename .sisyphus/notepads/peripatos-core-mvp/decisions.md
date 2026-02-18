@@ -1,0 +1,1 @@
+- Added PERIPATOS_SKIP_DOCLING env flag to bypass Docling converter for offline QA checks.

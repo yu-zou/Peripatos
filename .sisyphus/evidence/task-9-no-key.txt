@@ -1,0 +1,7 @@
+=== QA Scenario 2: Missing API Key Detection ===
+Available (api_key=None): False
+Available (api_key=""): False
+Available (api_key="test-key"): True
+
+--- Attempting synthesis without API key ---
+Caught expected error: TTSError: OpenAI API key not available
