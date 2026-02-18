@@ -1,0 +1,12 @@
+llm:
+  provider: "openai"
+  model: "gpt-4o"
+
+tts:
+  engine: "openai"
+  voice_host: "alloy"
+  voice_expert: "onyx"
+
+persona: "tutor"
+language: "en"
+output_dir: "./output"

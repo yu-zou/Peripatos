@@ -1,0 +1,50 @@
+{
+  "paper_metadata": {
+    "title": "Efficient Conversational AI through Structured Dialogue",
+    "authors": ["John Doe", "Jane Smith"],
+    "abstract": "This paper explores efficient dialogue generation for conversational AI systems.",
+    "arxiv_id": "2408.09869",
+    "source_path": "tests/fixtures/sample_paper.pdf",
+    "sections": [
+      {
+        "title": "Introduction",
+        "content": "Conversational AI has become increasingly important in recent years.",
+        "section_type": "introduction"
+      },
+      {
+        "title": "Methodology",
+        "content": "We propose a novel approach to structured dialogue generation.",
+        "section_type": "methodology"
+      }
+    ]
+  },
+  "turns": [
+    {
+      "speaker": "host",
+      "text": "Welcome to this discussion of the paper on conversational AI. Can you tell us what this paper is about?",
+      "section_ref": "Introduction"
+    },
+    {
+      "speaker": "expert",
+      "text": "Certainly! This paper presents new techniques for generating structured dialogues in conversational AI systems.",
+      "section_ref": "Introduction"
+    },
+    {
+      "speaker": "host",
+      "text": "That sounds interesting. What makes this approach novel compared to existing methods?",
+      "section_ref": "Methodology"
+    },
+    {
+      "speaker": "expert",
+      "text": "The key innovation is our use of hierarchical planning to structure the dialogue flow. This allows for more coherent and contextually appropriate responses.",
+      "section_ref": "Methodology"
+    },
+    {
+      "speaker": "host",
+      "text": "Fascinating! How did you evaluate the effectiveness of your approach?",
+      "section_ref": "Methodology"
+    }
+  ],
+  "persona_type": "tutor",
+  "language_mode": "en"
+}

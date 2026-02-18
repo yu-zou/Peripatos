@@ -1,0 +1,64 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 4 0 R >> >> /MediaBox [0 0 612 792] /Contents 5 0 R >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+5 0 obj
+<< /Length 500 >>
+stream
+BT
+/F1 12 Tf
+50 750 Td
+(Sample Academic Paper for Testing) Tj
+0 -30 Td
+(Authors: John Doe, Jane Smith) Tj
+0 -30 Td
+(ArXiv ID: 2408.09869) Tj
+0 -50 Td
+/F1 14 Tf
+(Abstract) Tj
+/F1 12 Tf
+0 -20 Td
+(This is a sample abstract with mathematical content.) Tj
+0 -20 Td
+(We study the convergence properties of neural networks.) Tj
+0 -50 Td
+/F1 14 Tf
+(1. Introduction) Tj
+/F1 12 Tf
+0 -20 Td
+(The field of deep learning has seen rapid advancement.) Tj
+0 -20 Td
+(Our work builds on previous research in optimization.) Tj
+0 -50 Td
+/F1 14 Tf
+(2. Methodology) Tj
+/F1 12 Tf
+0 -20 Td
+(We propose a novel algorithm for training.) Tj
+0 -20 Td
+(Our approach combines gradient descent with momentum.) Tj
+ET
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000214 00000 n 
+0000000301 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+851
+%%EOF
