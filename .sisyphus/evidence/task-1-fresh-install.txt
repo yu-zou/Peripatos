@@ -1,0 +1,19 @@
+QA Scenario 1: Fresh Install Test
+==================================
+
+Objective: Verify fresh installation of peripatos-core package with dev dependencies
+
+Steps:
+1. Removed existing .venv
+2. Created fresh Python 3.10+ virtual environment
+3. Ran: pip install -e ".[dev]"
+4. Verified import: python3 -c "import peripatos; print(peripatos.__version__)"
+
+RESULT: ✓ PASS
+
+Output:
+- Package installed successfully in editable mode
+- All dependencies resolved and installed
+- Import test returns: 0.1.0 (correct version)
+
+Conclusion: Fresh install works correctly. Package is discoverable and version is correct.

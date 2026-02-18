@@ -1,0 +1,29 @@
+QA Scenario 3: Forbidden Dependencies Test
+============================================
+
+Objective: Verify that forbidden dependencies are NOT in pyproject.toml
+Forbidden packages: marker, marker-pdf, scholarly, elevenlabs
+
+Step 1: Check for forbidden dependencies in pyproject.toml
+Searching for 'marker' in dependencies:
+✓ Not found
+
+Searching for 'scholarly' in dependencies:
+✓ Not found
+
+
+Actual dependencies in pyproject.toml:
+dependencies = [
+    "docling",
+    "pydub",
+    "edge-tts",
+    "openai",
+    "anthropic",
+    "python-dotenv",
+    "pyyaml",
+]
+
+RESULT: ✓ PASS
+- No marker dependency found
+- No scholarly dependency found
+- No elevenlabs dependency found
