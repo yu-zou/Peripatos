@@ -1,0 +1,4 @@
+English host: en-US-AriaNeural
+English expert: en-US-GuyNeural
+Chinese host: zh-CN-XiaoxiaoNeural
+Chinese expert: zh-CN-YunxiNeural

@@ -1,0 +1,2 @@
+ParsingError Docling converter not available
+InvalidPath PDF not found: /nonexistent/paper.pdf

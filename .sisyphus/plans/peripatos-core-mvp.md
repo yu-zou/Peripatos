@@ -609,7 +609,7 @@ Max Concurrent: 6 (Wave 2)
 
 ### Wave 2 — Pipeline Modules (MAX PARALLEL)
 
-- [ ] 5. The "Eye" — PDF Parser Module (Docling Integration)
+- [x] 5. The "Eye" — PDF Parser Module (Docling Integration)
 
   **What to do**:
   - Implement `peripatos/eye/parser.py`:
@@ -1012,7 +1012,7 @@ Max Concurrent: 6 (Wave 2)
   - Files: `peripatos/brain/generator.py, peripatos/brain/personas.py, tests/test_brain.py`
   - Pre-commit: `pytest tests/test_brain.py`
 
-- [ ] 9. The "Voice" — OpenAI TTS Engine
+- [x] 9. The "Voice" — OpenAI TTS Engine
 
   **What to do**:
   - Implement `peripatos/voice/openai_tts.py`:
@@ -1117,7 +1117,7 @@ Max Concurrent: 6 (Wave 2)
   - Files: `peripatos/voice/openai_tts.py, tests/test_openai_tts.py`
   - Pre-commit: `pytest tests/test_openai_tts.py`
 
-- [ ] 10. The "Voice" — edge-tts Fallback Engine
+- [x] 10. The "Voice" — edge-tts Fallback Engine
 
   **What to do**:
   - Implement `peripatos/voice/edge_tts_engine.py`:

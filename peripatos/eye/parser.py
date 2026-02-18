@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import os
 import re
 from pathlib import Path
 from typing import Any
@@ -64,6 +65,8 @@ def _load_docling() -> tuple[Any, Any, Any, Any]:
 
 
 def _build_converter() -> Any | None:
+    if os.environ.get("PERIPATOS_SKIP_DOCLING"):
+        return None
     try:
         document_converter, pdf_options, pdf_format_option, input_format = _load_docling()
         options = pdf_options(
