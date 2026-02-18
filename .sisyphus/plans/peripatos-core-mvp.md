@@ -713,7 +713,7 @@ Max Concurrent: 6 (Wave 2)
   - Files: `peripatos/eye/parser.py, tests/test_parser.py`
   - Pre-commit: `pytest tests/test_parser.py`
 
-- [ ] 6. The "Eye" — ArXiv Fetcher Module
+- [x] 6. The "Eye" — ArXiv Fetcher Module
 
   **What to do**:
   - Implement `peripatos/eye/arxiv.py`:

@@ -38,3 +38,40 @@
 - Chunk at **80% of max size** for clause boundaries (provides buffer for finding good split point)
 - Preserve punctuation and spaces in chunks (maintains natural flow)
 
+
+## ArXiv Fetcher Implementation (Task 7 - Implementation)
+
+### Implementation Details
+- **File**: `peripatos/eye/arxiv.py` (140 lines)
+- **Test Coverage**: All 19 tests passing (100%)
+
+### Key Implementation Decisions
+1. **ID Validation**: Uses compiled regex pattern `^\d{4}\.\d{4,5}(v\d+)?$` for performance
+2. **HTTP Client**: Uses stdlib `urllib.request` (no external dependencies)
+3. **XML Parsing**: Uses `xml.etree.ElementTree` with namespace handling for ArXiv API
+4. **Temp Directory**: Uses `tempfile.mkdtemp()` for PDF storage (configurable)
+5. **Error Handling**: All failures wrapped in custom `FetchError` exception
+
+### ArXiv API Integration
+- **PDF URL**: `https://arxiv.org/pdf/{arxiv_id}`
+- **Metadata API**: `http://export.arxiv.org/api/query?id_list={base_id}`
+- **XML Namespace**: Uses `http://www.w3.org/2005/Atom` for parsing
+- **Metadata Extract**: title, authors list, summary text
+
+### Version Suffix Handling
+- Valid IDs: `2408.09869` and `2408.09869v1` (etc.)
+- Version suffix stripped for API queries but preserved in file names
+- Pattern allows multi-digit versions (v1, v2, v10, etc.)
+
+### Error Cases Tested
+✓ Invalid ID format (dashes, missing dot, too short, empty, malformed version)
+✓ Network failures (connection timeout, 404 responses)
+✓ API parsing failures (invalid XML)
+✓ Missing entry in API response
+
+### Design Patterns Used
+- Single Responsibility: validate, fetch, extract_metadata are separate methods
+- Fail-Fast: validation happens before network calls
+- Resource Cleanup: context managers for HTTP responses
+- Type Hints: Full type annotations for public API
+
