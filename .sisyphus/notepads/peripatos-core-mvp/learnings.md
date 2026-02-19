@@ -364,3 +364,96 @@
   5. Dev dependencies install successfully: `pip install -e ".[dev]"`
   6. pytest is available and functional
 - **Test result**: All checks passed in clean environment
+
+## Task 16: E2E Integration Tests (2026-02-19)
+
+**Tests Created**: 7 comprehensive end-to-end integration tests in `tests/test_e2e.py`
+
+**Test Coverage**:
+1. `test_full_pipeline_with_mocked_openai()` - Full PDF→MP3 pipeline with mocked OpenAI LLM+TTS
+2. `test_full_pipeline_edge_tts_fallback()` - Same pipeline using edge-tts (no API key required)
+3. `test_arxiv_pipeline_mocked_network()` - ArXiv ID fetching with mocked HTTP requests
+4. `test_personas_produce_different_prompts()` - Verifies all 4 personas generate unique prompts
+5. `test_bilingual_mode_zh_en()` - Validates bilingual Chinese+English prompt modifier
+6. `test_error_cases()` - Tests 6+ error scenarios (invalid ArXiv ID, missing keys, corrupted PDF, etc.)
+7. `test_multi_section_chapter_generation()` - Verifies chapter markers for multi-section papers
+
+**Key Mocking Patterns**:
+
+### PDF Parser Mocking (Docling)
+```python
+class _StubConverter:
+    def convert(self, source):
+        return _StubResult(markdown_string)
+
+parser = PDFParser(converter=_make_stub_converter(markdown)())
+```
+
+### OpenAI LLM Mocking
+```python
+mock_openai.OpenAI.return_value = mock_client
+mock_client.chat.completions.create.return_value = Mock(
+    choices=[Mock(message=Mock(content=json_dialogue))]
+)
+```
+
+### OpenAI TTS Mocking
+```python
+mock_tts_client.audio.speech.create.return_value = Mock(
+    read=lambda: b"ID3\x03\x00" + b"\x00" * 100
+)
+```
+
+### edge-tts Async Mocking
+```python
+async def mock_stream():
+    yield {"type": "audio", "data": b"\xFF\xFB\x90\x00"}
+
+mock_communicate.stream = mock_stream
+edge_tts.Communicate.return_value = mock_communicate
+```
+
+### ffmpeg + pydub Mocking
+```python
+@patch('subprocess.run')  # ffmpeg
+@patch('shutil.which', return_value='/usr/bin/ffmpeg')
+@patch('PydubAudioSegment')  # pydub
+```
+
+**Results**:
+- **Total tests**: 156 (149 existing + 7 new E2E)
+- **Pass rate**: 100%
+- **Coverage**: 87% (exceeds 80% target)
+- **Execution time**: ~6 seconds
+
+**Error Handling Coverage**:
+- Invalid ArXiv ID format detection
+- Network failures (404, connection errors)
+- Missing/invalid API keys
+- Corrupted PDF files
+- Empty audio segments
+- Malformed LLM responses
+
+**Integration Points Validated**:
+1. PDF parsing (Docling) → PaperMetadata
+2. Math normalization → LaTeX to spoken text
+3. Dialogue generation (OpenAI/Anthropic) → DialogueScript
+4. Audio rendering (OpenAI TTS/edge-tts) → AudioSegments
+5. Chapter building → ChapterMarkers
+6. Audio mixing (ffmpeg) → Final MP3
+
+**Best Practices Learned**:
+- Always mock at module level: `@patch('peripatos.module.import')`
+- Use stub converters for complex dependencies (Docling)
+- Mock async functions with `AsyncMock` and async generators
+- Test both success and failure paths in E2E tests
+- Verify integration boundaries (data flows between modules)
+- Use minimal fixture data (stub markdown instead of real PDFs)
+
+**Gotchas**:
+- Docling requires explicit converter stub injection via constructor
+- ArXiv tests need both PDF and API metadata mocking
+- pydub AudioSegment needs `__len__` and `__add__` mocked for concatenation
+- edge-tts streams need async generator pattern, not side_effect list
+- ffmpeg subprocess mock must return `Mock(returncode=0)`
+

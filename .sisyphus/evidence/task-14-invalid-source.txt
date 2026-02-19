@@ -1,10 +1,3 @@
-Invalid source error test (from test_invalid_source_error):
-
-Expected behavior: Error message like 'Invalid source: not-a-source. Must be an ArXiv ID or existing PDF path.'
-
-Test verification:
-- test_invalid_source_error() calls main() with invalid source
-- Asserts 'Invalid source' appears in stderr
-- Verifies SystemExit is raised
-
-Note: Test passes, confirming error handling works correctly.
+usage: peripatos [-h] [--version] {generate} ...
+peripatos: error: Invalid source: not-a-source. Must be an ArXiv ID or existing PDF path.
+🔎 Detecting source...

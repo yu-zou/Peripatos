@@ -1670,7 +1670,7 @@ Max Concurrent: 6 (Wave 2)
   - Files: `pyproject.toml, .env.example`
   - Pre-commit: `pip install -e . && peripatos --help`
 
-- [ ] 16. End-to-End Integration Tests
+- [x] 16. End-to-End Integration Tests
 
   **What to do**:
   - Implement `tests/test_e2e.py`:
