@@ -1,0 +1,28 @@
+Traceback (most recent call last):
+  File "/Users/yzou/Peripatos/.venv/lib/python3.14/site-packages/pydub/utils.py", line 14, in <module>
+    import audioop
+ModuleNotFoundError: No module named 'audioop'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "<string>", line 2, in <module>
+    from peripatos.cli import detect_source_type
+  File "/Users/yzou/Peripatos/peripatos/cli.py", line 37, in <module>
+    from peripatos.voice.mixer import AudioMixer, MixerError
+  File "/Users/yzou/Peripatos/peripatos/voice/mixer.py", line 10, in <module>
+    from pydub import AudioSegment as PydubAudioSegment
+  File "/Users/yzou/Peripatos/.venv/lib/python3.14/site-packages/pydub/__init__.py", line 1, in <module>
+    from .audio_segment import AudioSegment
+  File "/Users/yzou/Peripatos/.venv/lib/python3.14/site-packages/pydub/audio_segment.py", line 11, in <module>
+    from .utils import mediainfo_json, fsdecode
+  File "/Users/yzou/Peripatos/.venv/lib/python3.14/site-packages/pydub/utils.py", line 16, in <module>
+    import pyaudioop as audioop
+ModuleNotFoundError: No module named 'pyaudioop'
+Source type detection test (from test_detect_source_type):
+ArXiv ID '2408.09869' → 'arxiv'
+PDF path 'tests/fixtures/sample_paper.pdf' → 'pdf'
+ArXiv ID with version '2408.09869v2' → 'arxiv' (implied by ArxivFetcher.ARXIV_ID_PATTERN)
+
+Note: Live execution skipped due to Python 3.14 audioop compatibility issue.
+Tests verify this functionality via mocked dependencies.

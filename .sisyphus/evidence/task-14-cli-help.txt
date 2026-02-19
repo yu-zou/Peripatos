@@ -1,0 +1,32 @@
+peripatos 0.1.0
+usage: peripatos [-h] [--version] {generate} ...
+
+peripatos generate <source> - Convert a paper into Socratic audio dialogue.
+
+positional arguments:
+  {generate}
+    generate  Generate audio from an ArXiv ID or PDF
+
+options:
+  -h, --help  show this help message and exit
+  --version   show program's version number and exit
+usage: peripatos generate [-h] [--persona {enthusiast,peer,skeptic,tutor}]
+                          [--language {en,zh-en}]
+                          [--tts-engine {edge-tts,openai}]
+                          [--output-dir OUTPUT_DIR]
+                          [--llm-provider {anthropic,openai}]
+                          [--llm-model LLM_MODEL] [--verbose]
+                          source
+
+positional arguments:
+  source                ArXiv ID or local PDF path
+
+options:
+  -h, --help            show this help message and exit
+  --persona {enthusiast,peer,skeptic,tutor}
+  --language {en,zh-en}
+  --tts-engine {edge-tts,openai}
+  --output-dir OUTPUT_DIR
+  --llm-provider {anthropic,openai}
+  --llm-model LLM_MODEL
+  --verbose, -v
