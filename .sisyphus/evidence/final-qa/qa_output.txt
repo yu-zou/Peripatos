@@ -1,0 +1,110 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.19, pytest-9.0.2, pluggy-1.6.0 -- /Users/yzou/miniconda3/envs/peripatos/bin/python3.10
+cachedir: .pytest_cache
+rootdir: /Users/yzou/Peripatos
+configfile: pyproject.toml
+plugins: anyio-4.12.1, Faker-40.4.0, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=auto, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 8 items
+
+tests/test_manual_qa.py::TestManualQA::test_scenario_1_arxiv_tutor_with_chapters 🌐 Fetching ArXiv PDF...
+🧠 Generating dialogue (Tutor persona)...
+🔊 Rendering audio...
+🔊 Rendering audio... 1/24
+🔊 Rendering audio... 2/24
+🔊 Rendering audio... 3/24
+🔊 Rendering audio... 4/24
+🔊 Rendering audio... 5/24
+🔊 Rendering audio... 6/24
+🔊 Rendering audio... 7/24
+🔊 Rendering audio... 8/24
+🔊 Rendering audio... 9/24
+🔊 Rendering audio... 10/24
+🔊 Rendering audio... 11/24
+🔊 Rendering audio... 12/24
+🔊 Rendering audio... 13/24
+🔊 Rendering audio... 14/24
+🔊 Rendering audio... 15/24
+🔊 Rendering audio... 16/24
+🔊 Rendering audio... 17/24
+🔊 Rendering audio... 18/24
+🔊 Rendering audio... 19/24
+🔊 Rendering audio... 20/24
+🔊 Rendering audio... 21/24
+🔊 Rendering audio... 22/24
+🔊 Rendering audio... 23/24
+🔊 Rendering audio... 24/24
+🎚️ Mixing audio...
+✓ Scenario 1: ArXiv → MP3 with tutor persona - PASS
+  - Generated 24 dialogue turns
+  - Created 24 audio segments
+  - Generated 6 chapters
+  - Total duration: 270900ms
+PASSED
+tests/test_manual_qa.py::TestManualQA::test_scenario_2_local_pdf_skeptic 🧠 Generating dialogue (Skeptic persona)...
+🔊 Rendering audio...
+🔊 Rendering audio... 1/12
+🔊 Rendering audio... 2/12
+🔊 Rendering audio... 3/12
+🔊 Rendering audio... 4/12
+🔊 Rendering audio... 5/12
+🔊 Rendering audio... 6/12
+🔊 Rendering audio... 7/12
+🔊 Rendering audio... 8/12
+🔊 Rendering audio... 9/12
+🔊 Rendering audio... 10/12
+🔊 Rendering audio... 11/12
+🔊 Rendering audio... 12/12
+🎚️ Mixing audio...
+✓ Scenario 2: Local PDF → MP3 with skeptic persona - PASS
+PASSED
+tests/test_manual_qa.py::TestManualQA::test_scenario_3_edge_tts_fallback 🧠 Generating dialogue (Tutor persona)...
+🔊 Rendering audio...
+🔊 Rendering audio... 1/12
+🔊 Rendering audio... 2/12
+🔊 Rendering audio... 3/12
+🔊 Rendering audio... 4/12
+🔊 Rendering audio... 5/12
+🔊 Rendering audio... 6/12
+🔊 Rendering audio... 7/12
+🔊 Rendering audio... 8/12
+🔊 Rendering audio... 9/12
+🔊 Rendering audio... 10/12
+🔊 Rendering audio... 11/12
+🔊 Rendering audio... 12/12
+🎚️ Mixing audio...
+✓ Scenario 3: edge-tts fallback - PASS
+PASSED
+tests/test_manual_qa.py::TestManualQA::test_scenario_4_bilingual_zh_en 🧠 Generating dialogue (Tutor persona)...
+🔊 Rendering audio...
+🔊 Rendering audio... 1/12
+🔊 Rendering audio... 2/12
+🔊 Rendering audio... 3/12
+🔊 Rendering audio... 4/12
+🔊 Rendering audio... 5/12
+🔊 Rendering audio... 6/12
+🔊 Rendering audio... 7/12
+🔊 Rendering audio... 8/12
+🔊 Rendering audio... 9/12
+🔊 Rendering audio... 10/12
+🔊 Rendering audio... 11/12
+🔊 Rendering audio... 12/12
+🎚️ Mixing audio...
+✓ Scenario 4: Bilingual zh-en mode - PASS
+PASSED
+tests/test_manual_qa.py::TestManualQA::test_scenario_5_all_personas ✓ Scenario 5: All 4 personas produce unique prompts - PASS
+PASSED
+tests/test_manual_qa.py::TestManualQA::test_error_case_invalid_arxiv_id Error: Failed to fetch PDF from ArXiv: 404 Not Found
+🌐 Fetching ArXiv PDF...
+✓ Error case: Invalid ArXiv ID - PASS
+PASSED
+tests/test_manual_qa.py::TestManualQA::test_error_case_missing_api_key Error: OpenAI API call failed: Invalid API key
+🧠 Generating dialogue (Tutor persona)...
+✓ Error case: Missing API key - PASS
+PASSED
+tests/test_manual_qa.py::TestManualQA::test_error_case_nonexistent_pdf Error: Failed to parse PDF: /private/var/folders/lk/42clznb95r170_t53q7f0gf80000gn/T/pytest-of-yzou/pytest-25/test_error_case_nonexistent_pd0/corrupted.pdf
+📄 Parsing PDF...
+✓ Error case: Non-existent/invalid PDF - PASS
+PASSED
+
+============================== 8 passed in 6.34s ===============================

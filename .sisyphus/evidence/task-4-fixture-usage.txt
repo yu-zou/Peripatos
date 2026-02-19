@@ -11,7 +11,7 @@ FIXTURE USAGE VALIDATION TEST
   Status: ✓ Session-scoped fixture available
 
 ✓ Fixture 3: mock_openai_key
-  Sets: OPENAI_API_KEY='test-key-sk-proj-abc123def456'
+  Sets: OPENAI_API_KEY='test-openai-key-12345'
   Cleans up: After test function completes
   Status: ✓ Function-scoped fixture with monkeypatch
 

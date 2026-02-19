@@ -1,0 +1,4 @@
+Downloaded PDF: /var/folders/lk/42clznb95r170_t53q7f0gf80000gn/T/tmptsuove78/2408.09869.pdf
+File exists: True
+File size: 5566575 bytes
+SUCCESS: ArXiv fetcher works

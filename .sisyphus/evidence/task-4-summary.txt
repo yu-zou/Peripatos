@@ -63,7 +63,7 @@ DELIVERABLES CHECKLIST
 3. ✅ mock_openai_key
    - Scope: function
    - Method: monkeypatch.setenv()
-   - Sets: OPENAI_API_KEY to "test-key-sk-proj-abc123def456"
+   - Sets: OPENAI_API_KEY to "test-openai-key-12345"
    - Cleans up: After test completes
    - Use case: Tests for API key validation without network calls
 
