@@ -68,12 +68,12 @@ class TestEnums:
         engine_names = {e.name for e in engines}
         assert engine_names == {"OPENAI", "EDGE_TTS"}
 
-    def test_llm_provider_has_two_values(self):
-        """LLMProvider should have OPENAI and ANTHROPIC."""
+    def test_llm_provider_has_four_values(self):
+        """LLMProvider should have OPENAI, ANTHROPIC, OPENROUTER, and GEMINI."""
         providers = list(LLMProvider)
-        assert len(providers) == 2
+        assert len(providers) == 4
         provider_names = {p.name for p in providers}
-        assert provider_names == {"OPENAI", "ANTHROPIC"}
+        assert provider_names == {"OPENAI", "ANTHROPIC", "OPENROUTER", "GEMINI"}
 
 
 class TestSectionInfo:

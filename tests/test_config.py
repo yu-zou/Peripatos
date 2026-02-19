@@ -119,16 +119,28 @@ class TestEnvVarLoading:
     """Test that .env API keys are loaded."""
 
     def test_env_vars_override_config(self, temp_config_file):
-        """Test that environment variables override config file."""
+         """Test that environment variables override config file."""
+         with patch("peripatos.config.get_config_path", return_value=temp_config_file):
+             with patch.dict(os.environ, {
+                 "OPENAI_API_KEY": "sk-test-openai",
+                 "ANTHROPIC_API_KEY": "sk-test-anthropic",
+             }, clear=True):
+                 config = load_config()
+                 
+                 assert config.openai_api_key == "sk-test-openai"
+                 assert config.anthropic_api_key == "sk-test-anthropic"
+
+    def test_openrouter_and_gemini_env_vars_loaded(self, temp_config_file):
+        """Test that OpenRouter and Gemini environment variables are loaded."""
         with patch("peripatos.config.get_config_path", return_value=temp_config_file):
             with patch.dict(os.environ, {
-                "OPENAI_API_KEY": "sk-test-openai",
-                "ANTHROPIC_API_KEY": "sk-test-anthropic",
+                "OPENROUTER_API_KEY": "test-openrouter-key",
+                "GEMINI_API_KEY": "test-gemini-key",
             }, clear=True):
                 config = load_config()
                 
-                assert config.openai_api_key == "sk-test-openai"
-                assert config.anthropic_api_key == "sk-test-anthropic"
+                assert config.openrouter_api_key == "test-openrouter-key"
+                assert config.gemini_api_key == "test-gemini-key"
 
 
 class TestCLIOverrides:
@@ -191,9 +203,91 @@ class TestAPIKeyValidation:
                 assert "ANTHROPIC_API_KEY" in str(exc_info.value)
 
     def test_api_key_validation_passes_with_key(self, temp_config_file):
-        """Test that validation passes when API key is present."""
-        with patch("peripatos.config.get_config_path", return_value=temp_config_file):
-            with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test"}, clear=True):
+         """Test that validation passes when API key is present."""
+         with patch("peripatos.config.get_config_path", return_value=temp_config_file):
+             with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test"}, clear=True):
+                 config = load_config()
+                 
+                 # Should not raise
+                 config.validate_api_keys()
+
+    def test_missing_openrouter_api_key_raises_error(self, temp_config_file, temp_config_dir):
+        """Test that missing OPENROUTER_API_KEY raises ValueError."""
+        config_path = Path(temp_config_dir) / "config.yaml"
+        config_data = {
+            "llm": {
+                "provider": "openrouter",
+                "model": "openrouter/auto",
+            },
+        }
+        with open(config_path, "w") as f:
+            yaml.dump(config_data, f)
+        
+        with patch("peripatos.config.get_config_path", return_value=config_path):
+            with patch.dict(os.environ, {}, clear=True):  # No API keys
+                config = load_config()
+                
+                with pytest.raises(ValueError) as exc_info:
+                    config.validate_api_keys()
+                
+                # Check that error message contains the missing key name
+                assert "OPENROUTER_API_KEY" in str(exc_info.value)
+
+    def test_missing_gemini_api_key_raises_error(self, temp_config_file, temp_config_dir):
+        """Test that missing GEMINI_API_KEY raises ValueError."""
+        config_path = Path(temp_config_dir) / "config.yaml"
+        config_data = {
+            "llm": {
+                "provider": "gemini",
+                "model": "gemini-2.0-flash",
+            },
+        }
+        with open(config_path, "w") as f:
+            yaml.dump(config_data, f)
+        
+        with patch("peripatos.config.get_config_path", return_value=config_path):
+            with patch.dict(os.environ, {}, clear=True):  # No API keys
+                config = load_config()
+                
+                with pytest.raises(ValueError) as exc_info:
+                    config.validate_api_keys()
+                
+                # Check that error message contains the missing key name
+                assert "GEMINI_API_KEY" in str(exc_info.value)
+
+    def test_openrouter_api_key_validation_passes_with_key(self, temp_config_file, temp_config_dir):
+        """Test that validation passes when OpenRouter API key is present."""
+        config_path = Path(temp_config_dir) / "config.yaml"
+        config_data = {
+            "llm": {
+                "provider": "openrouter",
+                "model": "openrouter/auto",
+            },
+        }
+        with open(config_path, "w") as f:
+            yaml.dump(config_data, f)
+        
+        with patch("peripatos.config.get_config_path", return_value=config_path):
+            with patch.dict(os.environ, {"OPENROUTER_API_KEY": "test-key"}, clear=True):
+                config = load_config()
+                
+                # Should not raise
+                config.validate_api_keys()
+
+    def test_gemini_api_key_validation_passes_with_key(self, temp_config_file, temp_config_dir):
+        """Test that validation passes when Gemini API key is present."""
+        config_path = Path(temp_config_dir) / "config.yaml"
+        config_data = {
+            "llm": {
+                "provider": "gemini",
+                "model": "gemini-2.0-flash",
+            },
+        }
+        with open(config_path, "w") as f:
+            yaml.dump(config_data, f)
+        
+        with patch("peripatos.config.get_config_path", return_value=config_path):
+            with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}, clear=True):
                 config = load_config()
                 
                 # Should not raise
@@ -256,22 +350,24 @@ class TestConfigDataclass:
     """Test PeripatosConfig dataclass."""
 
     def test_config_dataclass_attributes(self, temp_config_file):
-        """Test that PeripatosConfig has all required attributes."""
-        with patch("peripatos.config.get_config_path", return_value=temp_config_file):
-            with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test"}, clear=True):
-                config = load_config()
-                
-                # Check all required attributes exist
-                assert hasattr(config, "llm_provider")
-                assert hasattr(config, "llm_model")
-                assert hasattr(config, "tts_engine")
-                assert hasattr(config, "tts_voice_host")
-                assert hasattr(config, "tts_voice_expert")
-                assert hasattr(config, "persona")
-                assert hasattr(config, "language")
-                assert hasattr(config, "output_dir")
-                assert hasattr(config, "openai_api_key")
-                assert hasattr(config, "anthropic_api_key")
+         """Test that PeripatosConfig has all required attributes."""
+         with patch("peripatos.config.get_config_path", return_value=temp_config_file):
+             with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test"}, clear=True):
+                 config = load_config()
+                 
+                 # Check all required attributes exist
+                 assert hasattr(config, "llm_provider")
+                 assert hasattr(config, "llm_model")
+                 assert hasattr(config, "tts_engine")
+                 assert hasattr(config, "tts_voice_host")
+                 assert hasattr(config, "tts_voice_expert")
+                 assert hasattr(config, "persona")
+                 assert hasattr(config, "language")
+                 assert hasattr(config, "output_dir")
+                 assert hasattr(config, "openai_api_key")
+                 assert hasattr(config, "anthropic_api_key")
+                 assert hasattr(config, "openrouter_api_key")
+                 assert hasattr(config, "gemini_api_key")
 
 
 class TestPriorityOrder:

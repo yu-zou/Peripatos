@@ -30,6 +30,8 @@ def _build_config(provider: str) -> PeripatosConfig:
         output_dir="./test_output",
         openai_api_key="test-openai",
         anthropic_api_key="test-anthropic",
+        openrouter_api_key="test-openrouter",
+        gemini_api_key="test-gemini",
     )
 
 
@@ -203,3 +205,105 @@ def test_long_section_chunking(mock_import_module):
     generator.generate(paper, _build_config("openai"))
 
     assert mock_client.chat.completions.create.call_count > 1
+
+
+@patch("peripatos.brain.generator.importlib.import_module")
+def test_generator_openrouter_integration(mock_import_module):
+    mock_client = Mock()
+    mock_openai_module = Mock(OpenAI=Mock(return_value=mock_client))
+    mock_import_module.return_value = mock_openai_module
+    mock_response = Mock()
+    mock_response.choices = [Mock(message=Mock(content=_json_dialogue()))]
+    mock_client.chat.completions.create.return_value = mock_response
+
+    generator = DialogueGenerator()
+    config = _build_config("openrouter")
+    paper = _sample_paper()
+
+    script = generator.generate(paper, config)
+
+    assert script.paper_metadata == paper
+    assert script.persona_type == PersonaType.TUTOR
+    assert script.language_mode == LanguageMode.EN
+    assert [turn.speaker for turn in script.turns] == [
+        SpeakerRole.HOST,
+        SpeakerRole.EXPERT,
+    ]
+    # Verify OpenAI client created with OpenRouter base_url
+    call_args = mock_openai_module.OpenAI.call_args[1]
+    assert call_args["base_url"] == "https://openrouter.ai/api/v1"
+    assert call_args["api_key"] == "test-openrouter"
+    # Verify chat.completions.create called correctly
+    create_args = mock_client.chat.completions.create.call_args[1]
+    assert create_args["model"] == "gpt-4o"
+    assert create_args["messages"][0]["role"] == "system"
+    assert create_args["messages"][1]["role"] == "user"
+
+
+@patch("peripatos.brain.generator.importlib.import_module")
+def test_generator_gemini_integration(mock_import_module):
+    mock_client = Mock()
+    mock_genai_module = Mock(Client=Mock(return_value=mock_client))
+    mock_types_module = Mock()
+    mock_config = Mock()
+    mock_types_module.GenerateContentConfig = Mock(return_value=mock_config)
+    
+    # Handle two import calls: google.genai and google.genai.types
+    def import_side_effect(module_name):
+        if module_name == "google.genai":
+            return mock_genai_module
+        elif module_name == "google.genai.types":
+            return mock_types_module
+        raise ImportError(f"No module named '{module_name}'")
+    
+    mock_import_module.side_effect = import_side_effect
+    
+    mock_response = Mock()
+    mock_response.text = _json_dialogue()
+    mock_client.models.generate_content.return_value = mock_response
+
+    generator = DialogueGenerator()
+    config = _build_config("gemini")
+    paper = _sample_paper()
+
+    script = generator.generate(paper, config)
+
+    assert script.paper_metadata == paper
+    assert script.persona_type == PersonaType.TUTOR
+    assert script.language_mode == LanguageMode.EN
+    assert [turn.speaker for turn in script.turns] == [
+        SpeakerRole.HOST,
+        SpeakerRole.EXPERT,
+    ]
+    # Verify Client created with correct api_key
+    client_args = mock_genai_module.Client.call_args[1]
+    assert client_args["api_key"] == "test-gemini"
+    # Verify generate_content called with correct parameters
+    call_args = mock_client.models.generate_content.call_args[1]
+    assert call_args["model"] == "gpt-4o"
+    assert "contents" in call_args
+    assert call_args["config"] == mock_config
+
+
+@patch("peripatos.brain.generator.importlib.import_module")
+def test_openrouter_import_error(mock_import_module):
+    mock_import_module.side_effect = ImportError("No module named 'openai'")
+
+    generator = DialogueGenerator()
+    config = _build_config("openrouter")
+    paper = _sample_paper()
+
+    with pytest.raises(GenerationError, match="OpenAI client not available"):
+        generator.generate(paper, config)
+
+
+@patch("peripatos.brain.generator.importlib.import_module")
+def test_gemini_import_error(mock_import_module):
+    mock_import_module.side_effect = ImportError("No module named 'google.genai'")
+
+    generator = DialogueGenerator()
+    config = _build_config("gemini")
+    paper = _sample_paper()
+
+    with pytest.raises(GenerationError, match="Google GenAI client not available"):
+        generator.generate(paper, config)
