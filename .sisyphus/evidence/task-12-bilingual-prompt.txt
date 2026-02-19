@@ -1,0 +1,3 @@
+Explain the concepts in Mandarin Chinese (简体中文), but keep all technical terms in English. For example, say 'Transformer 模型' not '变换器模型'. This helps listeners learn technical vocabulary precisely.
+
+Bilingual modifier OK
