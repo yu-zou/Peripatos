@@ -187,6 +187,8 @@ options:
   --verbose, -v
 ```
 
+> **Note:** The `--tts-engine` flag selects which engine to use, but engine-specific options — voice selection (`voice_host`, `voice_expert`) and TTS model — are not available as CLI flags. Configure these in `~/.peripatos/config.yaml` under the `tts` section. See [TTS Engine Setup](#tts-engine-setup) and [Recommended Settings](#recommended-settings) for details.
+
 ## Requirements
 
 *   Python 3.10 or higher
