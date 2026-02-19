@@ -26,6 +26,9 @@ class DialogueGenerator:
         self.max_retries = max_retries
         self._openai_client = None
         self._anthropic_client = None
+        self._openrouter_client = None
+        self._gemini_client = None
+        self._gemini_types = None
 
     def generate(self, paper: PaperMetadata, config: PeripatosConfig) -> DialogueScript:
         persona_type = self._resolve_persona(config.persona)
@@ -84,6 +87,10 @@ class DialogueGenerator:
             return self._call_openai(config, system_prompt, content)
         if provider == LLMProvider.ANTHROPIC:
             return self._call_anthropic(config, system_prompt, content)
+        if provider == LLMProvider.OPENROUTER:
+            return self._call_openrouter(config, system_prompt, content)
+        if provider == LLMProvider.GEMINI:
+            return self._call_gemini(config, system_prompt, content)
         raise GenerationError(f"Unsupported LLM provider '{config.llm_provider}'")
 
     def _call_openai(self, config: PeripatosConfig, system_prompt: str, content: str) -> str:
@@ -139,6 +146,70 @@ class DialogueGenerator:
                 raise GenerationError(f"Anthropic API call failed: {exc}") from exc
 
         raise GenerationError(f"Anthropic API call failed: {last_error}")
+
+    def _call_openrouter(self, config: PeripatosConfig, system_prompt: str, content: str) -> str:
+        if self._openrouter_client is None:
+            try:
+                openai_module = importlib.import_module("openai")
+            except ImportError as exc:
+                raise GenerationError("OpenAI client not available (required for OpenRouter)") from exc
+            self._openrouter_client = openai_module.OpenAI(
+                base_url="https://openrouter.ai/api/v1",
+                api_key=config.openrouter_api_key
+            )
+
+        last_error = None
+        for attempt in range(self.max_retries):
+            try:
+                completion = self._openrouter_client.chat.completions.create(
+                    model=config.llm_model,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": content},
+                    ],
+                )
+                return completion.choices[0].message.content
+            except Exception as exc:
+                last_error = exc
+                if "rate_limit" in str(exc).lower():
+                    time.sleep(2 ** attempt)
+                    continue
+                raise GenerationError(f"OpenRouter API call failed: {exc}") from exc
+
+        raise GenerationError(f"OpenRouter API call failed: {last_error}")
+
+    def _call_gemini(self, config: PeripatosConfig, system_prompt: str, content: str) -> str:
+        if self._gemini_client is None:
+            try:
+                genai_module = importlib.import_module("google.genai")
+                types_module = importlib.import_module("google.genai.types")
+            except ImportError as exc:
+                raise GenerationError("Google GenAI client not available") from exc
+            self._gemini_client = genai_module.Client(api_key=config.gemini_api_key)
+            self._gemini_types = types_module
+
+        last_error = None
+        for attempt in range(self.max_retries):
+            try:
+                gen_config = self._gemini_types.GenerateContentConfig(  # pyright: ignore[reportOptionalMemberAccess]
+                    system_instruction=system_prompt
+                )
+                response = self._gemini_client.models.generate_content(
+                    model=config.llm_model,
+                    contents=content,
+                    config=gen_config
+                )
+                return response.text
+            except Exception as exc:
+                last_error = exc
+                if ("rate_limit" in str(exc).lower() or 
+                    "resource_exhausted" in str(exc).lower() or 
+                    "429" in str(exc)):
+                    time.sleep(2 ** attempt)
+                    continue
+                raise GenerationError(f"Gemini API call failed: {exc}") from exc
+
+        raise GenerationError(f"Gemini API call failed: {last_error}")
 
     def _parse_response(self, response_text: str, section_ref: str) -> list[DialogueTurn]:
         try:

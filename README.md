@@ -37,6 +37,8 @@ Configure your API keys by creating a `.env` file in the project root:
 ```bash
 OPENAI_API_KEY=sk-your-key-here
 ANTHROPIC_API_KEY=sk-your-key-here
+OPENROUTER_API_KEY=your-key-here
+GEMINI_API_KEY=your-key-here
 ```
 
 Default settings can be managed in `~/.peripatos/config.yaml`. The system follows a priority chain: defaults -> YAML config -> environment variables -> CLI overrides.
@@ -63,7 +65,7 @@ usage: peripatos generate [-h] [--persona {enthusiast,peer,skeptic,tutor}]
                           [--language {en,zh-en}]
                           [--tts-engine {edge-tts,openai}]
                           [--output-dir OUTPUT_DIR]
-                          [--llm-provider {anthropic,openai}]
+                          [--llm-provider {anthropic,gemini,openai,openrouter}]
                           [--llm-model LLM_MODEL] [--verbose]
                           source
 
@@ -76,7 +78,7 @@ options:
   --language {en,zh-en}
   --tts-engine {edge-tts,openai}
   --output-dir OUTPUT_DIR
-  --llm-provider {anthropic,openai}
+  --llm-provider {anthropic,gemini,openai,openrouter}
   --llm-model LLM_MODEL
   --verbose, -v
 ```
@@ -85,7 +87,7 @@ options:
 
 *   Python 3.10 or higher
 *   `ffmpeg` for audio processing and chapter injection
-*   API keys for OpenAI or Anthropic
+*   API keys for at least one LLM provider (OpenAI, Anthropic, OpenRouter, or Google Gemini)
 
 ## Development
 
@@ -104,4 +106,7 @@ MIT License - See [LICENSE](LICENSE) file for details.
 
 *   **Docling**: For robust PDF document parsing.
 *   **OpenAI**: For GPT-4 dialogue generation and high-fidelity TTS.
+*   **Anthropic**: For Claude models and powerful reasoning capabilities.
+*   **OpenRouter**: For unified API gateway access to multiple LLM providers.
+*   **Google Gemini**: For advanced multimodal and reasoning capabilities.
 *   **edge-tts**: For high-quality fallback speech synthesis.
