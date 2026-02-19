@@ -122,3 +122,47 @@
 ### Testing Strategy
 - Mocked OpenAI/Anthropic clients through importlib patching to verify message construction.
 - JSON parsing tests ensure DialogueTurn mapping and error handling for invalid responses.
+
+## Task 12: Bilingual Code-Switching (Feb 19, 2026)
+
+**Approach:**
+- Followed TDD: wrote 7 comprehensive tests before implementation
+- Created BilingualProcessor class with simple pass-through design
+- Trust LLM output via prompt modifier rather than complex post-processing
+
+**Technical Decisions:**
+1. **Prompt Modifier Strategy**: Generate bilingual instruction string to append to system prompts
+   - ZH_EN mode: Explicit instruction to use Chinese explanations + English technical terms
+   - EN mode: Empty string (no modification)
+   - Example instruction includes concrete example ("Transformer 模型" not "变换器模型")
+
+2. **Technical Term Whitelist**: Defined 40+ common ML/NLP terms to preserve in English
+   - Stored as frozenset for immutability and O(1) lookup
+   - Includes: Transformer, Attention, LSTM, Optimizer, etc.
+
+3. **BilingualProcessor Design**: Minimal processing, trust LLM
+   - EN mode: Pass through unchanged (early return)
+   - ZH_EN mode: Hook for future validation, currently trusts LLM output
+   - Preserves all DialogueScript metadata (speakers, section refs, persona)
+
+4. **Test Coverage**: 7 tests covering:
+   - Prompt modifier generation (ZH_EN and EN modes)
+   - Technical term preservation
+   - EN mode pass-through
+   - Speaker order and metadata preservation
+   - Edge case: lowercase technical terms
+
+**Pattern Reuse:**
+- Dataclass construction follows generator.py pattern
+- Used LanguageMode enum from models.py
+- Followed type hint conventions (Python 3.10+ with typing.Final)
+
+**Integration Readiness:**
+- Ready for dialogue generator to append bilingual_modifier to system prompts
+- BilingualProcessor can be chained after DialogueScript generation
+- No breaking changes to existing models
+
+**Verification:**
+- All 7 tests pass in 0.04s
+- QA scenario validates prompt modifier contains Chinese and English references
+- Evidence saved to .sisyphus/evidence/task-12-bilingual-prompt.txt

@@ -25,3 +25,20 @@
 
 ### Issues Encountered
 - **LSP diagnostics unavailable**: basedpyright not installed; proceeded with pytest for verification.
+
+## Task 12: Bilingual Code-Switching Issues
+
+**Trade-offs:**
+1. **Trust LLM vs. Validation**: Current implementation trusts LLM to preserve English technical terms
+   - Pro: Simpler code, leverages LLM capabilities
+   - Con: No validation if LLM mistranslates terms (e.g., "Transformer" → "变换器")
+   - Mitigation: _preserve_technical_terms() method exists as hook for future regex-based validation
+
+2. **Limited Language Support**: Only Chinese+English bilingual mode implemented
+   - Other language pairs (Japanese+English, Korean+English) would need separate implementations
+   - Current LanguageMode.ZH_EN is hardcoded; future expansion would require new enum values
+
+**Potential Enhancements:**
+- Add regex-based validation in _preserve_technical_terms() to enforce whitelist
+- Detect TTS boundary issues (e.g., add pauses at language switches)
+- Support custom technical term whitelists per domain (biology, physics, etc.)

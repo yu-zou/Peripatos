@@ -1301,7 +1301,7 @@ Max Concurrent: 6 (Wave 2)
   - Files: `peripatos/voice/renderer.py, tests/test_renderer.py`
   - Pre-commit: `pytest tests/test_renderer.py`
 
-- [ ] 12. Bilingual Code-Switching (Chinese + English)
+- [x] 12. Bilingual Code-Switching (Chinese + English)
 
   **What to do**:
   - Implement `peripatos/brain/bilingual.py`:
