@@ -260,3 +260,61 @@
 - **ffprobe validation:** Use `-print_format json -show_chapters` to extract chapter metadata
 - **Chapter verification:** Check timebase, start/end times, and title fields in JSON output
 
+## Task 14: CLI Orchestrator
+
+**Date:** 2026-02-19
+
+### argparse CLI Structure
+- **Subcommand pattern**: `peripatos generate <source>` using `add_subparsers(dest="command")`
+- **Version flag**: `add_argument('--version', action='version', version=f'%(prog)s {__version__}')`
+- **Choices validation**: Use `choices=sorted(VALID_X)` for enum-backed options
+- **Optional flags**: `action="store_true"` for boolean flags like `--verbose`
+- **Error handling**: `parser.error()` for custom validation failures
+
+### Pipeline Orchestration Approach
+- **Modular stages**: Separate function for each pipeline step (resolve, parse, normalize, generate, render, mix)
+- **Error propagation**: Each stage returns `Result | int` where int = error code
+- **isinstance checks**: `if isinstance(result, int): return result` for early error returns
+- **Progress indicators**: Print user-friendly messages with emojis (📄, 🧠, 🔊, 🎚️, ✅)
+- **Output directory creation**: `Path.mkdir(parents=True, exist_ok=True)` before pipeline starts
+
+### Bilingual Integration Pattern
+- **Custom DialogueGenerator subclass**: Override `_build_system_prompt()` to inject bilingual modifier
+- **Prompt modifier injection**: `get_bilingual_prompt_modifier(language_mode)` returns string to append
+- **Post-processing**: Apply `BilingualProcessor.process()` after generation for ZH_EN mode
+- **Clean separation**: Generator focuses on LLM, BilingualProcessor handles output validation
+
+### Error Handling Best Practices
+- **User-friendly messages**: Never show stack traces unless `--verbose` flag enabled
+- **Specific exceptions**: Catch FetchError, ParsingError, GenerationError, MixerError separately
+- **_handle_error helper**: Centralized error formatting with optional traceback printing
+- **parser.error() for validation**: Use argparse's built-in error system for input validation
+- **Return codes**: 0 = success, 1 = failure (standard Unix convention)
+
+### Chapter Generation from Sections
+- **Cumulative time tracking**: Iterate through turns, sum durations + silence
+- **Section boundaries**: Map turn.section_ref to section.title, track start/end times
+- **ChapterMarker creation**: Build from aggregated time windows per section
+- **Silence accounting**: Add `mixer.silence_between_segments_ms` between turns
+
+### Config CLI Overrides
+- **Build overrides dict**: Extract non-None CLI args into dict
+- **Merge with load_config**: Pass `cli_overrides=overrides` to config loader
+- **Validate after merge**: Call `config.validate_api_keys()` after all overrides applied
+- **Priority chain**: defaults → YAML → env vars → CLI overrides (highest)
+
+### Source Type Detection
+- **ArXiv ID regex**: Reuse `ArxivFetcher.ARXIV_ID_PATTERN` for consistency
+- **Path validation**: Check `path.exists()` and `.suffix.lower() == ".pdf"`
+- **Return None for invalid**: Allows `parser.error()` to handle custom message
+
+### Output Filename Generation
+- **Pattern**: `{base}_{persona}_{language}.mp3` where base = arxiv_id or pdf_stem
+- **ArXiv ID preservation**: Store in `paper.arxiv_id` after successful fetch
+- **Fallback to stem**: Use `paper.source_path.stem` if no ArXiv ID
+
+### Entry Point Pattern
+- **main(argv: list[str] | None)**: Allows testing with custom argv
+- **Return int**: 0 = success, 1 = failure
+- **if __name__ == '__main__'**: `sys.exit(main())` for CLI execution
+- **Verbose logging setup**: `logging.basicConfig(level=DEBUG if verbose else INFO)`

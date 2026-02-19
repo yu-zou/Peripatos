@@ -1476,7 +1476,7 @@ Max Concurrent: 6 (Wave 2)
   - Files: `peripatos/voice/mixer.py, tests/test_mixer.py`
   - Pre-commit: `pytest tests/test_mixer.py`
 
-- [ ] 14. CLI Orchestrator (argparse + End-to-End Pipeline Wiring)
+- [x] 14. CLI Orchestrator (argparse + End-to-End Pipeline Wiring)
 
   **What to do**:
   - Implement `peripatos/cli.py`:
