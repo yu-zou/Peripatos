@@ -10,7 +10,7 @@ from typing import cast
 # Valid configuration values
 VALID_PERSONAS = {"skeptic", "enthusiast", "tutor", "peer"}
 VALID_LANGUAGES = {"en", "zh-en"}
-VALID_LLM_PROVIDERS = {"openai", "anthropic"}
+VALID_LLM_PROVIDERS = {"openai", "anthropic", "openrouter", "gemini"}
 VALID_TTS_ENGINES = {"openai", "edge-tts"}
 
 # Default configuration
@@ -114,7 +114,7 @@ class PeripatosConfig:
     """Configuration for Peripatos application.
     
     Attributes:
-        llm_provider: LLM provider (openai or anthropic).
+        llm_provider: LLM provider (openai, anthropic, openrouter, or gemini).
         llm_model: Model name for the LLM.
         tts_engine: TTS engine (openai or edge-tts).
         tts_voice_host: Voice name for host persona.
@@ -124,6 +124,8 @@ class PeripatosConfig:
         output_dir: Directory for output files.
         openai_api_key: OpenAI API key from environment.
         anthropic_api_key: Anthropic API key from environment.
+        openrouter_api_key: OpenRouter API key from environment.
+        gemini_api_key: Gemini API key from environment.
     """
     
     llm_provider: str
@@ -136,6 +138,8 @@ class PeripatosConfig:
     output_dir: str
     openai_api_key: str | None = field(default=None)
     anthropic_api_key: str | None = field(default=None)
+    openrouter_api_key: str | None = field(default=None)
+    gemini_api_key: str | None = field(default=None)
     
     def __post_init__(self):
         """Validate configuration after initialization."""
@@ -187,6 +191,20 @@ class PeripatosConfig:
         if self.llm_provider == "anthropic" and not self.anthropic_api_key:
             message = (
                 "ANTHROPIC_API_KEY environment variable is not set. "
+                + "Please add it to your .env file or set it in your environment."
+            )
+            raise ValueError(message)
+        
+        if self.llm_provider == "openrouter" and not self.openrouter_api_key:
+            message = (
+                "OPENROUTER_API_KEY environment variable is not set. "
+                + "Please add it to your .env file or set it in your environment."
+            )
+            raise ValueError(message)
+        
+        if self.llm_provider == "gemini" and not self.gemini_api_key:
+            message = (
+                "GEMINI_API_KEY environment variable is not set. "
                 + "Please add it to your .env file or set it in your environment."
             )
             raise ValueError(message)
@@ -256,6 +274,8 @@ def load_config(cli_overrides: Mapping[str, object] | None = None) -> PeripatosC
         "output_dir": _get_str(merged, "output_dir", cast(str, DEFAULT_CONFIG["output_dir"])),
         "openai_api_key": os.getenv("OPENAI_API_KEY"),
         "anthropic_api_key": os.getenv("ANTHROPIC_API_KEY"),
+        "openrouter_api_key": os.getenv("OPENROUTER_API_KEY"),
+        "gemini_api_key": os.getenv("GEMINI_API_KEY"),
     }
     
     # Apply CLI overrides
@@ -276,4 +296,6 @@ def load_config(cli_overrides: Mapping[str, object] | None = None) -> PeripatosC
         output_dir=cast(str, config_dict["output_dir"]),
         openai_api_key=cast(str | None, config_dict["openai_api_key"]),
         anthropic_api_key=cast(str | None, config_dict["anthropic_api_key"]),
+        openrouter_api_key=cast(str | None, config_dict["openrouter_api_key"]),
+        gemini_api_key=cast(str | None, config_dict["gemini_api_key"]),
     )

@@ -1,0 +1,17 @@
+QA SCENARIO 3: API Key Fields in PeripatosConfig
+================================================
+
+Command:
+python -c "from peripatos.config import PeripatosConfig; print(hasattr(PeripatosConfig, '__dataclass_fields__') and 'openrouter_api_key' in PeripatosConfig.__dataclass_fields__ and 'gemini_api_key' in PeripatosConfig.__dataclass_fields__)"
+
+Output:
+True
+
+Status: PASS ✓
+
+Verification:
+- PeripatosConfig has __dataclass_fields__ attribute
+- openrouter_api_key field is present
+- gemini_api_key field is present
+- Both fields added at correct lines (after line 138 in config.py)
+- Fields follow pattern: str | None = field(default=None)

@@ -56,6 +56,8 @@ class LLMProvider(Enum):
 
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
+    OPENROUTER = "openrouter"
+    GEMINI = "gemini"
 
 
 # Data Classes

@@ -1,0 +1,15 @@
+QA SCENARIO 1: LLMProvider Enum Values
+========================================
+
+Command:
+python -c "from peripatos.models import LLMProvider; print(sorted(p.value for p in LLMProvider))"
+
+Output:
+['anthropic', 'gemini', 'openai', 'openrouter']
+
+Status: PASS ✓
+
+Verification:
+- LLMProvider enum has 4 values
+- All expected providers present: anthropic, gemini, openai, openrouter
+- Sorted alphabetically for clarity

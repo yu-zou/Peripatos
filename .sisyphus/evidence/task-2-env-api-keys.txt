@@ -1,0 +1,24 @@
+QA SCENARIO 1: New API Keys Present
+=====================================
+
+Verification: grep -c "API_KEY" .env.example
+Expected: 4 (OPENAI_API_KEY, ANTHROPIC_API_KEY, OPENROUTER_API_KEY, GEMINI_API_KEY)
+Result: 4 ✓
+
+Detailed check:
+- OPENAI_API_KEY=your-openai-api-key-here (line 7) ✓
+- ANTHROPIC_API_KEY=your-anthropic-api-key-here (line 12) ✓
+- OPENROUTER_API_KEY=your-openrouter-api-key-here (line 18) ✓
+- GEMINI_API_KEY=your-gemini-api-key-here (line 24) ✓
+
+OpenRouter documentation check:
+- Explanation present: "Unified API gateway for multiple LLM providers" ✓
+- URL included: https://openrouter.ai/keys ✓
+- Format note: "provider/model format, e.g., openai/gpt-4o" ✓
+
+Gemini documentation check:
+- Explanation present: "Google's Gemini AI models for dialogue generation" ✓
+- URL included: https://ai.google.dev ✓
+- Example models: "gemini-2.0-flash (fast), gemini-1.5-pro (advanced reasoning)" ✓
+
+PASS: All 4 API_KEY entries present with appropriate documentation

@@ -1,0 +1,15 @@
+QA SCENARIO 2: VALID_LLM_PROVIDERS Set
+======================================
+
+Command:
+python -c "from peripatos.config import VALID_LLM_PROVIDERS; print(sorted(VALID_LLM_PROVIDERS))"
+
+Output:
+['anthropic', 'gemini', 'openai', 'openrouter']
+
+Status: PASS ✓
+
+Verification:
+- VALID_LLM_PROVIDERS set contains 4 providers
+- All expected strings present: anthropic, gemini, openai, openrouter
+- Set is correctly updated in config.py line 13
