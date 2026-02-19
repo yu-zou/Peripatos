@@ -52,7 +52,7 @@ def mock_openai_key(monkeypatch) -> Generator[None, None, None]:
     Yields:
         None (fixture handles env var management)
     """
-    test_key = "test-key-sk-proj-abc123def456"
+    test_key = "test-openai-key-12345"
     monkeypatch.setenv("OPENAI_API_KEY", test_key)
     yield
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
