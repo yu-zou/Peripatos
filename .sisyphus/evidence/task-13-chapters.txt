@@ -1,0 +1,37 @@
+{
+    "chapters": [
+        {
+            "id": 0,
+            "time_base": "1/1000",
+            "start": 0,
+            "start_time": "0.000000",
+            "end": 200,
+            "end_time": "0.200000",
+            "tags": {
+                "title": "Introduction"
+            }
+        },
+        {
+            "id": 1,
+            "time_base": "1/1000",
+            "start": 500,
+            "start_time": "0.500000",
+            "end": 700,
+            "end_time": "0.700000",
+            "tags": {
+                "title": "Discussion"
+            }
+        },
+        {
+            "id": 2,
+            "time_base": "1/1000",
+            "start": 1000,
+            "start_time": "1.000000",
+            "end": 1200,
+            "end_time": "1.200000",
+            "tags": {
+                "title": "Conclusion"
+            }
+        }
+    ]
+}
