@@ -21,3 +21,7 @@
 - Could add support for configurable model (tts-1 vs tts-1-hd) via config.py
 - Could add audio format options (mp3, opus, aac, flac)
 
+## Task 8: Brain Dialogue Generator (Feb 19, 2026)
+
+### Issues Encountered
+- **LSP diagnostics unavailable**: basedpyright not installed; proceeded with pytest for verification.

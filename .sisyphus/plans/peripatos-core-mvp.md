@@ -902,7 +902,7 @@ Max Concurrent: 6 (Wave 2)
   - Files: `peripatos/eye/math_normalize.py, tests/test_math.py`
   - Pre-commit: `pytest tests/test_math.py`
 
-- [ ] 8. The "Brain" — Dialogue Script Generator (LLM Prompts + 4 Personas)
+- [x] 8. The "Brain" — Dialogue Script Generator (LLM Prompts + 4 Personas)
 
   **What to do**:
   - Implement `peripatos/brain/personas.py`:

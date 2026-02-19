@@ -112,3 +112,13 @@
 - Not perfect transcription, but conceptually clear
 - Example: `$\sum_{i=1}^{N} x_i$` → "the sum of i=1 to the power of N x i"
 
+## Task 8: Brain Dialogue Generator (Feb 19, 2026)
+
+### Implementation Patterns
+- **Lazy LLM client initialization** via importlib to avoid hard dependency imports at module load.
+- **Retry with exponential backoff** on rate-limit errors (1s, 2s, 4s) for both OpenAI and Anthropic.
+- **Persona prompts** kept distinct for HOST and EXPERT roles to satisfy archetype requirements.
+
+### Testing Strategy
+- Mocked OpenAI/Anthropic clients through importlib patching to verify message construction.
+- JSON parsing tests ensure DialogueTurn mapping and error handling for invalid responses.
