@@ -1220,7 +1220,7 @@ Max Concurrent: 6 (Wave 2)
 
 ### Wave 3 — Integration & Mixing
 
-- [ ] 11. Audio Renderer Orchestrator (TTS Engine Selection + Smart Chunking)
+- [x] 11. Audio Renderer Orchestrator (TTS Engine Selection + Smart Chunking)
 
   **What to do**:
   - Implement `peripatos/voice/renderer.py`:

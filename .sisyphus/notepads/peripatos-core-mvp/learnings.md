@@ -166,3 +166,33 @@
 - All 7 tests pass in 0.04s
 - QA scenario validates prompt modifier contains Chinese and English references
 - Evidence saved to .sisyphus/evidence/task-12-bilingual-prompt.txt
+
+## Task 11: Audio Renderer Orchestrator
+
+### Implementation Summary
+- Created `AudioRenderer` class in `peripatos/voice/renderer.py`
+- Implements TTS engine selection with OpenAI-first, edge-tts fallback strategy
+- Routes voices based on speaker roles (HOST/EXPERT)
+- Provides `add_silence_padding()` method for 300ms silence between turns
+- Includes progress callback support for CLI integration
+
+### Key Design Decisions
+1. **Engine Selection Logic**: Checks `is_available()` on OpenAI engine first, falls back to edge-tts with warning log
+2. **Separation of Concerns**: `render()` produces AudioSegment list, `add_silence_padding()` handles merging with silence
+3. **Duration Calculation**: Uses pydub to calculate exact duration, with fallback estimation if ffprobe unavailable
+4. **Voice Mapping**: Simple switch based on `SpeakerRole.HOST` vs `SpeakerRole.EXPERT`
+
+### Testing Approach
+- 7 tests covering all required scenarios (5+ requirement met)
+- Tests verify engine selection, fallback, voice routing, silence padding, segment production, edge-tts mapping, and progress callbacks
+- Extensive mocking of pydub and TTS engines to avoid external dependencies
+
+### Technical Notes
+- pydub requires ffmpeg/ffprobe for audio processing (optional in tests via mocking)
+- edge-tts engine uses async internally but exposes `synthesize_sync()` wrapper
+- OpenAI engine handles chunking internally for long texts
+
+### QA Evidence
+- Verified edge-tts fallback works when OPENAI_API_KEY is not set
+- Evidence saved to `.sisyphus/evidence/task-11-fallback.txt`
+- All 7 tests pass successfully
