@@ -457,3 +457,10 @@ edge_tts.Communicate.return_value = mock_communicate
 - edge-tts streams need async generator pattern, not side_effect list
 - ffmpeg subprocess mock must return `Mock(returncode=0)`
 
+
+## Task 17: Documentation (2026-02-19)
+
+### README Structure
+- Sections: Quick Start, Configuration, Persona Modes, Bilingual Mode, CLI Reference, Requirements, Development, License, Acknowledgments
+- Line count: 107
+- Key highlights: Included all 4 persona archetypes, bilingual zh-en explanation, and CLI help summary.

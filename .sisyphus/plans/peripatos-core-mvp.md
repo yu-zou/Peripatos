@@ -1760,7 +1760,7 @@ Max Concurrent: 6 (Wave 2)
   - Files: `tests/test_e2e.py`
   - Pre-commit: `pytest tests/test_e2e.py`
 
-- [ ] 17. Documentation (README.md + Usage Examples)
+- [x] 17. Documentation (README.md + Usage Examples)
 
   **What to do**:
   - Write `README.md` with:
