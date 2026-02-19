@@ -70,14 +70,14 @@ Build a pip-installable Python CLI tool that takes an ArXiv paper ID or local PD
 - pytest test suite
 
 ### Definition of Done
-- [ ] `pip install -e .` succeeds from repo root
-- [ ] `peripatos generate <arxiv_id>` produces a valid MP3 file
-- [ ] `peripatos generate <local_pdf>` produces a valid MP3 file
-- [ ] MP3 has chapter markers readable by ffprobe
-- [ ] All 4 persona modes produce distinctly different dialogue styles
-- [ ] `--language zh-en` produces Chinese+English code-switched output
-- [ ] `pytest` passes with >80% coverage on core logic
-- [ ] MIT LICENSE file present at repo root
+- [x] `pip install -e .` succeeds from repo root
+- [x] `peripatos generate <arxiv_id>` produces a valid MP3 file
+- [x] `peripatos generate <local_pdf>` produces a valid MP3 file
+- [x] MP3 has chapter markers readable by ffprobe
+- [x] All 4 persona modes produce distinctly different dialogue styles
+- [x] `--language zh-en` produces Chinese+English code-switched output
+- [x] `pytest` passes with >80% coverage on core logic
+- [x] MIT LICENSE file present at repo root
 
 ### Must Have
 - Working end-to-end pipeline (PDF → audio) for both ArXiv and local PDF inputs
@@ -1857,7 +1857,7 @@ Max Concurrent: 6 (Wave 2)
   Start from clean state (`pip install -e .`). Execute EVERY QA scenario from EVERY task — follow exact steps, capture evidence. Test cross-task integration: ArXiv ID → full MP3 with chapters and correct persona. Test edge cases: invalid ArXiv ID, missing API key, corrupted PDF, empty config. Save to `.sisyphus/evidence/final-qa/`.
   Output: `Scenarios [N/N pass] | Integration [N/N] | Edge Cases [N tested] | VERDICT`
 
-- [ ] F4. **Scope Fidelity Check** — `deep`
+- [x] F4. **Scope Fidelity Check** — `deep`
   For each task: read "What to do", read actual diff (git log/diff). Verify 1:1 — everything in spec was built (no missing), nothing beyond spec was built (no creep). Check "Must NOT do" compliance. Detect cross-task contamination: Task N touching Task M's files. Flag unaccounted changes. Verify NO marker-pdf, NO scholarly, NO ElevenLabs, NO web server code exists anywhere.
   Output: `Tasks [N/N compliant] | Contamination [CLEAN/N issues] | Unaccounted [CLEAN/N files] | VERDICT`
 
@@ -1902,9 +1902,9 @@ pytest --cov=peripatos --cov-report=term  # Expected: >80% coverage
 ```
 
 ### Final Checklist
-- [ ] All "Must Have" present
-- [ ] All "Must NOT Have" absent
-- [ ] All tests pass
-- [ ] MIT LICENSE present
-- [ ] No hardcoded API keys in any file
-- [ ] Clean `pip install -e .` from fresh venv
+- [x] All "Must Have" present
+- [x] All "Must NOT Have" absent
+- [x] All tests pass
+- [x] MIT LICENSE present
+- [x] No hardcoded API keys in any file
+- [x] Clean `pip install -e .` from fresh venv
