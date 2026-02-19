@@ -26,6 +26,18 @@
 ### Issues Encountered
 - **LSP diagnostics unavailable**: basedpyright not installed; proceeded with pytest for verification.
 
+## F4 Scope Fidelity Check (2026-02-19)
+
+### Scope deviations flagged
+- Task 11: Mixed-language voice selection not implemented; renderer does not detect language per turn.
+- Task 13: Section-based silence padding (500ms between sections) not implemented; only one silence duration used.
+- Task 15: Added `mutagen` dependency without usage (violates "Do NOT add unnecessary dependencies").
+
+### Unaccounted changes (post-task)
+- tests/test_manual_qa.py added outside task specs.
+- tests/conftest.py updated for safe API key pattern (post Task 4).
+- .sisyphus/boulder.json and granite-docling-evaluation plan added (doc plan accepted, boulder internal).
+
 ## Task 12: Bilingual Code-Switching Issues
 
 **Trade-offs:**

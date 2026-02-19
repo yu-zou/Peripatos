@@ -27,7 +27,6 @@ dependencies = [
     "anthropic>=0.7.0",
     "python-dotenv>=1.0.0",
     "pyyaml>=6.0",
-    "mutagen>=1.46.0",
 ]
 
 [tool.setuptools.packages.find]
