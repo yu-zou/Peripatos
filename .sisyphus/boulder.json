@@ -1,6 +1,29 @@
 {
-  "active_plan": "/Users/yzou/Peripatos/.sisyphus/plans/peripatos-core-mvp.md",
-  "started_at": "2026-02-18T21:29:22.561Z",
-  "session_ids": ["ses_38eaf1e9effeZwDqnibGbGNe2A"],
-  "plan_name": "peripatos-core-mvp"
+  "active_plan": null,
+  "started_at": null,
+  "session_ids": [],
+  "plan_name": null,
+  "completed_plans": [
+    {
+      "plan_name": "llm-provider-extension",
+      "completed_at": "2026-02-19T22:14:36.547Z",
+      "session_ids": ["ses_38eaf1e9effeZwDqnibGbGNe2A"],
+      "final_status": "complete",
+      "tests_passed": "173/173"
+    },
+    {
+      "plan_name": "readme-tts-docs",
+      "completed_at": "2026-02-19T22:40:00.000Z",
+      "session_ids": ["ses_38eaf1e9effeZwDqnibGbGNe2A"],
+      "final_status": "complete",
+      "tasks_completed": "5/5",
+      "tests_passed": "173/173",
+      "final_verification": {
+        "F1_plan_compliance": "APPROVE (11/11 Must Have, 8/8 Must NOT Have)",
+        "F2_code_quality": "APPROVE (173/173 tests, 0 markdown issues, 0 AI slop)",
+        "F3_manual_qa": "APPROVE (21/21 voices verified, flow OK, YAML OK)",
+        "F4_scope_fidelity": "APPROVE (0 deletions, CLEAN scope)"
+      }
+    }
+  ]
 }
