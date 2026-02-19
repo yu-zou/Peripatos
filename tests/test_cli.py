@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import cast
 
 import pytest
 
@@ -32,21 +33,31 @@ def test_argparse_all_arguments(tmp_path: Path) -> None:
         ]
     )
 
-    assert args.command == "generate"
-    assert args.source == "2408.09869"
-    assert args.persona == "tutor"
-    assert args.language == "zh-en"
-    assert args.tts_engine == "edge-tts"
-    assert args.output_dir == str(output_dir)
-    assert args.llm_provider == "anthropic"
-    assert args.llm_model == "claude-3-opus"
-    assert args.verbose is True
+    command = cast(str, args.command)
+    source = cast(str, args.source)
+    persona = cast(str, args.persona)
+    language = cast(str, args.language)
+    tts_engine = cast(str, args.tts_engine)
+    output_dir_value = cast(str, args.output_dir)
+    llm_provider = cast(str, args.llm_provider)
+    llm_model = cast(str, args.llm_model)
+    verbose = cast(bool, args.verbose)
+
+    assert command == "generate"
+    assert source == "2408.09869"
+    assert persona == "tutor"
+    assert language == "zh-en"
+    assert tts_engine == "edge-tts"
+    assert output_dir_value == str(output_dir)
+    assert llm_provider == "anthropic"
+    assert llm_model == "claude-3-opus"
+    assert verbose is True
 
 
 def test_version_flag(capsys: pytest.CaptureFixture[str]) -> None:
     parser = create_parser()
     with pytest.raises(SystemExit):
-        parser.parse_args(["--version"])
+        _ = parser.parse_args(["--version"])
     captured = capsys.readouterr()
     assert __version__ in captured.out
 
@@ -54,7 +65,7 @@ def test_version_flag(capsys: pytest.CaptureFixture[str]) -> None:
 def test_help_flag(capsys: pytest.CaptureFixture[str]) -> None:
     parser = create_parser()
     with pytest.raises(SystemExit):
-        parser.parse_args(["--help"])
+        _ = parser.parse_args(["--help"])
     captured = capsys.readouterr()
     assert "usage" in captured.out.lower()
     assert "peripatos generate" in captured.out
@@ -63,14 +74,17 @@ def test_help_flag(capsys: pytest.CaptureFixture[str]) -> None:
 def test_invalid_source_error(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
     monkeypatch.setattr(sys, "argv", ["peripatos", "generate", "not-a-source"])
     with pytest.raises(SystemExit):
-        main()
+        _ = main()
     captured = capsys.readouterr()
     assert "Invalid source" in captured.err
 
 
 def test_detect_source_type(tmp_path: Path) -> None:
     pdf_path = tmp_path / "paper.pdf"
-    pdf_path.write_bytes(b"%PDF-1.4 test")
+    _ = pdf_path.write_bytes(b"%PDF-1.4 test")
 
-    assert detect_source_type("2408.09869") == "arxiv"
-    assert detect_source_type(str(pdf_path)) == "pdf"
+    arxiv_type = detect_source_type("2408.09869")
+    pdf_type = detect_source_type(str(pdf_path))
+
+    assert arxiv_type == "arxiv"
+    assert pdf_type == "pdf"

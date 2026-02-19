@@ -1596,7 +1596,7 @@ Max Concurrent: 6 (Wave 2)
 
 ### Wave 4 — Packaging & Final Verification
 
-- [ ] 15. Package Distribution (pip install, Entry Points)
+- [x] 15. Package Distribution (pip install, Entry Points)
 
   **What to do**:
   - Finalize `pyproject.toml`:

@@ -20,13 +20,14 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-    "docling",
-    "pydub",
-    "edge-tts",
-    "openai",
-    "anthropic",
-    "python-dotenv",
-    "pyyaml",
+    "docling>=1.0.0",
+    "pydub>=0.25.1",
+    "edge-tts>=6.1.0",
+    "openai>=1.0.0",
+    "anthropic>=0.7.0",
+    "python-dotenv>=1.0.0",
+    "pyyaml>=6.0",
+    "mutagen>=1.46.0",
 ]
 
 [tool.setuptools.packages.find]
@@ -35,13 +36,17 @@ exclude = ["design_guideline*", "tests*"]
 
 [project.optional-dependencies]
 dev = [
-    "pytest",
-    "pytest-cov",
-    "pytest-asyncio",
+    "pytest>=8.0",
+    "pytest-cov>=6.0",
+    "pytest-asyncio>=0.25",
 ]
 
 [project.scripts]
 peripatos = "peripatos.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/Peripatos/peripatos"
+Repository = "https://github.com/Peripatos/peripatos"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

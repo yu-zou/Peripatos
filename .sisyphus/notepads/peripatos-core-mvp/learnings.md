@@ -318,3 +318,49 @@
 - **Return int**: 0 = success, 1 = failure
 - **if __name__ == '__main__'**: `sys.exit(main())` for CLI execution
 - **Verbose logging setup**: `logging.basicConfig(level=DEBUG if verbose else INFO)`
+- **CLI progress feedback**: Use emoji stage prints for fetch/parse/normalize/generate/render/mix steps.
+- **Error output channel**: Route user-facing errors to stderr via `_handle_error` while keeping verbose tracebacks optional.
+
+## Task 15: Package Distribution (pip install, Entry Points)
+
+### Packaging Configuration (PEP 621)
+- **Version constraints**: Use `>=x.y.z` for minimum versions, avoid exact pins
+- **Mutagen**: Required for MP3 chapter metadata - was missing from initial dependencies
+- **Build system**: setuptools + wheel recommended for Python packages
+- **Package discovery**: Use `[tool.setuptools.packages.find]` with include/exclude patterns
+
+### Dependency Organization
+- **Runtime deps**: All 8 core dependencies (docling, pydub, edge-tts, openai, anthropic, python-dotenv, pyyaml, mutagen)
+- **Dev deps**: pytest>=8.0, pytest-cov>=6.0, pytest-asyncio>=0.25
+- **Optional deps**: Use `[project.optional-dependencies]` table with named groups (e.g., `dev`)
+- **Installation**: `pip install -e .` for runtime, `pip install -e ".[dev]"` for dev
+
+### Classifiers and Metadata
+- **Development Status**: Use standard PyPI classifier (e.g., "3 - Alpha")
+- **Python versions**: Specify each supported version explicitly (3.10, 3.11, 3.12)
+- **Topic classifier**: "Topic :: Multimedia :: Sound/Audio :: Speech" + "Scientific/Engineering"
+- **Project URLs**: Homepage and Repository as GitHub links
+
+### Entry Points
+- **Format**: `[project.scripts] command-name = "package.module:function"`
+- **Entry point**: `peripatos = "peripatos.cli:main"`
+- **Function signature**: `def main(argv: list[str] | None = None) -> int`
+- **Return values**: 0 for success, 1 for failure (Unix convention)
+- **Test in fresh venv**: Always verify entry point works before considering complete
+
+### .env.example Documentation
+- **Purpose**: Template for users to copy and populate with API keys
+- **Structure**: Comments explaining each variable, source URLs, required/optional status
+- **Keys documented**: OPENAI_API_KEY, ANTHROPIC_API_KEY, ENVIRONMENT, OUTPUT_DIR, LOG_LEVEL
+- **Link to service pages**: Include URLs for obtaining API keys (openai.com, anthropic.com)
+
+### Fresh Venv Testing
+- **Test scenario**: Create isolated environment → install package → verify functionality
+- **Verification checklist**:
+  1. Installation succeeds without dependency conflicts
+  2. Entry point `peripatos` command is available in bin/
+  3. `peripatos --version` outputs correct version (0.1.0)
+  4. `peripatos --help` shows all subcommands (generate)
+  5. Dev dependencies install successfully: `pip install -e ".[dev]"`
+  6. pytest is available and functional
+- **Test result**: All checks passed in clean environment

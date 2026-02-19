@@ -48,6 +48,9 @@ class _DialogueGeneratorWithModifier(DialogueGenerator):
 
     @override
     def _build_system_prompt(self, prompts: dict[str, str]) -> str:
+        return self._compose_system_prompt(prompts)
+
+    def _compose_system_prompt(self, prompts: dict[str, str]) -> str:
         base = super()._build_system_prompt(prompts)
         if self._prompt_modifier:
             return f"{base} {self._prompt_modifier}"
