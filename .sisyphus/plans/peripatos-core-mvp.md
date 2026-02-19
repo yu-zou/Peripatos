@@ -1381,7 +1381,7 @@ Max Concurrent: 6 (Wave 2)
   - Files: `peripatos/brain/bilingual.py, tests/test_bilingual.py`
   - Pre-commit: `pytest tests/test_bilingual.py`
 
-- [ ] 13. The "Mixer" — Audio Stitching + Chapter Markers (ffmpeg)
+- [x] 13. The "Mixer" — Audio Stitching + Chapter Markers (ffmpeg)
 
   **What to do**:
   - Implement `peripatos/voice/mixer.py`:

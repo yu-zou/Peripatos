@@ -196,3 +196,67 @@
 - Verified edge-tts fallback works when OPENAI_API_KEY is not set
 - Evidence saved to `.sisyphus/evidence/task-11-fallback.txt`
 - All 7 tests pass successfully
+
+## Task 13: Audio Mixer with Chapter Markers
+
+**Date:** 2026-02-19
+
+### ffmpeg Chapter Metadata Format
+- **FFMETADATA1 format structure:**
+  - Header: `;FFMETADATA1` (semicolon prefix is critical)
+  - Chapter sections: `[CHAPTER]` blocks with `TIMEBASE=1/1000`, `START`, `END`, `title` fields
+  - Each chapter needs separate `[CHAPTER]` section
+  - Millisecond timebase (1/1000) works well for audio precision
+  - ffmpeg command: `ffmpeg -i input.mp3 -i metadata.txt -map_metadata 1 -codec copy output.mp3`
+  - `-map_metadata 1` maps metadata from second input (index 1)
+  - `-codec copy` preserves quality without re-encoding
+
+### pydub Audio Concatenation Patterns
+- **Loading audio from bytes:** `PydubAudioSegment.from_mp3(BytesIO(segment.audio_bytes))`
+- **Creating silence:** `PydubAudioSegment.silent(duration=300)` (milliseconds)
+- **Concatenation operator:** `audio1 + audio2` (returns new segment)
+- **Duration calculation:** `len(audio)` returns milliseconds
+- **Export pattern:** `audio.export(output_path, format='mp3')`
+- **Chaining concatenations:** Silence and audio can be chained: `combined + silence + audio`
+
+### Chapter Timing Calculation Approach
+- **Track cumulative time:** Maintain running total of milliseconds as segments are concatenated
+- **Account for silence:** Add silence duration to cumulative time between segments
+- **Intro/outro silence:** Configurable padding at beginning and end of final audio
+- **Chapter boundaries:** Align with section transitions for natural navigation points
+
+### TDD Approach for Complex Integration
+- **Write comprehensive mocks first:** Mock all external dependencies (pydub, subprocess, shutil)
+- **Test edge cases early:** Empty segments, missing ffmpeg, invalid metadata
+- **Verify format correctness:** Assert metadata file structure matches ffmpeg expectations
+- **Mock operator overloading:** Need `__add__` support on Mock objects for concatenation tests
+- **7 tests for thorough coverage:** Concatenation, metadata format, error handling, configuration
+
+### Error Handling Pattern
+- **Custom exception class:** `MixerError(Exception)` follows existing pattern from TTSError
+- **Early validation:** Check inputs (empty segments) before expensive operations
+- **Dependency checking:** Use `shutil.which('ffmpeg')` to detect missing tools
+- **Helpful error messages:** Include installation instructions and visit URLs
+- **Exception wrapping:** Wrap generic exceptions in MixerError with context
+
+### Temporary File Management
+- **Use tempfile.mkstemp():** Creates unique temp files with file descriptors
+- **Same directory as output:** Create temp files in `output_path.parent` to avoid cross-device issues
+- **Close file descriptors:** Always `os.close(temp_fd)` after mkstemp
+- **Cleanup after success:** `unlink()` temp files after successful ffmpeg injection
+- **Preserve on error:** Let exceptions propagate without cleanup for debugging
+
+### Subprocess Integration
+- **Use subprocess.run():** Modern API with `check=True`, `capture_output=True`, `text=True`
+- **Error handling:** Catch `CalledProcessError` and extract stderr for debugging
+- **Command building:** Build as list `['ffmpeg', '-i', str(path), ...]` not string
+- **Path conversion:** Use `str(path)` for Path objects in subprocess commands
+- **Debugging:** Log full command with `' '.join(cmd)` for reproducibility
+
+### Testing with Real ffmpeg
+- **QA scenario 1:** Create real audio with chapters, verify with ffprobe JSON output
+- **QA scenario 2:** Mock ffmpeg unavailability, verify helpful error message
+- **Evidence files:** Save QA results to `.sisyphus/evidence/` for verification
+- **ffprobe validation:** Use `-print_format json -show_chapters` to extract chapter metadata
+- **Chapter verification:** Check timebase, start/end times, and title fields in JSON output
+
