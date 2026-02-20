@@ -1,5 +1,6 @@
 import importlib
 import json
+import json_repair
 import re
 import time
 
@@ -219,10 +220,7 @@ class DialogueGenerator:
         if match:
             response_text = match.group(1).strip()
         
-        try:
-            payload = json.loads(response_text)
-        except json.JSONDecodeError as exc:
-            raise GenerationError("Invalid JSON response from LLM") from exc
+        payload = json_repair.loads(response_text)
 
         if not isinstance(payload, list):
             raise GenerationError("Invalid JSON response from LLM")

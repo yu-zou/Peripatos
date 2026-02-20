@@ -217,6 +217,51 @@ def test_parse_response_clean_json_still_works():
     assert turns[1].text == "Hi"
 
 
+def test_parse_response_repairs_unescaped_quotes():
+    generator = DialogueGenerator()
+    # Unescaped double quotes inside text value — the primary bug from E2E testing
+    response_text = '[{"speaker": "HOST", "text": "The paper is "about" topic modeling"}, {"speaker": "EXPERT", "text": "That is correct"}]'
+    turns = generator._parse_response(response_text, "test-section")
+    assert len(turns) == 2
+    assert turns[0].speaker == SpeakerRole.HOST
+    assert "about" in turns[0].text
+    assert turns[1].speaker == SpeakerRole.EXPERT
+
+
+def test_parse_response_repairs_control_characters():
+    generator = DialogueGenerator()
+    # Literal newlines inside JSON string values (not escaped as \\n)
+    response_text = '[{"speaker": "HOST", "text": "Line one.\nLine two."}, {"speaker": "EXPERT", "text": "Agreed"}]'
+    turns = generator._parse_response(response_text, "test-section")
+    assert len(turns) == 2
+    assert turns[0].speaker == SpeakerRole.HOST
+    assert "Line one" in turns[0].text
+    assert turns[1].speaker == SpeakerRole.EXPERT
+
+
+def test_parse_response_repairs_trailing_comma():
+    generator = DialogueGenerator()
+    # Trailing comma after last element — common LLM mistake
+    response_text = '[{"speaker": "HOST", "text": "Hello"}, {"speaker": "EXPERT", "text": "Hi"},]'
+    turns = generator._parse_response(response_text, "test-section")
+    assert len(turns) == 2
+    assert turns[0].speaker == SpeakerRole.HOST
+    assert turns[0].text == "Hello"
+    assert turns[1].speaker == SpeakerRole.EXPERT
+    assert turns[1].text == "Hi"
+
+
+def test_parse_response_repairs_fenced_malformed_json():
+    generator = DialogueGenerator()
+    # Combined: code fence wrapping + unescaped quotes inside
+    response_text = '```json\n[{"speaker": "HOST", "text": "The method is "novel" indeed"}, {"speaker": "EXPERT", "text": "Yes"}]\n```'
+    turns = generator._parse_response(response_text, "test-section")
+    assert len(turns) == 2
+    assert turns[0].speaker == SpeakerRole.HOST
+    assert "novel" in turns[0].text
+    assert turns[1].speaker == SpeakerRole.EXPERT
+
+
 @patch("peripatos.brain.generator.importlib.import_module")
 def test_long_section_chunking(mock_import_module):
     mock_client = Mock()
