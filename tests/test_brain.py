@@ -177,6 +177,46 @@ def test_invalid_json_handling(mock_import_module):
         generator.generate(_sample_paper(), _build_config("openai"))
 
 
+def test_parse_response_strips_json_code_fence():
+    generator = DialogueGenerator()
+    response_text = '```json\n[{"speaker": "HOST", "text": "Hello"}, {"speaker": "EXPERT", "text": "Hi"}]\n```'
+    
+    turns = generator._parse_response(response_text, "test-section")
+    
+    assert len(turns) == 2
+    assert turns[0].speaker == SpeakerRole.HOST
+    assert turns[0].text == "Hello"
+    assert turns[1].speaker == SpeakerRole.EXPERT
+    assert turns[1].text == "Hi"
+    assert all(turn.section_ref == "test-section" for turn in turns)
+
+
+def test_parse_response_strips_bare_code_fence():
+    generator = DialogueGenerator()
+    response_text = '```\n[{"speaker": "HOST", "text": "Hello"}, {"speaker": "EXPERT", "text": "Hi"}]\n```'
+    
+    turns = generator._parse_response(response_text, "test-section")
+    
+    assert len(turns) == 2
+    assert turns[0].speaker == SpeakerRole.HOST
+    assert turns[0].text == "Hello"
+    assert turns[1].speaker == SpeakerRole.EXPERT
+    assert turns[1].text == "Hi"
+
+
+def test_parse_response_clean_json_still_works():
+    generator = DialogueGenerator()
+    response_text = '[{"speaker": "HOST", "text": "Hello"}, {"speaker": "EXPERT", "text": "Hi"}]'
+    
+    turns = generator._parse_response(response_text, "test-section")
+    
+    assert len(turns) == 2
+    assert turns[0].speaker == SpeakerRole.HOST
+    assert turns[0].text == "Hello"
+    assert turns[1].speaker == SpeakerRole.EXPERT
+    assert turns[1].text == "Hi"
+
+
 @patch("peripatos.brain.generator.importlib.import_module")
 def test_long_section_chunking(mock_import_module):
     mock_client = Mock()

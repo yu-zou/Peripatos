@@ -1,5 +1,6 @@
 import importlib
 import json
+import re
 import time
 
 from peripatos.brain.personas import get_persona_prompts
@@ -212,6 +213,12 @@ class DialogueGenerator:
         raise GenerationError(f"Gemini API call failed: {last_error}")
 
     def _parse_response(self, response_text: str, section_ref: str) -> list[DialogueTurn]:
+        response_text = response_text.strip()
+        
+        match = re.search(r'```(?:\w*)\s*\n?(.*?)\n?\s*```', response_text, re.DOTALL)
+        if match:
+            response_text = match.group(1).strip()
+        
         try:
             payload = json.loads(response_text)
         except json.JSONDecodeError as exc:
