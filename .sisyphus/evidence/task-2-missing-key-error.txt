@@ -1,5 +1,0 @@
-Traceback (most recent call last):
-  File "<string>", line 1, in <module>
-  File "/Users/yzou/Peripatos/peripatos/config.py", line 171, in validate_api_keys
-    raise ValueError(
-ValueError: OPENAI_API_KEY environment variable is not set. Please add it to your .env file or set it in your environment.

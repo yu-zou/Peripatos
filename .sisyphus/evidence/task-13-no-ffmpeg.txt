@@ -1,2 +1,0 @@
-MixerError raised as expected:
-ffmpeg is not installed or not found in PATH. Please install ffmpeg to use audio mixing functionality. Visit https://ffmpeg.org/download.html for installation instructions.

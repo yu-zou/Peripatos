@@ -1,2 +1,0 @@
-183:                genai_module = importlib.import_module("google.genai")
-184:                types_module = importlib.import_module("google.genai.types")

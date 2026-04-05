@@ -1,5 +1,0 @@
-43:                response_text = self._call_llm(config, system_prompt, content)
-44:                turns.extend(self._parse_response(response_text, section.title))
-201:                return response.text
-213:    def _parse_response(self, response_text: str, section_ref: str) -> list[DialogueTurn]:
-215:            payload = json.loads(response_text)
