@@ -168,7 +168,8 @@ class TestCLIOverrides:
 class TestAPIKeyValidation:
     """Test that missing API key raises ValueError."""
 
-    def test_missing_openai_api_key_raises_error(self, temp_config_file):
+    @patch("dotenv.load_dotenv")
+    def test_missing_openai_api_key_raises_error(self, mock_load_dotenv, temp_config_file):
         """Test that missing OPENAI_API_KEY raises ValueError."""
         with patch("peripatos.config.get_config_path", return_value=temp_config_file):
             with patch.dict(os.environ, {}, clear=True):  # No API keys
@@ -211,7 +212,8 @@ class TestAPIKeyValidation:
                  # Should not raise
                  config.validate_api_keys()
 
-    def test_missing_openrouter_api_key_raises_error(self, temp_config_file, temp_config_dir):
+    @patch("dotenv.load_dotenv")
+    def test_missing_openrouter_api_key_raises_error(self, mock_load_dotenv, temp_config_file, temp_config_dir):
         """Test that missing OPENROUTER_API_KEY raises ValueError."""
         config_path = Path(temp_config_dir) / "config.yaml"
         config_data = {
