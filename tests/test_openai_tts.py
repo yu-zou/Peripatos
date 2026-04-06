@@ -58,6 +58,7 @@ class TestOpenAITTSEngine:
         for chunk in chunks:
             assert len(chunk) <= 4096
 
+    @patch.dict(os.environ, {}, clear=True)
     def test_is_available_returns_false_when_api_key_missing(self):
         """Test that is_available returns False when API key is missing."""
         # Test with None
@@ -148,6 +149,7 @@ class TestOpenAITTSEngine:
         assert b"audio-chunk-0" in result
         assert b"audio-chunk-1" in result
 
+    @patch.dict(os.environ, {}, clear=True)
     def test_synthesize_raises_error_when_api_key_missing(self):
         """Test that synthesize raises TTSError when API key is missing."""
         engine = OpenAITTSEngine(api_key=None)

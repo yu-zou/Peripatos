@@ -143,7 +143,7 @@ def test_json_parsing_creates_turns(mock_import_module):
     assert script.turns[1].speaker == SpeakerRole.EXPERT
 
 
-@patch("peripatos.brain.generator.time.sleep")
+@patch.object(__import__("peripatos.brain.generator", fromlist=["time"]).time, "sleep")
 @patch("peripatos.brain.generator.importlib.import_module")
 def test_api_failure_retry_raises_generation_error(mock_import_module, mock_sleep):
     mock_client = Mock()

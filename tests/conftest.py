@@ -2,14 +2,23 @@
 
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Generator
+from unittest.mock import Mock, MagicMock
+
+# CRITICAL: Mock pydub before any imports that depend on it
+# pydub has issues with Python 3.13 due to audioop removal
+# We mock it early to allow imports to succeed
+sys.modules['pydub'] = Mock()
+sys.modules['pydub.AudioSegment'] = Mock()
 
 import pytest
 import yaml
 
 from peripatos.config import PeripatosConfig
 from peripatos.models import (
+    AudioSegment,
     DialogueScript,
     DialogueTurn,
     LanguageMode,
@@ -242,3 +251,70 @@ def sample_dialogue_script(sample_pdf_path) -> DialogueScript:
         persona_type=PersonaType.TUTOR,
         language_mode=LanguageMode.EN,
     )
+
+
+@pytest.fixture
+def mock_audio_segment():
+    """Create a mock pydub AudioSegment with proper interface.
+    
+    Returns:
+        MagicMock object that behaves like pydub.AudioSegment
+    """
+    mock_audio = MagicMock()
+    mock_audio.__len__.return_value = 2000
+    mock_audio.__add__.return_value = mock_audio
+    mock_audio.export.return_value = None
+    mock_audio.frame_rate = 24000
+    mock_audio.channels = 2
+    mock_audio.sample_width = 2
+    mock_audio.duration_seconds = 2.0
+    
+    return mock_audio
+
+
+@pytest.fixture
+def mock_pydub_module(mock_audio_segment):
+    """Create a complete mock of pydub.AudioSegment module.
+    
+    This fixture mocks ALL pydub operations to bypass ffmpeg entirely.
+    
+    Args:
+        mock_audio_segment: Fixture for creating mock audio objects
+        
+    Returns:
+        Mock object that can replace peripatos.voice.renderer.PydubAudioSegment
+    """
+    mock_pydub = Mock()
+    mock_pydub.from_mp3.return_value = mock_audio_segment
+    mock_pydub.from_file.return_value = mock_audio_segment
+    mock_pydub.silent.return_value = mock_audio_segment
+    mock_pydub.from_raw.return_value = mock_audio_segment
+    mock_pydub.from_mono_audiosegments.return_value = mock_audio_segment
+    
+    return mock_pydub
+
+
+@pytest.fixture
+def audio_segment_factory(mock_audio_segment):
+    """Factory fixture to create AudioSegment model objects.
+    
+    Returns:
+        Callable that creates AudioSegment instances with reasonable defaults
+    """
+    def _make_audio_segment(
+        speaker_role=SpeakerRole.HOST,
+        text="Sample dialogue",
+        duration_ms=2000,
+        file_path=None
+    ):
+        if file_path is None:
+            file_path = Path(f"/tmp/audio_{id(mock_audio_segment)}.mp3")
+        
+        return AudioSegment(
+            speaker=speaker_role,
+            text=text,
+            duration_ms=duration_ms,
+            file_path=file_path
+        )
+    
+    return _make_audio_segment
