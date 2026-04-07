@@ -65,6 +65,31 @@ def _install_docling_stubs(monkeypatch: pytest.MonkeyPatch) -> _Module:
 
     pipeline_options.VlmPipelineOptions = VlmPipelineOptions
 
+    class VlmConvertOptions:
+        def __init__(self, vlm_options: object | None = None) -> None:
+            self.vlm_options = vlm_options
+
+        @classmethod
+        def from_preset(cls, preset: str, engine_options: object | None = None) -> "VlmConvertOptions":
+            _ = preset
+            if isinstance(engine_options, MlxVlmEngineOptions):
+                vlm_spec = vlm_specs.GRANITEDOCLING_MLX
+            else:
+                vlm_spec = vlm_specs.GRANITEDOCLING_TRANSFORMERS
+            instance = cls(vlm_options=vlm_spec)
+            instance.model_spec = SimpleNamespace(max_new_tokens=8192)
+            return instance
+
+    pipeline_options.VlmConvertOptions = VlmConvertOptions
+
+    vlm_engine_options = _Module("docling.datamodel.vlm_engine_options")
+
+    class MlxVlmEngineOptions:
+        def __init__(self) -> None:
+            pass
+
+    vlm_engine_options.MlxVlmEngineOptions = MlxVlmEngineOptions
+
     pipeline = _Module("docling.pipeline")
     vlm_pipeline = _Module("docling.pipeline.vlm_pipeline")
 
@@ -103,6 +128,7 @@ def _install_docling_stubs(monkeypatch: pytest.MonkeyPatch) -> _Module:
     monkeypatch.setitem(sys.modules, "docling.datamodel.vlm_model_specs", vlm_specs)
     monkeypatch.setitem(sys.modules, "docling.datamodel.base_models", base_models)
     monkeypatch.setitem(sys.modules, "docling.datamodel.pipeline_options", pipeline_options)
+    monkeypatch.setitem(sys.modules, "docling.datamodel.vlm_engine_options", vlm_engine_options)
     monkeypatch.setitem(sys.modules, "docling.pipeline", pipeline)
     monkeypatch.setitem(sys.modules, "docling.pipeline.vlm_pipeline", vlm_pipeline)
     monkeypatch.setitem(sys.modules, "docling.document_converter", document_converter)
@@ -113,7 +139,12 @@ def _install_docling_stubs(monkeypatch: pytest.MonkeyPatch) -> _Module:
 def _assert_pipeline_options(converter: _ConverterProtocol, expected_vlm_option: str) -> None:
     format_option = converter.format_options["pdf"]
     pipeline_options = getattr(format_option, "pipeline_options", SimpleNamespace())
-    assert getattr(pipeline_options, "vlm_options", None) == expected_vlm_option
+    vlm_options = getattr(pipeline_options, "vlm_options", None)
+    if isinstance(vlm_options, str):
+        actual = vlm_options
+    else:
+        actual = getattr(vlm_options, "vlm_options", None)
+    assert actual == expected_vlm_option
 
 
 def test_create_vlm_converter_prefers_mlx_on_apple_silicon(monkeypatch: pytest.MonkeyPatch):

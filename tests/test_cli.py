@@ -88,3 +88,41 @@ def test_detect_source_type(tmp_path: Path) -> None:
 
     assert arxiv_type == "arxiv"
     assert pdf_type == "pdf"
+
+
+def test_vlm_flag_parsed_correctly() -> None:
+    """Test that --vlm flag is parsed and stored in args.vlm"""
+    parser = create_parser()
+    args = parser.parse_args(["generate", "2408.09869", "--vlm"])
+    
+    vlm = cast(bool, args.vlm)
+    assert vlm is True
+
+
+def test_vlm_flag_defaults_to_false() -> None:
+    """Test that vlm flag defaults to False when not provided"""
+    parser = create_parser()
+    args = parser.parse_args(["generate", "2408.09869"])
+    
+    vlm = cast(bool, getattr(args, "vlm", False))
+    assert vlm is False
+
+
+def test_vlm_flag_is_store_true_action() -> None:
+    """Test that --vlm uses store_true action (no argument needed)"""
+    parser = create_parser()
+    # Should not raise an error when parsing --vlm without a value
+    args = parser.parse_args(["generate", "2408.09869", "--vlm"])
+    
+    vlm = cast(bool, args.vlm)
+    assert vlm is True
+
+
+def test_vlm_flag_in_help_text(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test that --vlm flag appears in help text"""
+    parser = create_parser()
+    with pytest.raises(SystemExit):
+        _ = parser.parse_args(["generate", "--help"])
+    captured = capsys.readouterr()
+    
+    assert "--vlm" in captured.out

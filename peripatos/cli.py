@@ -112,6 +112,13 @@ def create_parser() -> argparse.ArgumentParser:
         action="store_true",
         dest="verbose",
     )
+    _ = generate.add_argument(
+        "--vlm",
+        action="store_true",
+        dest="vlm",
+        default=False,
+        help="Use Granite Docling VLM for enhanced PDF parsing (requires: pip install peripatos[vlm])",
+    )
 
     return parser
 
@@ -203,11 +210,13 @@ def _resolve_source(
     return Path(source)
 
 
-def _parse_pdf(pdf_path: Path, verbose: bool) -> PaperMetadata | int:
+def _parse_pdf(pdf_path: Path, use_vlm: bool, verbose: bool) -> PaperMetadata | int:
     print("📄 Parsing PDF...")
     try:
-        parser = PDFParser()
+        parser = PDFParser(use_vlm=use_vlm)
         return parser.parse(pdf_path)
+    except ImportError as exc:
+        return _handle_error(f"VLM support requires additional dependencies. Install with: pip install peripatos[vlm]. Error: {exc}", exc, verbose)
     except ParsingError as exc:
         return _handle_error(str(exc), exc, verbose)
 
@@ -344,7 +353,8 @@ def main(argv: list[str] | None = None) -> int:
         return resolved
     pdf_path = resolved
 
-    parsed = _parse_pdf(pdf_path, verbose)
+    use_vlm = cast(bool, getattr(args, "vlm", False))
+    parsed = _parse_pdf(pdf_path, use_vlm, verbose)
     if isinstance(parsed, int):
         return parsed
     paper = parsed
