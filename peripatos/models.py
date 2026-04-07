@@ -80,6 +80,7 @@ class PaperMetadata:
     source_path: Path
     sections: list[SectionInfo]
     arxiv_id: Optional[str] = None
+    parser_type: Optional[str] = None
 
 
 @dataclass

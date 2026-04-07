@@ -214,3 +214,125 @@ def test_create_vlm_converter_retries_once(monkeypatch: pytest.MonkeyPatch):
 
     assert converter.convert("sample.pdf") == "ok"
     assert calls["count"] == 2
+
+
+# Tests for PDFParser VLM integration
+
+
+class _StubVLMDocument:
+    def __init__(self, markdown: str) -> None:
+        self._markdown = markdown
+
+    def export_to_markdown(self) -> str:
+        return self._markdown
+
+
+class _StubVLMResult:
+    def __init__(self, markdown: str) -> None:
+        self.document = _StubVLMDocument(markdown)
+
+
+class _StubVLMConverter:
+    def __init__(self) -> None:
+        self.converted = False
+
+    def convert(self, source: object) -> _StubVLMResult:
+        self.converted = True
+        return _StubVLMResult("# Test Paper\n\n## Abstract\n\nVLM-parsed content.")
+
+
+def test_pdf_parser_with_use_vlm_parameter_creates_vlm_converter(monkeypatch: pytest.MonkeyPatch, sample_pdf_path):
+    """Test that PDFParser(use_vlm=True) creates a VLM converter."""
+    from peripatos.eye.parser import PDFParser
+
+    _install_torch_stub(monkeypatch, cuda_available=False)
+    _ = _install_docling_stubs(monkeypatch)
+    monkeypatch.setattr("platform.system", lambda: "Linux")
+
+    stub_converter = _StubVLMConverter()
+    monkeypatch.setattr("peripatos.eye.vlm.create_vlm_converter", lambda **kwargs: stub_converter)
+
+    parser = PDFParser(use_vlm=True)
+    metadata = parser.parse(sample_pdf_path)
+
+    assert stub_converter.converted is True
+    assert metadata.title == "Test Paper"
+    assert metadata.abstract
+    assert "VLM-parsed" in metadata.abstract
+
+
+def test_pdf_parser_without_use_vlm_uses_standard_converter(monkeypatch: pytest.MonkeyPatch, sample_pdf_path):
+    """Test that PDFParser() without use_vlm uses the standard converter."""
+    from peripatos.eye.parser import PDFParser
+
+    vlm_called = {"value": False}
+
+    def _fake_vlm_converter(**kwargs):
+        vlm_called["value"] = True
+        return _StubVLMConverter()
+
+    monkeypatch.setattr("peripatos.eye.vlm.create_vlm_converter", _fake_vlm_converter)
+
+    standard_markdown = "# Standard Title\n\n## Abstract\n\nStandard content."
+
+    class _StubStandardConverter:
+        def convert(self, source: object) -> _StubVLMResult:
+            return _StubVLMResult(standard_markdown)
+
+    parser = PDFParser(converter=_StubStandardConverter())
+    metadata = parser.parse(sample_pdf_path)
+
+    assert vlm_called["value"] is False
+    assert metadata.title == "Standard Title"
+
+
+def test_pdf_parser_vlm_produces_valid_paper_metadata(monkeypatch: pytest.MonkeyPatch, sample_pdf_path):
+    """Test that VLM parser produces valid PaperMetadata with all required fields."""
+    from peripatos.eye.parser import PDFParser
+    from peripatos.models import PaperMetadata
+
+    _install_torch_stub(monkeypatch, cuda_available=False)
+    _ = _install_docling_stubs(monkeypatch)
+    monkeypatch.setattr("platform.system", lambda: "Linux")
+
+    vlm_markdown = """# VLM Paper Title
+
+Authors: Alice, Bob
+
+## Abstract
+
+This is the abstract from VLM parsing.
+
+## 1. Introduction
+
+VLM introduction content.
+
+## 2. Methodology
+
+VLM methodology content.
+
+## 3. Conclusion
+
+VLM conclusion content.
+
+## References
+
+[1] Reference 1
+"""
+
+    class _DetailedVLMConverter:
+        def convert(self, source: object) -> _StubVLMResult:
+            return _StubVLMResult(vlm_markdown)
+
+    monkeypatch.setattr("peripatos.eye.vlm.create_vlm_converter", lambda **kwargs: _DetailedVLMConverter())
+
+    parser = PDFParser(use_vlm=True)
+    metadata = parser.parse(sample_pdf_path)
+
+    assert isinstance(metadata, PaperMetadata)
+    assert metadata.title == "VLM Paper Title"
+    assert metadata.authors == ["Alice", "Bob"]
+    assert "abstract from VLM" in metadata.abstract
+    assert metadata.source_path == sample_pdf_path
+    assert len(metadata.sections) > 0
+    assert any("Introduction" in s.title for s in metadata.sections)

@@ -102,7 +102,7 @@ def _ensure_vlm_dependencies() -> None:
 
 
 def create_vlm_converter(
-    timeout_seconds: float = 60.0, retries: int = 1
+    timeout_seconds: float = 60.0, retries: int = 1, backend: str | None = None
 ) -> _DocumentConverterProtocol:
     _ensure_vlm_dependencies()
     try:
@@ -116,12 +116,22 @@ def create_vlm_converter(
         _load_docling()
     )
 
-    if _is_apple_silicon():
+    if backend == "mlx":
         vlm_options = vlm_specs.GRANITEDOCLING_MLX
-    elif torch.cuda.is_available():
+    elif backend == "cuda":
         vlm_options = vlm_specs.GRANITEDOCLING_TRANSFORMERS
+    elif backend == "cpu":
+        vlm_options = vlm_specs.GRANITEDOCLING_TRANSFORMERS
+    elif backend is None:
+        # Auto-detect
+        if _is_apple_silicon():
+            vlm_options = vlm_specs.GRANITEDOCLING_MLX
+        elif torch.cuda.is_available():
+            vlm_options = vlm_specs.GRANITEDOCLING_TRANSFORMERS
+        else:
+            vlm_options = vlm_specs.GRANITEDOCLING_TRANSFORMERS
     else:
-        vlm_options = vlm_specs.GRANITEDOCLING_TRANSFORMERS
+        raise ValueError(f"Unsupported backend: {backend}. Must be 'mlx', 'cuda', 'cpu', or None (auto)")
 
     pipeline_options = vlm_options_cls(vlm_options=vlm_options)
     format_options: dict[object, object] = {

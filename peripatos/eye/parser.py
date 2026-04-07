@@ -14,15 +14,20 @@ class ParsingError(Exception):
 
 
 class PDFParser:
-    def __init__(self, converter: Any | None = None) -> None:
+    def __init__(self, converter: Any | None = None, use_vlm: bool = False) -> None:
         self._converter: Any | None = converter
+        self._use_vlm = use_vlm
 
     def parse(self, source: str | Path) -> PaperMetadata:
         source_path = Path(source)
         if not source_path.exists() or not source_path.is_file():
             raise ParsingError(f"PDF not found: {source_path}")
         if self._converter is None:
-            self._converter = _build_converter()
+            if self._use_vlm:
+                from peripatos.eye.vlm import create_vlm_converter
+                self._converter = create_vlm_converter()
+            else:
+                self._converter = _build_converter()
         if self._converter is None:
             raise ParsingError("Docling converter not available")
 
