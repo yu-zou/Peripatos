@@ -366,7 +366,7 @@ class TestFullPipelineE2E:
         # Test 4: Invalid PDF parsing (corrupted file)
         corrupted_pdf = tmp_path / "corrupted.pdf"
         corrupted_pdf.write_bytes(b"not a real pdf")
-        result = _parse_pdf(corrupted_pdf, verbose=False)
+        result = _parse_pdf(corrupted_pdf, use_vlm=False, verbose=False)
         # Should return error code or raise exception
         assert isinstance(result, int) or result is None
 

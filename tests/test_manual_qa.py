@@ -541,7 +541,7 @@ class TestManualQA:
         # Try parsing corrupted PDF
         corrupted_pdf = tmp_path / "corrupted.pdf"
         corrupted_pdf.write_bytes(b"not a real pdf")
-        result = _parse_pdf(corrupted_pdf, verbose=False)
+        result = _parse_pdf(corrupted_pdf, use_vlm=False, verbose=False)
         assert isinstance(result, int) or result is None
 
         print(f"✓ Error case: Non-existent/invalid PDF - PASS")

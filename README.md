@@ -162,6 +162,50 @@ When using `--language zh-en` with edge-tts, Peripatos automatically selects:
 
 OpenAI's `tts-1` is recommended for speed and reliability. Use `tts-1-hd` if audio quality is critical (not user-configurable in Peripatos currently). edge-tts is ideal for free, multilingual content.
 
+## VLM Enhanced Parsing (Experimental)
+
+Peripatos includes optional support for **Granite Docling VLM** (Vision-Language Model) to enhance PDF parsing accuracy, particularly for complex documents with tables, equations, and figures.
+
+### Installation
+
+```bash
+pip install peripatos[vlm]
+```
+
+This installs additional dependencies: `torch`, `transformers`, and `mlx-vlm` (on Apple Silicon).
+
+### Usage
+
+Enable VLM parsing with the `--vlm` flag:
+
+```bash
+peripatos generate 2408.09869 --vlm
+peripatos generate ./papers/attention.pdf --vlm
+```
+
+### Current Status: Performance-Limited
+
+**⚠️ Experimental Feature:** VLM parsing is currently **not viable for production use** due to performance constraints.
+
+**Benchmark Results** (Apple Silicon MLX, M-series chip):
+- **Base Docling**: ~6.4 seconds per page
+- **VLM MLX**: ~72.9 seconds per page (11.4× slower)
+- **Bottleneck**: Model inference time exceeds practical thresholds for multi-page documents
+
+**Hardware Requirements:**
+- **Apple Silicon (MLX)**: Preferred, but still slow (~72.9s/page)
+- **CUDA GPUs**: Possible alternative (not benchmarked)
+- **CPU-only**: Extremely slow (>10 minutes/page) — not recommended
+
+### When to Use VLM
+
+Consider VLM for:
+- Single-page documents or short papers (< 5 pages)
+- Documents where base Docling extraction is insufficient
+- Experimental workflows where quality trumps speed
+
+**Recommendation:** Wait for performance improvements before using VLM in production workflows. See `.sisyphus/evidence/task-7-investigation.txt` for detailed performance analysis.
+
 ## CLI Reference
 
 ```text
@@ -170,7 +214,7 @@ usage: peripatos generate [-h] [--persona {enthusiast,peer,skeptic,tutor}]
                           [--tts-engine {edge-tts,openai}]
                           [--output-dir OUTPUT_DIR]
                           [--llm-provider {anthropic,gemini,openai,openrouter}]
-                          [--llm-model LLM_MODEL] [--verbose]
+                          [--llm-model LLM_MODEL] [--vlm] [--verbose]
                           source
 
 positional arguments:
@@ -184,6 +228,7 @@ options:
   --output-dir OUTPUT_DIR
   --llm-provider {anthropic,gemini,openai,openrouter}
   --llm-model LLM_MODEL
+  --vlm                 Use Granite Docling VLM for enhanced PDF parsing (requires: pip install peripatos[vlm])
   --verbose, -v
 ```
 
