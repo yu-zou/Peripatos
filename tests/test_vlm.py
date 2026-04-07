@@ -1,0 +1,216 @@
+import builtins
+import sys
+import time
+import types
+from typing import Callable, Protocol, cast
+from types import SimpleNamespace
+from typing_extensions import override
+
+import pytest
+
+from peripatos.eye.vlm import create_vlm_converter
+
+class _ConverterProtocol(Protocol):
+    format_options: dict[object, object]
+
+
+class _DocumentConverterStub(Protocol):
+    convert_impl: Callable[[object], str]
+    call_count: int
+
+
+class _DoclingDocumentModule(Protocol):
+    DocumentConverter: type[_DocumentConverterStub]
+
+
+class _Module(types.ModuleType):
+    @override
+    def __setattr__(self, name: str, value: object) -> None:
+        types.ModuleType.__setattr__(self, name, value)
+
+
+def _install_torch_stub(monkeypatch: pytest.MonkeyPatch, cuda_available: bool) -> None:
+    torch_module = _Module("torch")
+
+    class _Cuda:
+        @staticmethod
+        def is_available() -> bool:
+            return cuda_available
+
+    torch_module.cuda = _Cuda()
+    monkeypatch.setitem(sys.modules, "torch", torch_module)
+    monkeypatch.setitem(sys.modules, "transformers", _Module("transformers"))
+
+
+def _install_docling_stubs(monkeypatch: pytest.MonkeyPatch) -> _Module:
+    _ = monkeypatch
+    docling = _Module("docling")
+    datamodel = _Module("docling.datamodel")
+    vlm_specs = _Module("docling.datamodel.vlm_model_specs")
+    vlm_specs.GRANITEDOCLING_MLX = "mlx-spec"
+    vlm_specs.GRANITEDOCLING_TRANSFORMERS = "transformers-spec"
+
+    base_models = _Module("docling.datamodel.base_models")
+
+    class InputFormat:
+        PDF: str = "pdf"
+
+    base_models.InputFormat = InputFormat
+
+    pipeline_options = _Module("docling.datamodel.pipeline_options")
+
+    class VlmPipelineOptions:
+        def __init__(self, vlm_options: object | None = None) -> None:
+            self.vlm_options: object | None = vlm_options
+
+    pipeline_options.VlmPipelineOptions = VlmPipelineOptions
+
+    pipeline = _Module("docling.pipeline")
+    vlm_pipeline = _Module("docling.pipeline.vlm_pipeline")
+
+    class VlmPipeline:
+        pass
+
+    vlm_pipeline.VlmPipeline = VlmPipeline
+
+    document_converter = _Module("docling.document_converter")
+
+    class PdfFormatOption:
+        def __init__(self, pipeline_cls: type | None = None, pipeline_options: object | None = None) -> None:
+            self.pipeline_cls: type | None = pipeline_cls
+            self.pipeline_options: object | None = pipeline_options
+
+    class DocumentConverter:
+        @staticmethod
+        def convert_impl(source: object) -> str:
+            _ = source
+            return "ok"
+
+        call_count: int = 0
+
+        def __init__(self, format_options: dict[object, object] | None = None) -> None:
+            self.format_options: dict[object, object] = format_options or {}
+
+        def convert(self, source: object) -> str:
+            DocumentConverter.call_count += 1
+            return DocumentConverter.convert_impl(source)
+
+    document_converter.PdfFormatOption = PdfFormatOption
+    document_converter.DocumentConverter = DocumentConverter
+
+    monkeypatch.setitem(sys.modules, "docling", docling)
+    monkeypatch.setitem(sys.modules, "docling.datamodel", datamodel)
+    monkeypatch.setitem(sys.modules, "docling.datamodel.vlm_model_specs", vlm_specs)
+    monkeypatch.setitem(sys.modules, "docling.datamodel.base_models", base_models)
+    monkeypatch.setitem(sys.modules, "docling.datamodel.pipeline_options", pipeline_options)
+    monkeypatch.setitem(sys.modules, "docling.pipeline", pipeline)
+    monkeypatch.setitem(sys.modules, "docling.pipeline.vlm_pipeline", vlm_pipeline)
+    monkeypatch.setitem(sys.modules, "docling.document_converter", document_converter)
+
+    return document_converter
+
+
+def _assert_pipeline_options(converter: _ConverterProtocol, expected_vlm_option: str) -> None:
+    format_option = converter.format_options["pdf"]
+    pipeline_options = getattr(format_option, "pipeline_options", SimpleNamespace())
+    assert getattr(pipeline_options, "vlm_options", None) == expected_vlm_option
+
+
+def test_create_vlm_converter_prefers_mlx_on_apple_silicon(monkeypatch: pytest.MonkeyPatch):
+    _install_torch_stub(monkeypatch, cuda_available=True)
+    _ = _install_docling_stubs(monkeypatch)
+    monkeypatch.setattr("platform.system", lambda: "Darwin")
+    monkeypatch.setattr("platform.machine", lambda: "arm64")
+
+    converter = create_vlm_converter()
+
+    _assert_pipeline_options(converter, "mlx-spec")
+
+
+def test_create_vlm_converter_uses_cuda_when_available(monkeypatch: pytest.MonkeyPatch):
+    _install_torch_stub(monkeypatch, cuda_available=True)
+    _ = _install_docling_stubs(monkeypatch)
+    monkeypatch.setattr("platform.system", lambda: "Linux")
+    monkeypatch.setattr("platform.machine", lambda: "x86_64")
+
+    converter = create_vlm_converter()
+
+    _assert_pipeline_options(converter, "transformers-spec")
+
+
+def test_create_vlm_converter_falls_back_to_cpu(monkeypatch: pytest.MonkeyPatch):
+    _install_torch_stub(monkeypatch, cuda_available=False)
+    _ = _install_docling_stubs(monkeypatch)
+    monkeypatch.setattr("platform.system", lambda: "Linux")
+    monkeypatch.setattr("platform.machine", lambda: "x86_64")
+
+    converter = create_vlm_converter()
+
+    _assert_pipeline_options(converter, "transformers-spec")
+
+
+def test_create_vlm_converter_import_error_when_missing_deps(monkeypatch: pytest.MonkeyPatch):
+    original_import = builtins.__import__
+
+    def _blocked_import(
+        name: str,
+        globals: dict[str, object] | None = None,
+        locals: dict[str, object] | None = None,
+        fromlist: tuple[str, ...] = (),
+        level: int = 0,
+    ) -> object:
+        if name in {"torch", "transformers"}:
+            raise ImportError("missing")
+        return cast(object, original_import(name, globals, locals, fromlist, level))
+
+    monkeypatch.setattr(builtins, "__import__", _blocked_import)
+
+    with pytest.raises(
+        ImportError,
+        match="VLM support requires additional dependencies. Install with: pip install peripatos\\[vlm\\]",
+    ):
+        _ = create_vlm_converter()
+
+
+def test_create_vlm_converter_times_out(monkeypatch: pytest.MonkeyPatch):
+    _install_torch_stub(monkeypatch, cuda_available=False)
+    document_module = cast(_DoclingDocumentModule, cast(object, _install_docling_stubs(monkeypatch)))
+    monkeypatch.setattr("platform.system", lambda: "Linux")
+    monkeypatch.setattr("platform.machine", lambda: "x86_64")
+
+    def _slow_convert(source: object) -> str:
+        _ = source
+        time.sleep(0.05)
+        return "ok"
+
+    document_module.DocumentConverter.convert_impl = staticmethod(_slow_convert)
+    _ = document_module.DocumentConverter.call_count
+
+    converter = create_vlm_converter(timeout_seconds=0.01)
+
+    with pytest.raises(TimeoutError):
+        _ = converter.convert("sample.pdf")
+
+
+def test_create_vlm_converter_retries_once(monkeypatch: pytest.MonkeyPatch):
+    _install_torch_stub(monkeypatch, cuda_available=False)
+    document_module = cast(_DoclingDocumentModule, cast(object, _install_docling_stubs(monkeypatch)))
+    monkeypatch.setattr("platform.system", lambda: "Linux")
+    monkeypatch.setattr("platform.machine", lambda: "x86_64")
+
+    calls = {"count": 0}
+
+    def _flaky_convert(source: object) -> str:
+        _ = source
+        calls["count"] += 1
+        if calls["count"] == 1:
+            raise RuntimeError("loop")
+        return "ok"
+
+    document_module.DocumentConverter.convert_impl = staticmethod(_flaky_convert)
+    _ = document_module.DocumentConverter.call_count
+
+    converter = create_vlm_converter(timeout_seconds=1.0)
+
+    assert converter.convert("sample.pdf") == "ok"
+    assert calls["count"] == 2
