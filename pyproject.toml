@@ -41,6 +41,15 @@ dev = [
     "pytest-cov>=6.0",
     "pytest-asyncio>=0.25",
 ]
+vlm = [
+    "torch>=2.0",
+    "transformers>=4.40",
+    "accelerate",
+    "mlx-vlm>=0.4; sys_platform == 'darwin' and platform_machine == 'arm64'",
+]
+eval = [
+    "docling-eval>=0.10",
+]
 
 [project.scripts]
 peripatos = "peripatos.cli:main"
