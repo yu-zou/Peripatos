@@ -14,6 +14,7 @@ except ImportError:
 
 from peripatos import __version__
 from peripatos.brain.bilingual import BilingualProcessor, get_bilingual_prompt_modifier
+from peripatos.brain.chapters import ChapterGroup, consolidate_chapters, generate_signposts
 from peripatos.brain.generator import DialogueGenerator, GenerationError
 from peripatos.config import (
     PeripatosConfig,
@@ -267,29 +268,97 @@ def _render_audio(
         return []
 
 
+def _consolidate_and_insert_signposts(
+    script: DialogueScript,
+) -> tuple[DialogueScript, list[ChapterGroup]]:
+    if not script.turns:
+        return script, []
+
+    initial_groups = consolidate_chapters(list(script.turns))
+    signpost_turns = generate_signposts(initial_groups, list(script.turns))
+
+    if not signpost_turns:
+        return script, initial_groups
+
+    new_turns = list(script.turns)
+    for i, group in reversed(list(enumerate(initial_groups[1:], 1))):
+        insert_idx = group.turn_indices[0]
+        new_turns.insert(insert_idx, signpost_turns[i - 1])
+
+    new_script = DialogueScript(
+        paper_metadata=script.paper_metadata,
+        turns=new_turns,
+        persona_type=script.persona_type,
+        language_mode=script.language_mode,
+    )
+    final_groups = consolidate_chapters(new_script.turns)
+    return new_script, final_groups
+
+
 def _build_chapters(
     script: DialogueScript,
     segments: list[AudioSegment],
     silence_between_ms: int,
+    chapter_groups: list[ChapterGroup] | None = None,
 ) -> tuple[list[ChapterMarker], int]:
-    turns = list(script.turns)
     seg_list = list(segments)
-    count = min(len(turns), len(seg_list))
+    count = min(len(script.turns), len(seg_list))
+
+    turn_durations_ms: list[int] = []
     current_time_ms = 0
-    times: dict[str, dict[str, int]] = {}
     for idx in range(count):
-        turn = turns[idx]
-        segment = seg_list[idx]
-        title = turn.section_ref or "Section"
-        if title not in times:
-            times[title] = {"start": current_time_ms, "end": current_time_ms}
-        duration_ms = int(round(segment.duration_seconds * 1000))
+        duration_ms = int(round(seg_list[idx].duration_seconds * 1000))
+        turn_durations_ms.append(duration_ms)
         current_time_ms += duration_ms
         if idx < count - 1:
             current_time_ms += silence_between_ms
-        times[title]["end"] = current_time_ms
 
-    chapters: list[ChapterMarker] = []
+    total_time_ms = current_time_ms
+
+    if chapter_groups is not None:
+        chapters: list[ChapterMarker] = []
+        turn_start_ms: list[int] = []
+        running = 0
+        for idx in range(count):
+            turn_start_ms.append(running)
+            running += turn_durations_ms[idx]
+            if idx < count - 1:
+                running += silence_between_ms
+
+        for group in chapter_groups:
+            valid_indices = [i for i in group.turn_indices if i < count]
+            if not valid_indices:
+                continue
+            first = valid_indices[0]
+            last = valid_indices[-1]
+            start = turn_start_ms[first]
+            end = turn_start_ms[last] + turn_durations_ms[last]
+            if last < count - 1:
+                end += silence_between_ms
+            if end <= start:
+                continue
+            chapters.append(
+                ChapterMarker(
+                    title=group.title,
+                    start_time_ms=start,
+                    end_time_ms=end,
+                )
+            )
+        return chapters, total_time_ms
+
+    turns = list(script.turns)
+    times: dict[str, dict[str, int]] = {}
+    running = 0
+    for idx in range(count):
+        title = turns[idx].section_ref or "Section"
+        if title not in times:
+            times[title] = {"start": running, "end": running}
+        running += turn_durations_ms[idx]
+        if idx < count - 1:
+            running += silence_between_ms
+        times[title]["end"] = running
+
+    chapters = []
     for section in script.paper_metadata.sections:
         if section.title not in times:
             continue
@@ -303,7 +372,7 @@ def _build_chapters(
                 end_time_ms=window["end"],
             )
         )
-    return chapters, current_time_ms
+    return chapters, total_time_ms
 
 
 def _output_filename(paper: PaperMetadata, persona: str, language: str) -> str:
@@ -378,6 +447,8 @@ def main(argv: list[str] | None = None) -> int:
         return script_result
     script = script_result
 
+    script, chapter_groups = _consolidate_and_insert_signposts(script)
+
     segments = _render_audio(script, config, verbose)
     if not segments:
         return 1
@@ -387,6 +458,7 @@ def main(argv: list[str] | None = None) -> int:
         script,
         segments,
         mixer.silence_between_segments_ms,
+        chapter_groups=chapter_groups,
     )
     output_path = output_dir / _output_filename(paper, config.persona, config.language)
 
