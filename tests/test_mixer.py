@@ -1,6 +1,7 @@
 """Tests for audio mixer with chapter markers."""
 
 import shutil
+import sys
 from io import BytesIO
 from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock, call
@@ -259,3 +260,118 @@ class TestAudioMixer:
                     # Should be called at least once with 1000ms
                     calls = mock_pydub.silent.call_args_list
                     assert any(call[1].get('duration') == 1000 for call in calls)
+
+
+class TestWriteId3Chapters:
+    """Test suite for write_id3_chapters ID3v2 CHAP/CTOC writing."""
+
+    def _make_mp3(self, path: Path, duration_ms: int = 6000) -> None:
+        """Create a minimal file suitable for ID3v2 tag writing.
+
+        mutagen can write ID3 tags to any file (even empty) — actual audio
+        frames are not required to verify CHAP/CTOC frame serialization.
+        """
+        path.write_bytes(b'')
+
+    def test_write_id3_chapters_creates_chap_frames(self, tmp_path):
+        """CHAP frames must be written with correct timestamps and titles."""
+        mp3_path = tmp_path / "out.mp3"
+        self._make_mp3(mp3_path)
+
+        chapters = [
+            ChapterMarker(title="Intro", start_time_ms=0, end_time_ms=2000),
+            ChapterMarker(title="Body", start_time_ms=2000, end_time_ms=4000),
+            ChapterMarker(title="Outro", start_time_ms=4000, end_time_ms=6000),
+        ]
+
+        mixer = AudioMixer()
+        mixer.write_id3_chapters(mp3_path, chapters)
+
+        from mutagen.id3 import ID3
+        tags = ID3(str(mp3_path))
+        chap_frames = tags.getall('CHAP')
+        assert len(chap_frames) == 3
+
+        # Sort by element_id for deterministic check
+        by_id = {f.element_id: f for f in chap_frames}
+        assert by_id['chp0'].start_time == 0
+        assert by_id['chp0'].end_time == 2000
+        assert by_id['chp0'].start_offset == 0xFFFFFFFF
+        assert by_id['chp0'].end_offset == 0xFFFFFFFF
+        assert by_id['chp1'].start_time == 2000
+        assert by_id['chp1'].end_time == 4000
+        assert by_id['chp2'].start_time == 4000
+        assert by_id['chp2'].end_time == 6000
+
+        # Titles via embedded TIT2
+        titles = [str(by_id[f'chp{i}'].sub_frames['TIT2']) for i in range(3)]
+        assert titles == ["Intro", "Body", "Outro"]
+
+    def test_write_id3_chapters_creates_ctoc_frame(self, tmp_path):
+        """A single CTOC frame must reference all CHAP element ids in order."""
+        mp3_path = tmp_path / "out.mp3"
+        self._make_mp3(mp3_path)
+
+        chapters = [
+            ChapterMarker(title="A", start_time_ms=0, end_time_ms=1000),
+            ChapterMarker(title="B", start_time_ms=1000, end_time_ms=2000),
+            ChapterMarker(title="C", start_time_ms=2000, end_time_ms=3000),
+        ]
+
+        mixer = AudioMixer()
+        mixer.write_id3_chapters(mp3_path, chapters)
+
+        from mutagen.id3 import ID3, CTOCFlags
+        tags = ID3(str(mp3_path))
+        ctocs = tags.getall('CTOC')
+        assert len(ctocs) == 1
+        ctoc = ctocs[0]
+        assert ctoc.element_id == "toc"
+        assert ctoc.child_element_ids == ['chp0', 'chp1', 'chp2']
+        # Flags should include TOP_LEVEL and ORDERED bits
+        assert ctoc.flags & CTOCFlags.TOP_LEVEL
+        assert ctoc.flags & CTOCFlags.ORDERED
+
+    def test_write_id3_chapters_graceful_fallback_on_import_error(self, tmp_path, caplog):
+        """If mutagen import fails, function must log warning and not raise."""
+        mp3_path = tmp_path / "out.mp3"
+        self._make_mp3(mp3_path)
+
+        chapters = [ChapterMarker(title="X", start_time_ms=0, end_time_ms=1000)]
+
+        # Simulate mutagen being unimportable by hiding it from sys.modules
+        # and inserting a finder that raises ImportError on mutagen imports.
+        import builtins
+        real_import = builtins.__import__
+
+        def fake_import(name, *args, **kwargs):
+            if name.startswith('mutagen'):
+                raise ImportError("simulated missing mutagen")
+            return real_import(name, *args, **kwargs)
+
+        mixer = AudioMixer()
+        with patch.object(builtins, '__import__', side_effect=fake_import):
+            with caplog.at_level('WARNING'):
+                # Should NOT raise
+                mixer.write_id3_chapters(mp3_path, chapters)
+
+        assert any('ID3v2 chapter writing failed' in rec.message for rec in caplog.records)
+
+    def test_write_id3_chapters_called_from_mix(self, mock_audio_segments, mock_chapters, tmp_path):
+        """AudioMixer.mix() must call write_id3_chapters after ffmpeg injection."""
+        output_path = tmp_path / "test_output.mp3"
+
+        with patch('peripatos.voice.mixer.PydubAudioSegment') as mock_pydub:
+            mock_audio = Mock()
+            mock_audio.__len__ = Mock(return_value=1000)
+            mock_audio.__add__ = Mock(return_value=mock_audio)
+            mock_audio.export = Mock()
+            mock_pydub.from_mp3.return_value = mock_audio
+            mock_pydub.silent.return_value = mock_audio
+
+            with patch('subprocess.run'):
+                with patch('shutil.which', return_value='/usr/bin/ffmpeg'):
+                    with patch.object(AudioMixer, 'write_id3_chapters') as mock_write:
+                        mixer = AudioMixer()
+                        mixer.mix(mock_audio_segments, mock_chapters, output_path)
+                        mock_write.assert_called_once_with(output_path, mock_chapters)

@@ -29,6 +29,7 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "pyyaml>=6.0",
     "json-repair>=0.50.0",
+    "mutagen>=1.47",
 ]
 
 [tool.setuptools.packages.find]

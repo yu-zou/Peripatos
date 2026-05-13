@@ -95,6 +95,9 @@ class AudioMixer:
                 # Step 4: Inject chapters using ffmpeg
                 self._inject_chapters(temp_audio_path, metadata_file, output_path)
                 
+                # Step 5: Add ID3v2 CHAP/CTOC frames (player navigation support)
+                self.write_id3_chapters(output_path, chapters)
+                
                 # Clean up temporary files
                 temp_audio_path.unlink()
                 Path(metadata_file).unlink()
@@ -257,3 +260,44 @@ class AudioMixer:
         except subprocess.CalledProcessError as e:
             logger.error(f"ffmpeg failed: {e.stderr}")
             raise MixerError(f"ffmpeg failed to inject chapters: {e.stderr}") from e
+
+    def write_id3_chapters(self, mp3_path: Path, chapters: list[ChapterMarker]) -> None:
+        """Write ID3v2 CHAP and CTOC frames to an existing MP3 file.
+
+        Adds player-navigable chapter markers without re-encoding audio.
+        On any failure (missing mutagen, corrupt tags, etc.) logs a warning
+        and returns silently — ID3v2 chapters are best-effort metadata.
+        """
+        try:
+            from mutagen.id3 import ID3, CHAP, CTOC, TIT2, CTOCFlags
+            from mutagen.id3 import ID3NoHeaderError
+
+            try:
+                tags = ID3(str(mp3_path))
+            except ID3NoHeaderError:
+                tags = ID3()
+
+            child_ids = [f"chp{i}" for i in range(len(chapters))]
+
+            for i, chapter in enumerate(chapters):
+                tags.add(CHAP(
+                    element_id=f"chp{i}",
+                    start_time=int(chapter.start_time_ms),
+                    end_time=int(chapter.end_time_ms),
+                    start_offset=0xFFFFFFFF,
+                    end_offset=0xFFFFFFFF,
+                    sub_frames=[TIT2(encoding=3, text=[chapter.title])],
+                ))
+
+            tags.add(CTOC(
+                element_id="toc",
+                flags=CTOCFlags.TOP_LEVEL | CTOCFlags.ORDERED,
+                child_element_ids=child_ids,
+                sub_frames=[],
+            ))
+
+            tags.save(str(mp3_path))
+            logger.debug(f"Wrote {len(chapters)} ID3v2 CHAP frames to {mp3_path}")
+        except Exception as e:
+            logger.warning(f"ID3v2 chapter writing failed: {e}")
+            return
