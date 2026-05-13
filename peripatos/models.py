@@ -90,6 +90,8 @@ class DialogueTurn:
     speaker: SpeakerRole
     text: str
     section_ref: str
+    chapter_title: str | None = None
+    is_signpost: bool = False
 
 
 @dataclass

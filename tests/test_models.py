@@ -181,6 +181,28 @@ class TestDialogueTurn:
         assert turn.text == "What is the main contribution?"
         assert turn.section_ref == "introduction"
 
+    def test_dialogue_turn_defaults(self):
+        """New optional fields should default for backward compatibility."""
+        turn = DialogueTurn(
+            speaker=SpeakerRole.EXPERT,
+            text="Our approach uses transformers.",
+            section_ref="methodology",
+        )
+        assert turn.chapter_title is None
+        assert turn.is_signpost is False
+
+    def test_dialogue_turn_accepts_new_optional_fields(self):
+        """DialogueTurn should accept the new optional fields when provided."""
+        turn = DialogueTurn(
+            speaker=SpeakerRole.HOST,
+            text="Let's move to the next section.",
+            section_ref="results",
+            chapter_title="Chapter 2",
+            is_signpost=True,
+        )
+        assert turn.chapter_title == "Chapter 2"
+        assert turn.is_signpost is True
+
     def test_dialogue_turn_repr(self):
         """DialogueTurn should have a non-empty __repr__."""
         turn = DialogueTurn(
