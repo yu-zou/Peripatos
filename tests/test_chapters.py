@@ -1,4 +1,4 @@
-from peripatos.brain.chapters import ChapterGroup, consolidate_chapters
+from peripatos.brain.chapters import ChapterGroup, consolidate_chapters, generate_signposts
 from peripatos.models import DialogueTurn, SpeakerRole
 
 
@@ -70,3 +70,68 @@ def test_consolidate_deterministic():
     r2 = consolidate_chapters(turns, max_chapters=4)
     assert [(g.title, g.turn_indices, g.section_refs) for g in r1] == \
            [(g.title, g.turn_indices, g.section_refs) for g in r2]
+
+
+def test_signposts_multi_chapter():
+    groups = [
+        ChapterGroup(title="intro", turn_indices=[0], section_refs=["intro"]),
+        ChapterGroup(title="method", turn_indices=[1], section_refs=["method"]),
+        ChapterGroup(title="results", turn_indices=[2], section_refs=["results"]),
+        ChapterGroup(title="conclusion", turn_indices=[3], section_refs=["conclusion"]),
+    ]
+    turns = [_turn("intro"), _turn("method"), _turn("results"), _turn("conclusion")]
+
+    signposts = generate_signposts(groups, turns)
+
+    assert len(signposts) == 3
+
+
+def test_signposts_single_chapter():
+    groups = [ChapterGroup(title="intro", turn_indices=[0], section_refs=["intro"])]
+
+    assert generate_signposts(groups, [_turn("intro")]) == []
+
+
+def test_signposts_text_format():
+    groups = [
+        ChapterGroup(title="intro", turn_indices=[0], section_refs=["intro"]),
+        ChapterGroup(title="method", turn_indices=[1], section_refs=["method"]),
+    ]
+
+    signposts = generate_signposts(groups, [_turn("intro"), _turn("method")])
+
+    assert signposts[0].text == "Now, let's turn to method."
+
+
+def test_signposts_all_host_speaker():
+    groups = [
+        ChapterGroup(title="intro", turn_indices=[0], section_refs=["intro"]),
+        ChapterGroup(title="method", turn_indices=[1], section_refs=["method"]),
+    ]
+
+    signposts = generate_signposts(groups, [_turn("intro"), _turn("method")])
+
+    assert all(turn.speaker == SpeakerRole.HOST for turn in signposts)
+
+
+def test_signposts_is_signpost_flag():
+    groups = [
+        ChapterGroup(title="intro", turn_indices=[0], section_refs=["intro"]),
+        ChapterGroup(title="method", turn_indices=[1], section_refs=["method"]),
+    ]
+
+    signposts = generate_signposts(groups, [_turn("intro"), _turn("method")])
+
+    assert all(turn.is_signpost for turn in signposts)
+
+
+def test_signposts_text_length():
+    groups = [
+        ChapterGroup(title="intro", turn_indices=[0], section_refs=["intro"]),
+        ChapterGroup(title="method", turn_indices=[1], section_refs=["method"]),
+        ChapterGroup(title="results", turn_indices=[2], section_refs=["results"]),
+    ]
+
+    signposts = generate_signposts(groups, [_turn("intro"), _turn("method"), _turn("results")])
+
+    assert all(len(turn.text.split()) <= 20 for turn in signposts)
