@@ -15,7 +15,7 @@ Peripatos fetches an ArXiv paper (or any PDF), generates a natural back-and-fort
 ## Installation
 
 ```bash
-pip install peripatos-core
+pip install git+https://github.com/yu-zou/Peripatos.git
 ```
 
 For development:
