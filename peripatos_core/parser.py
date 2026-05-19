@@ -21,14 +21,6 @@ def _extract_sections(markdown: str) -> list[str]:
     return [line.lstrip("#").strip() for line in markdown.splitlines() if line.startswith("#")]
 
 
-def _first_present(mapping: dict[str, Any], keys: tuple[str, ...], default: Any = "") -> Any:
-    for key in keys:
-        value = mapping.get(key)
-        if value is not None:
-            return value
-    return default
-
-
 class DocumentParserBackend(Protocol):
     """Common interface for PDF parser backends."""
 
@@ -98,12 +90,13 @@ class MinerUPDFParserBackend:
             result = self._call_parser(pdf_path)
 
             if isinstance(result, dict):
-                markdown = _first_present(result, ("markdown", "text"), "")
-                sections = [str(s) for s in _first_present(result, ("sections",), [])]
-                full_text = _first_present(result, ("full_text", "text"), markdown)
+                markdown = result.get("markdown") or result.get("text") or ""
+                sections_data = result.get("sections")
+                sections = [str(s) for s in sections_data] if sections_data is not None else []
+                full_text = result.get("full_text") or result.get("text") or markdown
             elif isinstance(result, str):
                 markdown = result
-                sections = []
+                sections = _extract_sections(result)
                 full_text = result
             else:
                 markdown = (

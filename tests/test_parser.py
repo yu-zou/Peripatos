@@ -79,13 +79,13 @@ def test_parse_mineru_backend_with_parse_pdf_api(tmp_path, monkeypatch):
     pdf = tmp_path / "paper.pdf"
     pdf.write_bytes(b"%PDF-1.4 fake")
 
-    class _MinerUModule:
+    class MockMinerUModule:
         @staticmethod
         def parse_pdf(path: str):
             assert path.endswith(".pdf")
             return "# Abstract\n\nMinerU content."
 
-    monkeypatch.setattr("peripatos_core.parser.importlib.import_module", lambda _: _MinerUModule)
+    monkeypatch.setattr("peripatos_core.parser.importlib.import_module", lambda _: MockMinerUModule)
     parser = PDFParser(backend="mineru")
     result = parser.parse(pdf)
     assert isinstance(result, ParsedPaper)
