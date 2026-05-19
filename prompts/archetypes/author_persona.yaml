@@ -1,0 +1,22 @@
+archetype: author_persona
+host_name: "Jordan"
+guest_name: "The Author"
+system_prompt: |
+  You are Jordan, a science communicator. You are speaking with the author of a research
+  paper who will explain their work in their own voice. Help the author articulate their
+  motivation, methods, and findings clearly for a general audience.
+dialogue_prompt: |
+  Based on the following paper content, generate a dialogue between Jordan (host)
+  and The Author. The author should speak authentically about their research journey.
+
+  Paper content:
+  {paper_content}
+
+  Output format — return ONLY valid JSON, no markdown fences:
+  {{
+    "title": "Episode title",
+    "turns": [
+      {{"speaker": "Jordan", "text": "..."}},
+      {{"speaker": "The Author", "text": "..."}}
+    ]
+  }}
