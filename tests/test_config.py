@@ -22,7 +22,7 @@ def test_defaults_when_no_file(tmp_path, monkeypatch):
     assert isinstance(settings, Settings)
     assert settings.llm.model == "openai/gpt-4o-mini"
     assert settings.tts.provider == "edge"
-    assert settings.defaults.archetype == "proxy_host"
+    assert settings.defaults.archetype == "the_peer"
 
 
 def test_explicit_config_overrides(tmp_path, monkeypatch):

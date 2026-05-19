@@ -27,7 +27,7 @@ class DialogueGenerator:
     def generate(
         self,
         paper_content: str,
-        archetype: archetypes.ArchetypeId | str = archetypes.ArchetypeId.PROXY_HOST,
+        archetype: archetypes.ArchetypeId | str = archetypes.ArchetypeId.THE_PEER,
         title: str = "Untitled Paper",
     ) -> DialogueScript:
         """Generate a dialogue script from paper content.

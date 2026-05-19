@@ -17,33 +17,33 @@ def test_load_all_four_archetypes():
 
 def test_load_by_string():
     loader = ArchetypeLoader()
-    prompt = loader.load("proxy_host")
-    assert prompt.archetype == "proxy_host"
+    prompt = loader.load("the_peer")
+    assert prompt.archetype == "the_peer"
 
 
 def test_load_missing_raises(tmp_path):
     loader = ArchetypeLoader(prompts_dir=tmp_path)
     with pytest.raises(ConfigError, match="not found"):
-        loader.load("proxy_host")
+        loader.load("the_peer")
 
 
 def test_load_malformed_yaml_raises(tmp_path):
-    bad = tmp_path / "proxy_host.yaml"
+    bad = tmp_path / "the_peer.yaml"
     bad.write_text(": invalid: yaml: [")
     loader = ArchetypeLoader(prompts_dir=tmp_path)
     with pytest.raises(ConfigError):
-        loader.load("proxy_host")
+        loader.load("the_peer")
 
 
 def test_load_missing_fields_raises(tmp_path):
-    incomplete = tmp_path / "proxy_host.yaml"
-    incomplete.write_text(yaml.dump({"archetype": "proxy_host"}))
+    incomplete = tmp_path / "the_peer.yaml"
+    incomplete.write_text(yaml.dump({"archetype": "the_peer"}))
     loader = ArchetypeLoader(prompts_dir=tmp_path)
     with pytest.raises(ConfigError, match="missing fields"):
-        loader.load("proxy_host")
+        loader.load("the_peer")
 
 
 def test_list_available():
     loader = ArchetypeLoader()
     available = loader.list_available()
-    assert set(available) >= {"proxy_host", "author_persona", "devils_advocate", "domain_expert"}
+    assert set(available) >= {"the_peer", "the_skeptic", "the_tutor", "the_enthusiast"}

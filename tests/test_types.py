@@ -13,16 +13,16 @@ from peripatos_core.types import (
 
 
 def test_archetype_id_values():
-    assert ArchetypeId.PROXY_HOST == "proxy_host"
-    assert ArchetypeId.AUTHOR_PERSONA == "author_persona"
-    assert ArchetypeId.DEVILS_ADVOCATE == "devils_advocate"
-    assert ArchetypeId.DOMAIN_EXPERT == "domain_expert"
+    assert ArchetypeId.THE_PEER == "the_peer"
+    assert ArchetypeId.THE_SKEPTIC == "the_skeptic"
+    assert ArchetypeId.THE_TUTOR == "the_tutor"
+    assert ArchetypeId.THE_ENTHUSIAST == "the_enthusiast"
 
 
 def test_dialogue_turn():
-    turn = DialogueTurn(speaker="Host", text="Hello", archetype=ArchetypeId.PROXY_HOST)
+    turn = DialogueTurn(speaker="Host", text="Hello", archetype=ArchetypeId.THE_PEER)
     assert turn.speaker == "Host"
-    assert turn.archetype == ArchetypeId.PROXY_HOST
+    assert turn.archetype == ArchetypeId.THE_PEER
 
 
 def test_dialogue_script_default_empty():

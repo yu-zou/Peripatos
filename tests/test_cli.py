@@ -16,10 +16,10 @@ def test_help():
 def test_list_archetypes():
     result = runner.invoke(app, ["list-archetypes"])
     assert result.exit_code == 0
-    assert "proxy_host" in result.output
-    assert "author_persona" in result.output
-    assert "devils_advocate" in result.output
-    assert "domain_expert" in result.output
+    assert "the_peer" in result.output
+    assert "the_skeptic" in result.output
+    assert "the_tutor" in result.output
+    assert "the_enthusiast" in result.output
 
 
 def test_doctor_no_config(tmp_path, monkeypatch):

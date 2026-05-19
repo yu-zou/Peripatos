@@ -42,7 +42,7 @@ class TTSConfig:
 
 @dataclass
 class Defaults:
-    archetype: str = "proxy_host"
+    archetype: str = "the_peer"
     output_dir: str = "."
 
 

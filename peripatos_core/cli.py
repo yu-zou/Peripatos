@@ -47,10 +47,10 @@ def generate(
         help="Output MP3 file path.",
     ),
     archetype: str = typer.Option(
-        "proxy_host",
+        "the_peer",
         "--archetype",
         "-a",
-        help="Dialogue archetype: proxy_host, author_persona, devils_advocate, domain_expert.",
+        help="Dialogue archetype: the_peer, the_skeptic, the_tutor, the_enthusiast.",
     ),
     config: Optional[Path] = typer.Option(
         None,

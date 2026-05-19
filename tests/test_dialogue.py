@@ -18,7 +18,7 @@ def _make_valid_response(title: str = "Test Episode", n_turns: int = 4) -> str:
 def test_generate_returns_dialogue_script():
     stub = StubLLMProvider(response=_make_valid_response())
     gen = DialogueGenerator(llm=stub)
-    script = gen.generate("Some paper content", archetype=ArchetypeId.PROXY_HOST)
+    script = gen.generate("Some paper content", archetype=ArchetypeId.THE_PEER)
     assert isinstance(script, DialogueScript)
     assert len(script.turns) == 4
 
@@ -26,7 +26,7 @@ def test_generate_returns_dialogue_script():
 def test_generate_uses_archetype_system_prompt():
     stub = StubLLMProvider(response=_make_valid_response())
     gen = DialogueGenerator(llm=stub)
-    gen.generate("content", archetype=ArchetypeId.PROXY_HOST)
+    gen.generate("content", archetype=ArchetypeId.THE_PEER)
     assert len(stub.calls) == 1
     system_prompt, user_prompt = stub.calls[0]
     assert len(system_prompt) > 10
@@ -37,7 +37,7 @@ def test_generate_truncates_long_content():
     stub = StubLLMProvider(response=_make_valid_response())
     gen = DialogueGenerator(llm=stub)
     long_content = "x" * 20_000
-    gen.generate(long_content, archetype=ArchetypeId.PROXY_HOST)
+    gen.generate(long_content, archetype=ArchetypeId.THE_PEER)
     _, user_prompt = stub.calls[0]
     assert "x" * 100 in user_prompt
     assert len(user_prompt) < 15_000
@@ -47,7 +47,7 @@ def test_generate_strips_markdown_fences():
     raw = "```json\n" + _make_valid_response() + "\n```"
     stub = StubLLMProvider(response=raw)
     gen = DialogueGenerator(llm=stub)
-    script = gen.generate("content", archetype=ArchetypeId.PROXY_HOST)
+    script = gen.generate("content", archetype=ArchetypeId.THE_PEER)
     assert len(script.turns) == 4
 
 
@@ -55,13 +55,13 @@ def test_generate_invalid_json_raises():
     stub = StubLLMProvider(response="not valid json at all")
     gen = DialogueGenerator(llm=stub)
     with pytest.raises(LLMError, match="invalid JSON"):
-        gen.generate("content", archetype=ArchetypeId.PROXY_HOST)
+        gen.generate("content", archetype=ArchetypeId.THE_PEER)
 
 
 def test_generate_by_string_archetype():
     stub = StubLLMProvider(response=_make_valid_response())
     gen = DialogueGenerator(llm=stub)
-    script = gen.generate("content", archetype="author_persona")
+    script = gen.generate("content", archetype="the_tutor")
     assert isinstance(script, DialogueScript)
 
 

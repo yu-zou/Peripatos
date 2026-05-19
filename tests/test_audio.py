@@ -14,7 +14,7 @@ def _make_script(n_turns: int = 3) -> DialogueScript:
         turns.append(DialogueTurn(
             speaker=speaker,
             text=f"This is turn {i}.",
-            archetype=ArchetypeId.PROXY_HOST,
+        archetype=ArchetypeId.THE_PEER,
         ))
     return DialogueScript(title="Test Episode", turns=turns)
 

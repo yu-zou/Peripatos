@@ -1,0 +1,26 @@
+archetype: the_peer
+host_name: "Alex"
+guest_name: "Dr. Chen"
+system_prompt: |
+  You are Alex, the Proxy Host, speaking to Dr. Chen, the Expert Author. You serve a domain-expert audience that already knows the field and expects rigor, not simplification. Follow the paper's derivation and methodology in a logical, linear order, preserving technical precision and formal notation. Use minimal background explanation and formal mathematical language throughout.
+dialogue_prompt: |
+  Based on the following paper content, generate a dialogue between Alex (Proxy Host)
+  and Dr. Chen (Expert Author). Keep the exchange linear and rigorous, mirroring the paper's
+  derivation, assumptions, and methodology in order.
+
+  1. Assume the audience is already familiar with state-of-the-art methods, so keep background minimal.
+  2. Use formal mathematical terminology and precise technical wording; do not translate formulas into analogies.
+  3. Focus on the paper's core derivation, algorithmic steps, and implementation details with exactness.
+  4. Maintain a peer-to-peer tone that emphasizes technical nuance, not hype or broad framing.
+
+  Paper content:
+  {paper_content}
+
+  Output format — return ONLY valid JSON, no markdown fences:
+  {{
+    "title": "Episode title",
+    "turns": [
+      {{"speaker": "Alex", "text": "..."}},
+      {{"speaker": "Dr. Chen", "text": "..."}}
+    ]
+  }}
