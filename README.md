@@ -1,46 +1,52 @@
-# Peripatos Core
+<p align="center">
+  <img src="docs/logo.png" alt="Peripatos" width="180" />
+</p>
 
-Peripatos converts academic papers into engaging Socratic-dialogue MP3 podcasts. It parses PDF content, uses LLMs to generate a natural dialogue between a host and a guest, and synthesizes the script into audio with ID3v2.4 chapter markers for each dialogue turn.
+<h1 align="center">Peripatos</h1>
+
+<p align="center">
+  Turn any academic paper into a Socratic-dialogue podcast — in one command.
+</p>
+
+---
+
+Peripatos fetches an ArXiv paper (or any PDF), generates a natural back-and-forth dialogue between two speakers using an LLM, and synthesises the script into an MP3 with ID3v2.4 chapter markers — one chapter per dialogue turn.
 
 ## Installation
-
-Install the package via pip:
 
 ```bash
 pip install peripatos-core
 ```
 
-For development, clone the repository and install in editable mode:
+For development:
 
 ```bash
-git clone https://github.com/yzou/Peripatos.git
+git clone https://github.com/yu-zou/Peripatos.git
 cd Peripatos
 pip install -e .
 ```
 
 ## Configuration
 
-Peripatos requires a configuration file for LLM access. Copy the example configuration to your local config directory:
+Peripatos is configured via a single JSON file. Copy the example and fill in your API key:
 
 ```bash
 mkdir -p ~/.config/peripatos
 cp config.example.json ~/.config/peripatos/config.json
 ```
 
-### Configuration Resolution
-
-Peripatos looks for configuration in the following order:
-1. Explicit path provided via the `--config` (or `-c`) flag.
+Configuration is resolved in this order:
+1. `--config PATH` flag
 2. `~/.config/peripatos/config.json`
-3. Internal defaults.
+3. Built-in defaults
 
-### Example Configuration
+### Example
 
 ```json
 {
   "llm": {
     "base_url": "https://router.requesty.ai/v1",
-    "api_key": "YOUR_REQUESTY_API_KEY_HERE",
+    "api_key": "YOUR_API_KEY",
     "model": "openai/gpt-4o-mini"
   },
   "tts": {
@@ -48,71 +54,77 @@ Peripatos looks for configuration in the following order:
     "voice": "en-US-AriaNeural"
   },
   "defaults": {
-    "archetype": "proxy_host",
-    "output_dir": "."
+    "archetype": "peer"
   }
 }
 ```
 
-By default, the system uses `edge-tts` which works without an API key.
+The `tts.provider` defaults to `"edge"` (Microsoft Edge TTS — no API key required). Set it to `"openai"` to use any OpenAI-compatible TTS endpoint instead.
+
+The `llm.base_url` accepts any OpenAI-compatible endpoint: [Requesty](https://requesty.ai), [OpenRouter](https://openrouter.ai), or vanilla OpenAI.
 
 ## Quick Start
 
-Convert a paper using various source formats:
-
 ```bash
-# Using an ArXiv ID
+# ArXiv ID
 peripatos generate 1706.03762
 
-# Using an ArXiv URL
+# ArXiv URL
 peripatos generate https://arxiv.org/abs/2303.08774
 
-# Using a local PDF file
-peripatos generate ./papers/attention_is_all_you_need.pdf
+# Local PDF
+peripatos generate ./paper.pdf --output podcast.mp3
+
+# Choose an archetype
+peripatos generate 1706.03762 --archetype tutor --output lecture.mp3
 ```
 
 ## CLI Reference
 
-### `peripatos generate`
-Convert a paper to a Socratic-dialogue MP3.
-- `source`: ArXiv ID, ArXiv URL, PDF URL, or local PDF path.
-- `--output`, `-o`: Output MP3 file path (default: `output.mp3`).
-- `--archetype`, `-a`: Dialogue archetype to use (default: `proxy_host`).
-- `--config`, `-c`: Path to a specific JSON config file.
+### `peripatos generate <source>`
+
+| Flag | Short | Description |
+|---|---|---|
+| `--output` | `-o` | Output MP3 path (default: `output.mp3`) |
+| `--archetype` | `-a` | Dialogue style (default: `peer`) |
+| `--config` | `-c` | Path to a JSON config file |
 
 ### `peripatos list-archetypes`
-List all available dialogue archetypes.
+
+Print all available archetypes with descriptions.
 
 ### `peripatos doctor`
-Check the current configuration and print diagnostic information to verify API keys and provider settings.
+
+Verify your configuration and provider connectivity.
 
 ## Archetypes
 
-Archetypes define the tone and structure of the generated dialogue:
+| Name | Style |
+|---|---|
+| `peer` | A curious peer interviewing an expert — accessible, conversational |
+| `skeptic` | A sceptical host challenges the paper's claims — critical, rigorous |
+| `tutor` | An expert guides a student through the concepts — pedagogical, patient |
+| `enthusiast` | Two enthusiasts geek out over the findings — energetic, exploratory |
 
-- `proxy_host`: A curious host interviewing an expert guest who simplifies the paper's concepts.
-- `author_persona`: The host interviews the "author" of the paper about their motivations and findings.
-- `devils_advocate`: A skeptical host challenges the paper's claims, forcing a defensive but informative guest response.
-- `domain_expert`: A high-level technical discussion between two experts in the field.
+## Output
 
-## Output Format
+The generated MP3 embeds ID3v2.4 metadata:
 
-The output is a high-quality MP3 file. Peripatos embeds ID3v2.4 metadata including:
-- **Chapter Markers**: Each dialogue turn is marked as a chapter, allowing you to skip between speakers in supported players.
-- **Title/Artist**: Metadata extracted from the paper and archetype settings.
+- **Chapter markers** (`CHAP` / `CTOC`) — one per dialogue turn; skip between speakers in any chapter-aware player
+- **Title & artist** — extracted from the paper
 
 ## Running Tests
 
-Peripatos uses Docker for isolated testing.
+All tests run inside Docker:
 
 ```bash
-# Run unit tests
+# Unit tests (mocked providers)
 docker compose run --rm test pytest -v
 
-# Run integration tests (requires valid config/API keys)
+# Integration tests (requires real API keys in config)
 RUN_INTEGRATION=1 docker compose run --rm test pytest -v -m integration
 ```
 
 ## License
 
-MIT
+[MIT](LICENSE)
