@@ -60,13 +60,11 @@ def generate(
     ),
 ) -> None:
     """Convert a paper to a Socratic-dialogue MP3."""
-    from peripatos_core.archetypes import ArchetypeLoader
     from peripatos_core.audio import AudioRenderer
     from peripatos_core.dialogue import DialogueGenerator
     from peripatos_core.fetcher import PaperFetcher
     from peripatos_core.parser import PDFParser
     from peripatos_core.registry import build_llm_provider, build_tts_provider
-    from peripatos_core.types import ArchetypeId
 
     effective_config = config or _config_path
     settings = _get_settings(effective_config)
