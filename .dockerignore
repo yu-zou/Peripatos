@@ -1,0 +1,15 @@
+.git
+.venv
+venv
+__pycache__
+*.pyc
+*.pyo
+dist/
+build/
+*.egg-info/
+tests/output/
+.mypy_cache/
+.ruff_cache/
+config.json
+config.local.json
+tests/fixtures/integration_config.json

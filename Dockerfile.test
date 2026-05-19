@@ -1,0 +1,11 @@
+FROM python:3.11-slim
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg git curl ca-certificates poppler-utils && rm -rf /var/lib/apt/lists/*
+WORKDIR /workspace
+COPY requirements.txt requirements-dev.txt ./
+RUN pip install --no-cache-dir -r requirements-dev.txt
+RUN pip install --no-cache-dir -U "setuptools>=68" wheel
+COPY . .
+ENV PYTHONUNBUFFERED=1
+ENV DOCLING_CACHE_DIR=/models
+CMD ["pytest", "-v"]

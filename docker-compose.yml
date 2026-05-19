@@ -1,0 +1,17 @@
+services:
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    volumes:
+      - .:/workspace
+      - peripatos-models:/models
+      - peripatos-pip-cache:/root/.cache/pip
+      # User-global config mounted read-only when present (host-side optional)
+      - ${HOME}/.config/peripatos:/root/.config/peripatos:ro
+    environment:
+      - RUN_INTEGRATION=${RUN_INTEGRATION:-0}
+      - PYTHONPATH=/workspace
+volumes:
+  peripatos-models:
+  peripatos-pip-cache:
