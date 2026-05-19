@@ -40,6 +40,29 @@ Configuration is resolved in this order:
 2. `~/.config/peripatos/config.json`
 3. Built-in defaults
 
+### Default configuration
+
+```json
+{
+  "llm": {
+    "base_url": "https://router.requesty.ai/v1",
+    "api_key": "",
+    "model": "openai/gpt-4o-mini"
+  },
+  "tts": {
+    "provider": "edge",
+    "base_url": "",
+    "api_key": "",
+    "voice": "en-US-AriaNeural",
+    "model": "tts-1"
+  },
+  "defaults": {
+    "archetype": "peer",
+    "output_dir": "."
+  }
+}
+```
+
 ### Example
 
 ```json
