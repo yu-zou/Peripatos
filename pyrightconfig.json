@@ -1,0 +1,4 @@
+{
+  "include": ["peripatos_core", "tests"],
+  "typeCheckingMode": "basic"
+}

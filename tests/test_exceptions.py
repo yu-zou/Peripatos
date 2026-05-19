@@ -1,7 +1,12 @@
 """Tests for custom exception hierarchy."""
+from pathlib import Path
+import sys
+
 import pytest
 
-from peripatos_core.exceptions import (
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from peripatos_core.exceptions import (  # pyright: ignore[reportMissingImports]
     AudioError,
     ConfigError,
     FetchError,
