@@ -3,8 +3,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg git curl ca-certificates poppler-utils && rm -rf /var/lib/apt/lists/*
 WORKDIR /workspace
 COPY requirements.txt requirements-dev.txt ./
+RUN pip install --no-cache-dir -U pip setuptools>=68 wheel
 RUN pip install --no-cache-dir -r requirements-dev.txt
-RUN pip install --no-cache-dir -U "setuptools>=68" wheel
 COPY . .
 RUN pip install --no-cache-dir -e .
 ENV PYTHONUNBUFFERED=1

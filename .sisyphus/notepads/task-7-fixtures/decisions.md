@@ -1,1 +1,0 @@
-- Used ArXiv 1706.03762 as the sample paper fixture.

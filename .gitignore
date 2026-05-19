@@ -22,3 +22,4 @@ tests/fixtures/integration_config.json
 !tests/fixtures/integration_config.example.json
 .env
 .env.*
+.sisyphus/
