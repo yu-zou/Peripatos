@@ -1,5 +1,6 @@
 typer>=0.12,<1.0
 pydub>=0.25,<1.0
+audioop-lts>=0.2.1; python_version >= "3.13"
 mutagen>=1.47,<2.0
 openai>=1.40,<2.0
 edge-tts>=7.2,<8.0
