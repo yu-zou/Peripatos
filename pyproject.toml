@@ -27,6 +27,9 @@ build-backend = "setuptools.build_meta"
 where = ["."]
 include = ["peripatos_core*"]
 
+[tool.setuptools.package-data]
+peripatos_core = ["prompts/archetypes/*.yaml"]
+
 [tool.pytest.ini_options]
 markers = [
     "integration: opt-in real-API tests (deselect with '-m not integration')",

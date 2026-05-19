@@ -6,7 +6,7 @@ import yaml
 from peripatos_core.exceptions import ConfigError
 from peripatos_core.types import ArchetypeId
 
-_DEFAULT_PROMPTS_DIR = Path(__file__).parent.parent / "prompts" / "archetypes"
+_DEFAULT_PROMPTS_DIR = Path(__file__).parent / "prompts" / "archetypes"
 
 
 @dataclass
