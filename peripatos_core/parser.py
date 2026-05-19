@@ -28,7 +28,7 @@ def _coerce_sections(value: Any) -> list[str]:
     if isinstance(value, str):
         stripped = value.strip()
         return [stripped] if stripped else []
-    if isinstance(value, Iterable):
+    if isinstance(value, Iterable) and not isinstance(value, str):
         return [str(item) for item in value]
     return [str(value)]
 
