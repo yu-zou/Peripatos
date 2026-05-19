@@ -1,4 +1,4 @@
-archetype: the_skeptic
+archetype: skeptic
 host_name: "Alex"
 guest_name: "Dr. Chen"
 system_prompt: |

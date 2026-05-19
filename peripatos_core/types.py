@@ -7,10 +7,10 @@ from pathlib import Path
 
 
 class ArchetypeId(str, Enum):
-    THE_PEER = "the_peer"
-    THE_SKEPTIC = "the_skeptic"
-    THE_TUTOR = "the_tutor"
-    THE_ENTHUSIAST = "the_enthusiast"
+    PEER = "peer"
+    SKEPTIC = "skeptic"
+    TUTOR = "tutor"
+    ENTHUSIAST = "enthusiast"
 
 
 @dataclass

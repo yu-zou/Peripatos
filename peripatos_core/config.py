@@ -42,7 +42,7 @@ class TTSConfig:
 
 @dataclass
 class Defaults:
-    archetype: str = "the_peer"
+    archetype: str = "peer"
     output_dir: str = "."
 
 

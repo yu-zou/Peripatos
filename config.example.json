@@ -9,7 +9,7 @@
     "voice": "en-US-AriaNeural"
   },
   "defaults": {
-    "archetype": "proxy_host",
+    "archetype": "peer",
     "output_dir": "."
   }
 }

@@ -17,33 +17,33 @@ def test_load_all_four_archetypes():
 
 def test_load_by_string():
     loader = ArchetypeLoader()
-    prompt = loader.load("the_peer")
-    assert prompt.archetype == "the_peer"
+    prompt = loader.load("peer")
+    assert prompt.archetype == "peer"
 
 
 def test_load_missing_raises(tmp_path):
     loader = ArchetypeLoader(prompts_dir=tmp_path)
     with pytest.raises(ConfigError, match="not found"):
-        loader.load("the_peer")
+        loader.load("peer")
 
 
 def test_load_malformed_yaml_raises(tmp_path):
-    bad = tmp_path / "the_peer.yaml"
+    bad = tmp_path / "peer.yaml"
     bad.write_text(": invalid: yaml: [")
     loader = ArchetypeLoader(prompts_dir=tmp_path)
     with pytest.raises(ConfigError):
-        loader.load("the_peer")
+        loader.load("peer")
 
 
 def test_load_missing_fields_raises(tmp_path):
-    incomplete = tmp_path / "the_peer.yaml"
-    incomplete.write_text(yaml.dump({"archetype": "the_peer"}))
+    incomplete = tmp_path / "peer.yaml"
+    incomplete.write_text(yaml.dump({"archetype": "peer"}))
     loader = ArchetypeLoader(prompts_dir=tmp_path)
     with pytest.raises(ConfigError, match="missing fields"):
-        loader.load("the_peer")
+        loader.load("peer")
 
 
 def test_list_available():
     loader = ArchetypeLoader()
     available = loader.list_available()
-    assert set(available) >= {"the_peer", "the_skeptic", "the_tutor", "the_enthusiast"}
+    assert set(available) >= {"peer", "skeptic", "tutor", "enthusiast"}
