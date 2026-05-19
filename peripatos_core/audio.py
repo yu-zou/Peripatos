@@ -99,7 +99,10 @@ class AudioRenderer:
         tmp = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
         tmp.close()
         combined_path = Path(tmp.name)
-        combined.export(str(combined_path), format="mp3")
+        try:
+            combined.export(str(combined_path), format="mp3")
+        except Exception as exc:
+            raise AudioError(f"Failed to export concatenated audio: {exc}") from exc
         return combined_path
 
     def _compute_chapters(self, segments: list[AudioSegment]) -> list[ChapterMark]:
@@ -125,7 +128,10 @@ class AudioRenderer:
     ) -> None:
         """Copy source MP3 to output and embed ID3v2.4 chapter markers."""
         import shutil
-        shutil.copy2(str(source_path), str(output_path))
+        try:
+            shutil.copy2(str(source_path), str(output_path))
+        except OSError as exc:
+            raise AudioError(f"Failed to copy audio to output path: {exc}") from exc
 
         try:
             from mutagen.id3 import ID3, ID3NoHeaderError, CHAP, CTOC, TIT2, CTOCFlags  # type: ignore[reportMissingImports]
@@ -166,4 +172,7 @@ class AudioRenderer:
             sub_frames=[TIT2(encoding=3, text=title)],
         ))
 
-        tags.save(str(output_path), v2_version=4)
+        try:
+            tags.save(str(output_path), v2_version=4)
+        except Exception as exc:
+            raise AudioError(f"Failed to write ID3 tags to {output_path}: {exc}") from exc
