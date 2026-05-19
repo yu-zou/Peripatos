@@ -86,6 +86,12 @@ The `tts.provider` defaults to `"edge"` (Microsoft Edge TTS — no API key requi
 
 The `llm.base_url` accepts any OpenAI-compatible endpoint: [Requesty](https://requesty.ai), [OpenRouter](https://openrouter.ai), or vanilla OpenAI.
 
+### Reference
+
+| Key | Default | Description |
+|---|---|---|
+| `llm.max_paper_chars` | `128000` | Maximum characters of paper content sent to the LLM. Increase for larger papers; decrease to reduce token usage. |
+
 ## Quick Start
 
 ```bash
@@ -146,7 +152,12 @@ docker compose run --rm test pytest -v
 
 # Integration tests (requires real API keys in config)
 RUN_INTEGRATION=1 docker compose run --rm test pytest -v -m integration
+
+# Python 3.14 wheel-install smoke test (optional, requires Docker)
+docker compose run --rm install-test
 ```
+
+Builds a wheel from source, installs it into a fresh Python 3.14 environment, and verifies `peripatos --help`, `list-archetypes`, and provider imports all work correctly.
 
 ## License
 
