@@ -8,6 +8,9 @@
     "provider": "edge",
     "voice": "en-US-AriaNeural"
   },
+  "parser": {
+    "backend": "docling"
+  },
   "defaults": {
     "archetype": "peer",
     "output_dir": "."

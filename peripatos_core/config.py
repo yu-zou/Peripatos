@@ -18,10 +18,11 @@ logger = logging.getLogger(__name__)
 
 USER_GLOBAL_CONFIG_PATH = Path.home() / ".config" / "peripatos" / "config.json"
 
-KNOWN_KEYS = {"llm", "tts", "defaults"}
+KNOWN_KEYS = {"llm", "tts", "defaults", "parser"}
 KNOWN_LLM_KEYS = {"base_url", "api_key", "model"}
 KNOWN_TTS_KEYS = {"provider", "base_url", "api_key", "voice", "model"}
 KNOWN_DEFAULTS_KEYS = {"archetype", "output_dir"}
+KNOWN_PARSER_KEYS = {"backend"}
 
 
 @dataclass
@@ -47,10 +48,16 @@ class Defaults:
 
 
 @dataclass
+class ParserConfig:
+    backend: str = "docling"
+
+
+@dataclass
 class Settings:
     llm: LLMConfig = field(default_factory=LLMConfig)
     tts: TTSConfig = field(default_factory=TTSConfig)
     defaults: Defaults = field(default_factory=Defaults)
+    parser: ParserConfig = field(default_factory=ParserConfig)
 
 
 def _warn_unknown(section: str, data: dict[str, Any], known: set[str]) -> None:
@@ -90,6 +97,13 @@ def _apply_overrides(settings: Settings, data: dict[str, Any]) -> None:
         for k in KNOWN_DEFAULTS_KEYS:
             if k in def_data:
                 setattr(settings.defaults, k, def_data[k])
+
+    if "parser" in data:
+        parser_data = data["parser"]
+        _warn_unknown("parser", parser_data, KNOWN_PARSER_KEYS)
+        for k in KNOWN_PARSER_KEYS:
+            if k in parser_data:
+                setattr(settings.parser, k, parser_data[k])
 
 
 def load_settings(config_path: Path | None = None) -> Settings:

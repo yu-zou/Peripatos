@@ -22,6 +22,7 @@ def test_defaults_when_no_file(tmp_path, monkeypatch):
     assert isinstance(settings, Settings)
     assert settings.llm.model == "openai/gpt-4o-mini"
     assert settings.tts.provider == "edge"
+    assert settings.parser.backend == "docling"
     assert settings.defaults.archetype == "peer"
 
 
@@ -36,6 +37,16 @@ def test_explicit_config_overrides(tmp_path, monkeypatch):
     assert settings.llm.model == "openai/gpt-4o"
     assert settings.llm.api_key == "test-key"
     assert settings.tts.provider == "edge"
+
+
+def test_parser_backend_override(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "peripatos_core.config.USER_GLOBAL_CONFIG_PATH", tmp_path / "nonexistent.json"
+    )
+    cfg = tmp_path / "config.json"
+    cfg.write_text(json.dumps({"parser": {"backend": "mineru"}}))
+    settings = load_settings(config_path=cfg)
+    assert settings.parser.backend == "mineru"
 
 
 def test_user_global_config(tmp_path, monkeypatch):
