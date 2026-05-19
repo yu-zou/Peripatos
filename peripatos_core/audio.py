@@ -139,40 +139,42 @@ class AudioRenderer:
             raise AudioError("mutagen is not installed") from exc
 
         try:
-            tags = ID3(str(output_path))
-        except ID3NoHeaderError:
-            tags = ID3()
+            try:
+                tags = ID3(str(output_path))
+            except ID3NoHeaderError:
+                tags = ID3()
 
-        # Clear existing chapter tags
-        tags.delall("CHAP")
-        tags.delall("CTOC")
+            # Clear existing chapter tags
+            tags.delall("CHAP")
+            tags.delall("CTOC")
 
-        # Add title
-        tags.add(TIT2(encoding=3, text=title))
+            # Add title
+            tags.add(TIT2(encoding=3, text=title))
 
-        # Add CHAP frames
-        chap_ids = []
-        for i, ch in enumerate(chapters):
-            chap_id = f"chp{i}"
-            chap_ids.append(chap_id)
-            tags.add(CHAP(
-                element_id=chap_id,
-                start_time=ch.start_ms,
-                end_time=ch.end_ms,
-                start_offset=0xFFFFFFFF,
-                end_offset=0xFFFFFFFF,
-                sub_frames=[TIT2(encoding=3, text=ch.title)],
+            # Add CHAP frames
+            chap_ids = []
+            for i, ch in enumerate(chapters):
+                chap_id = f"chp{i}"
+                chap_ids.append(chap_id)
+                tags.add(CHAP(
+                    element_id=chap_id,
+                    start_time=ch.start_ms,
+                    end_time=ch.end_ms,
+                    start_offset=0xFFFFFFFF,
+                    end_offset=0xFFFFFFFF,
+                    sub_frames=[TIT2(encoding=3, text=ch.title)],
+                ))
+
+            # Add CTOC (table of contents)
+            tags.add(CTOC(
+                element_id="toc",
+                flags=CTOCFlags.TOP_LEVEL | CTOCFlags.ORDERED,
+                child_element_ids=chap_ids,
+                sub_frames=[TIT2(encoding=3, text=title)],
             ))
 
-        # Add CTOC (table of contents)
-        tags.add(CTOC(
-            element_id="toc",
-            flags=CTOCFlags.TOP_LEVEL | CTOCFlags.ORDERED,
-            child_element_ids=chap_ids,
-            sub_frames=[TIT2(encoding=3, text=title)],
-        ))
-
-        try:
             tags.save(str(output_path), v2_version=4)
+        except AudioError:
+            raise
         except Exception as exc:
             raise AudioError(f"Failed to write ID3 tags to {output_path}: {exc}") from exc
