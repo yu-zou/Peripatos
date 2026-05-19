@@ -96,13 +96,15 @@ class AudioRenderer:
         if combined is None:
             raise AudioError("No audio segments to concatenate")
 
-        tmp = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
-        tmp.close()
-        combined_path = Path(tmp.name)
         try:
+            tmp = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
+            tmp.close()
+            combined_path = Path(tmp.name)
             combined.export(str(combined_path), format="mp3")
+        except AudioError:
+            raise
         except Exception as exc:
-            raise AudioError(f"Failed to export concatenated audio: {exc}") from exc
+            raise AudioError(f"Failed to create/export concatenated audio: {exc}") from exc
         return combined_path
 
     def _compute_chapters(self, segments: list[AudioSegment]) -> list[ChapterMark]:
