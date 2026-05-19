@@ -70,17 +70,17 @@ class AudioRenderer:
     def _get_duration(self, audio_path: Path) -> float:
         """Get audio duration in seconds using pydub."""
         try:
-            from pydub import AudioSegment as PydubSegment
+            from pydub import AudioSegment as PydubSegment  # type: ignore[reportMissingImports]
             seg = PydubSegment.from_file(str(audio_path))
             return len(seg) / 1000.0
-        except Exception:
-            # Fallback: return 0 if pydub can't read (e.g. stub silent MP3)
+        except Exception as exc:
+            logger.warning("Could not read duration from %s (using 0.0): %s", audio_path, exc)
             return 0.0
 
     def _concatenate_segments(self, segments: list[AudioSegment]) -> Path:
         """Concatenate all audio segments into a single MP3 file."""
         try:
-            from pydub import AudioSegment as PydubSegment
+            from pydub import AudioSegment as PydubSegment  # type: ignore[reportMissingImports]
         except ImportError as exc:
             raise AudioError("pydub is not installed") from exc
 
@@ -88,8 +88,8 @@ class AudioRenderer:
         for seg in segments:
             try:
                 audio = PydubSegment.from_file(str(seg.audio_path))
-            except Exception:
-                # Stub files may not be valid MP3 — create silent segment
+            except Exception as exc:
+                logger.warning("Could not decode %s, using silent segment: %s", seg.audio_path, exc)
                 audio = PydubSegment.silent(duration=int(seg.duration_s * 1000) or 100)
             combined = audio if combined is None else combined + audio
 
@@ -128,7 +128,7 @@ class AudioRenderer:
         shutil.copy2(str(source_path), str(output_path))
 
         try:
-            from mutagen.id3 import ID3, ID3NoHeaderError, CHAP, CTOC, TIT2, CTOCFlags
+            from mutagen.id3 import ID3, ID3NoHeaderError, CHAP, CTOC, TIT2, CTOCFlags  # type: ignore[reportMissingImports]
         except ImportError as exc:
             raise AudioError("mutagen is not installed") from exc
 

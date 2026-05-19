@@ -1,5 +1,4 @@
 """Tests for CLI commands."""
-import pytest
 from typer.testing import CliRunner
 from peripatos_core.cli import app
 

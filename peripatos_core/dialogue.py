@@ -2,10 +2,10 @@
 from __future__ import annotations
 import json
 import logging
-from peripatos_core.archetypes import ArchetypeLoader, ArchetypePrompt
+import peripatos_core.archetypes as archetypes
 from peripatos_core.exceptions import LLMError
 from peripatos_core.providers.llm import LLMProvider
-from peripatos_core.types import ArchetypeId, DialogueScript, DialogueTurn
+from peripatos_core.types import DialogueScript, DialogueTurn
 
 logger = logging.getLogger(__name__)
 
@@ -19,15 +19,15 @@ class DialogueGenerator:
     def __init__(
         self,
         llm: LLMProvider,
-        archetype_loader: ArchetypeLoader | None = None,
+        archetype_loader: archetypes.ArchetypeLoader | None = None,
     ) -> None:
         self._llm = llm
-        self._loader = archetype_loader or ArchetypeLoader()
+        self._loader = archetype_loader or archetypes.ArchetypeLoader()
 
     def generate(
         self,
         paper_content: str,
-        archetype: ArchetypeId | str = ArchetypeId.PROXY_HOST,
+        archetype: archetypes.ArchetypeId | str = archetypes.ArchetypeId.PROXY_HOST,
         title: str = "Untitled Paper",
     ) -> DialogueScript:
         """Generate a dialogue script from paper content.
@@ -40,7 +40,7 @@ class DialogueGenerator:
         Returns:
             DialogueScript with turns populated.
         """
-        archetype_id = ArchetypeId(archetype) if isinstance(archetype, str) else archetype
+        archetype_id = archetypes.ArchetypeId(archetype) if isinstance(archetype, str) else archetype
         prompt_data = self._loader.load(archetype_id)
 
         # Truncate paper content to avoid token overflow
@@ -66,7 +66,7 @@ class DialogueGenerator:
         self,
         raw: str,
         title: str,
-        archetype: ArchetypeId,
+        archetype: archetypes.ArchetypeId,
     ) -> DialogueScript:
         """Parse LLM JSON response into a DialogueScript."""
         # Strip markdown code fences if present
