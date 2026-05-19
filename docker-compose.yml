@@ -12,6 +12,10 @@ services:
     environment:
       - RUN_INTEGRATION=${RUN_INTEGRATION:-0}
       - PYTHONPATH=/workspace
+  install-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.install-test
 volumes:
   peripatos-models:
   peripatos-pip-cache:

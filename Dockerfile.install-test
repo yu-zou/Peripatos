@@ -1,0 +1,20 @@
+FROM python:3.14-slim
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg git curl ca-certificates && rm -rf /var/lib/apt/lists/*
+WORKDIR /build
+RUN pip install --no-cache-dir -U pip setuptools wheel build
+COPY . /build
+# Build the wheel (NOT editable install — this is the whole point)
+RUN python -m build --wheel --outdir /dist
+# Install the built wheel into system site-packages
+RUN pip install --no-cache-dir /dist/peripatos_core-*.whl
+# Move away from source dir so imports MUST resolve from site-packages, not /build
+WORKDIR /
+CMD ["sh", "-c", "set -e; \
+  echo '=== peripatos --help ==='; \
+  peripatos --help; \
+  echo '=== peripatos list-archetypes ==='; \
+  peripatos list-archetypes; \
+  echo '=== import smoke test ==='; \
+  python -c \"from peripatos_core.providers.llm import OpenAICompatibleLLMProvider; from peripatos_core.archetypes import ArchetypeLoader; a = ArchetypeLoader().list_available(); assert sorted(a) == ['enthusiast', 'peer', 'skeptic', 'tutor'], a; print('OK archetypes:', a)\"; \
+  echo '=== ALL SMOKE TESTS PASSED ==='"]
