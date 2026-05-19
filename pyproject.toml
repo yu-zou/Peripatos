@@ -23,8 +23,9 @@ peripatos = "peripatos_core.cli:app"
 requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-packages = ["peripatos_core"]
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["peripatos_core*"]
 
 [tool.pytest.ini_options]
 markers = [
