@@ -1,0 +1,23 @@
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+.mypy_cache/
+.ruff_cache/
+tests/output/
+*.mp3
+!tests/fixtures/*.mp3
+models/
+# Local user config (may contain real API keys)
+config.json
+config.local.json
+tests/fixtures/integration_config.json
+!config.example.json
+!tests/fixtures/integration_config.example.json
+.env
+.env.*

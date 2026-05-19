@@ -1,0 +1,33 @@
+[project]
+name = "peripatos-core"
+version = "0.1.0"
+description = "Convert academic papers to Socratic-dialogue podcasts"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+dependencies = [
+    "typer>=0.12,<1.0",
+    "pydub>=0.25,<1.0",
+    "mutagen>=1.47,<2.0",
+    "openai>=1.40,<2.0",
+    "edge-tts>=6.1,<7.0",
+    "docling>=2.0",
+    "requests>=2.31,<3.0",
+    "pyyaml>=6.0,<7.0",
+]
+
+[project.scripts]
+peripatos = "peripatos_core.cli:app"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends.legacy:build"
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: opt-in real-API tests (deselect with '-m not integration')",
+]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
