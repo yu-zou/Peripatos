@@ -21,6 +21,14 @@ def _extract_sections(markdown: str) -> list[str]:
     return [line.lstrip("#").strip() for line in markdown.splitlines() if line.startswith("#")]
 
 
+def _first_present(mapping: dict[str, Any], keys: tuple[str, ...], default: Any = "") -> Any:
+    for key in keys:
+        value = mapping.get(key)
+        if value is not None:
+            return value
+    return default
+
+
 class DocumentParserBackend(Protocol):
     """Common interface for PDF parser backends."""
 
@@ -90,9 +98,9 @@ class MinerUPDFParserBackend:
             result = self._call_parser(pdf_path)
 
             if isinstance(result, dict):
-                markdown = result.get("markdown") or result.get("text") or ""
-                sections = [str(s) for s in (result.get("sections") or [])]
-                full_text = result.get("full_text") or result.get("text") or markdown
+                markdown = _first_present(result, ("markdown", "text"), "")
+                sections = [str(s) for s in _first_present(result, ("sections",), [])]
+                full_text = _first_present(result, ("full_text", "text"), markdown)
             elif isinstance(result, str):
                 markdown = result
                 sections = []
@@ -135,19 +143,6 @@ class PDFParser:
             supported = ", ".join(sorted(self._BACKENDS))
             raise ParseError(f"Unknown parser backend: {backend!r}. Supported: {supported}")
         self._backend: DocumentParserBackend = backend_cls()
-
-    @property
-    def _converter(self):
-        if isinstance(self._backend, DoclingPDFParserBackend):
-            return self._backend._converter
-        return None
-
-    @_converter.setter
-    def _converter(self, value):
-        if isinstance(self._backend, DoclingPDFParserBackend):
-            self._backend._converter = value
-        else:
-            raise AttributeError("_converter is only available for the docling backend")
 
     def parse(self, pdf_path: Path) -> ParsedPaper:
         """Parse a PDF and return structured content."""

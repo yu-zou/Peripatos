@@ -2,7 +2,7 @@
 import pytest
 from pathlib import Path
 from unittest.mock import MagicMock
-from peripatos_core.parser import PDFParser, ParsedPaper
+from peripatos_core.parser import DoclingPDFParserBackend, PDFParser, ParsedPaper
 from peripatos_core.exceptions import ParseError
 
 
@@ -22,7 +22,8 @@ def test_parse_returns_parsed_paper(tmp_path):
     pdf = tmp_path / "paper.pdf"
     pdf.write_bytes(b"%PDF-1.4 fake")
     parser = PDFParser()
-    parser._converter = _make_mock_converter("# Introduction\n\nHello world.")
+    assert isinstance(parser._backend, DoclingPDFParserBackend)
+    parser._backend._converter = _make_mock_converter("# Introduction\n\nHello world.")
     result = parser.parse(pdf)
     assert isinstance(result, ParsedPaper)
     assert "Introduction" in result.sections
@@ -47,7 +48,8 @@ def test_parse_extracts_sections(tmp_path):
     pdf = tmp_path / "paper.pdf"
     pdf.write_bytes(b"%PDF-1.4 fake")
     parser = PDFParser()
-    parser._converter = _make_mock_converter(
+    assert isinstance(parser._backend, DoclingPDFParserBackend)
+    parser._backend._converter = _make_mock_converter(
         "# Abstract\n\nText.\n## Introduction\n\nMore text.\n### Related Work\n\nEven more."
     )
     result = parser.parse(pdf)
@@ -62,7 +64,8 @@ def test_parse_docling_error_raises(tmp_path):
     parser = PDFParser()
     mock_converter = MagicMock()
     mock_converter.convert.side_effect = RuntimeError("docling internal error")
-    parser._converter = mock_converter
+    assert isinstance(parser._backend, DoclingPDFParserBackend)
+    parser._backend._converter = mock_converter
     with pytest.raises(ParseError, match="Docling failed"):
         parser.parse(pdf)
 
