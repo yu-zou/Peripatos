@@ -6,6 +6,7 @@ COPY requirements.txt requirements-dev.txt ./
 RUN pip install --no-cache-dir -r requirements-dev.txt
 RUN pip install --no-cache-dir -U "setuptools>=68" wheel
 COPY . .
+RUN pip install --no-cache-dir -e .
 ENV PYTHONUNBUFFERED=1
 ENV DOCLING_CACHE_DIR=/models
 CMD ["pytest", "-v"]
