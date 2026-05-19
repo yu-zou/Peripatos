@@ -68,12 +68,14 @@ def test_parse_docling_error_raises(tmp_path):
 
 
 def test_parse_real_fixture():
-    """Smoke test with the real sample PDF fixture (no mocking)."""
+    """Smoke test with the real sample PDF fixture (no mocking, requires Docling models)."""
+    import os
+    if not os.environ.get("RUN_INTEGRATION"):
+        pytest.skip("Skipped: set RUN_INTEGRATION=1 to run (requires Docling model download)")
     fixture = Path("tests/fixtures/sample_paper.pdf")
     if not fixture.exists():
         pytest.skip("sample_paper.pdf fixture not found")
     parser = PDFParser()
-    # This will download Docling models on first run (slow, but necessary)
     result = parser.parse(fixture)
     assert len(result.markdown) > 100
     assert len(result.sections) > 0
