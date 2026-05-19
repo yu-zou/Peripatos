@@ -1,7 +1,7 @@
 """Tests for PDFParser."""
 import pytest
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from peripatos_core.parser import PDFParser, ParsedPaper
 from peripatos_core.exceptions import ParseError
 
@@ -64,6 +64,41 @@ def test_parse_docling_error_raises(tmp_path):
     mock_converter.convert.side_effect = RuntimeError("docling internal error")
     parser._converter = mock_converter
     with pytest.raises(ParseError, match="Docling failed"):
+        parser.parse(pdf)
+
+
+def test_parse_unknown_backend_raises():
+    with pytest.raises(ParseError, match="Unknown parser backend"):
+        PDFParser(backend="unknown")
+
+
+def test_parse_mineru_backend_with_parse_pdf_api(tmp_path, monkeypatch):
+    pdf = tmp_path / "paper.pdf"
+    pdf.write_bytes(b"%PDF-1.4 fake")
+
+    class _MinerUModule:
+        @staticmethod
+        def parse_pdf(path: str):
+            assert path.endswith(".pdf")
+            return "# Abstract\n\nMinerU content."
+
+    monkeypatch.setattr("peripatos_core.parser.importlib.import_module", lambda _: _MinerUModule)
+    parser = PDFParser(backend="mineru")
+    result = parser.parse(pdf)
+    assert isinstance(result, ParsedPaper)
+    assert "Abstract" in result.sections
+    assert "MinerU content" in result.markdown
+
+
+def test_parse_mineru_missing_dependency_raises(tmp_path, monkeypatch):
+    pdf = tmp_path / "paper.pdf"
+    pdf.write_bytes(b"%PDF-1.4 fake")
+    parser = PDFParser(backend="mineru")
+    monkeypatch.setattr(
+        "peripatos_core.parser.importlib.import_module",
+        MagicMock(side_effect=ImportError("No module named mineru")),
+    )
+    with pytest.raises(ParseError, match="mineru is not installed"):
         parser.parse(pdf)
 
 

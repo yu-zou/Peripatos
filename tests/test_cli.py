@@ -29,6 +29,7 @@ def test_doctor_no_config(tmp_path, monkeypatch):
     assert result.exit_code == 0
     assert "LLM provider" in result.output
     assert "TTS provider" in result.output
+    assert "Parser backend" in result.output
 
 
 def test_doctor_with_config(tmp_path, monkeypatch):

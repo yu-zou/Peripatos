@@ -53,6 +53,9 @@ Configuration is resolved in this order:
     "provider": "edge",
     "voice": "en-US-AriaNeural"
   },
+  "parser": {
+    "backend": "docling"
+  },
   "defaults": {
     "archetype": "peer"
   }
@@ -62,6 +65,8 @@ Configuration is resolved in this order:
 The `tts.provider` defaults to `"edge"` (Microsoft Edge TTS — no API key required). Set it to `"openai"` to use any OpenAI-compatible TTS endpoint instead.
 
 The `llm.base_url` accepts any OpenAI-compatible endpoint: [Requesty](https://requesty.ai), [OpenRouter](https://openrouter.ai), or vanilla OpenAI.
+
+The `parser.backend` defaults to `"docling"` and can be set to `"mineru"` if you have MinerU installed.
 
 ## Quick Start
 

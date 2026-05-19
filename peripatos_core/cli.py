@@ -74,7 +74,7 @@ def generate(
     pdf_path, metadata = fetcher.fetch(source)
 
     typer.echo(f"[2/5] Parsing PDF: {pdf_path.name}")
-    parser = PDFParser()
+    parser = PDFParser(backend=settings.parser.backend)
     parsed = parser.parse(pdf_path)
 
     typer.echo(f"[3/5] Generating dialogue (archetype={archetype})")
@@ -121,12 +121,13 @@ def doctor(
 
     typer.echo("Peripatos Doctor")
     typer.echo("=" * 40)
-    typer.echo(f"LLM provider:  openai_compatible")
+    typer.echo("LLM provider:  openai_compatible")
     typer.echo(f"LLM base_url:  {settings.llm.base_url}")
     typer.echo(f"LLM model:     {settings.llm.model}")
     typer.echo(f"LLM api_key:   {'present' if settings.llm.api_key else 'MISSING'}")
     typer.echo(f"TTS provider:  {settings.tts.provider}")
     typer.echo(f"TTS voice:     {settings.tts.voice}")
+    typer.echo(f"Parser backend:{settings.parser.backend}")
     typer.echo(f"Default arch:  {settings.defaults.archetype}")
     typer.echo(f"Output dir:    {settings.defaults.output_dir}")
     typer.echo("=" * 40)
