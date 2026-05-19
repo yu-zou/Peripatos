@@ -1,6 +1,7 @@
 """PDF parser abstraction with pluggable document parsing backends."""
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 import importlib
 from pathlib import Path
@@ -19,6 +20,17 @@ class ParsedPaper:
 
 def _extract_sections(markdown: str) -> list[str]:
     return [line.lstrip("#").strip() for line in markdown.splitlines() if line.startswith("#")]
+
+
+def _coerce_sections(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        stripped = value.strip()
+        return [stripped] if stripped else []
+    if isinstance(value, Iterable):
+        return [str(item) for item in value]
+    return [str(value)]
 
 
 class DocumentParserBackend(Protocol):
@@ -91,8 +103,7 @@ class MinerUPDFParserBackend:
 
             if isinstance(result, dict):
                 markdown = result.get("markdown") or result.get("text") or ""
-                sections_data = result.get("sections")
-                sections = [str(s) for s in sections_data] if sections_data is not None else []
+                sections = _coerce_sections(result.get("sections"))
                 full_text = result.get("full_text") or result.get("text") or markdown
             elif isinstance(result, str):
                 markdown = result
@@ -109,7 +120,7 @@ class MinerUPDFParserBackend:
                     if hasattr(result, "export_to_text")
                     else getattr(result, "full_text", markdown)
                 )
-                sections = [str(s) for s in getattr(result, "sections", [])]
+                sections = _coerce_sections(getattr(result, "sections", []))
 
             if not sections:
                 sections = _extract_sections(markdown)
