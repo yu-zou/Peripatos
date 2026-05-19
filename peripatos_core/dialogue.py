@@ -2,6 +2,7 @@
 from __future__ import annotations
 import json
 import logging
+import re
 import peripatos_core.archetypes as archetypes
 from peripatos_core.exceptions import LLMError
 from peripatos_core.providers.llm import LLMProvider
@@ -74,6 +75,8 @@ class DialogueGenerator:
         if cleaned.startswith("```"):
             lines = cleaned.splitlines()
             cleaned = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+
+        cleaned = re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', cleaned)
 
         try:
             data = json.loads(cleaned)
