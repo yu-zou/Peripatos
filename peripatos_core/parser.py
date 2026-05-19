@@ -37,7 +37,14 @@ class DocumentParserBackend(Protocol):
     """Common interface for PDF parser backends."""
 
     def parse(self, pdf_path: Path) -> ParsedPaper:
-        """Parse PDF file and return normalized ParsedPaper."""
+        """Parse PDF file and return normalized ParsedPaper.
+
+        Args:
+            pdf_path: Path to the PDF file.
+
+        Returns:
+            Parsed paper content normalized across backends.
+        """
 
 
 class DoclingPDFParserBackend:
@@ -76,7 +83,7 @@ class MinerUPDFParserBackend:
     def __init__(self) -> None:
         self._module = None
 
-    def _get_module(self):
+    def _get_module(self) -> Any:
         if self._module is None:
             try:
                 self._module = importlib.import_module("mineru")
