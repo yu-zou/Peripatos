@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 USER_GLOBAL_CONFIG_PATH = Path.home() / ".config" / "peripatos" / "config.json"
 
 KNOWN_KEYS = {"llm", "tts", "defaults"}
-KNOWN_LLM_KEYS = {"base_url", "api_key", "model"}
+KNOWN_LLM_KEYS = {"base_url", "api_key", "model", "max_paper_chars"}
 KNOWN_TTS_KEYS = {"provider", "base_url", "api_key", "voice", "model"}
 KNOWN_DEFAULTS_KEYS = {"archetype", "output_dir"}
 
@@ -29,6 +29,7 @@ class LLMConfig:
     base_url: str = "https://router.requesty.ai/v1"
     api_key: str = ""
     model: str = "openai/gpt-4o-mini"
+    max_paper_chars: int = 128_000
 
 
 @dataclass

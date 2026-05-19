@@ -10,9 +10,6 @@ from peripatos_core.types import DialogueScript, DialogueTurn
 
 logger = logging.getLogger(__name__)
 
-# Maximum characters of paper content to send to LLM (avoid token overflow)
-MAX_PAPER_CHARS = 12_000
-
 
 class DialogueGenerator:
     """Generates a Socratic dialogue from paper text using an LLM."""
@@ -21,9 +18,11 @@ class DialogueGenerator:
         self,
         llm: LLMProvider,
         archetype_loader: archetypes.ArchetypeLoader | None = None,
+        max_paper_chars: int = 128_000,
     ) -> None:
         self._llm = llm
         self._loader = archetype_loader or archetypes.ArchetypeLoader()
+        self._max_paper_chars = max_paper_chars
 
     def generate(
         self,
@@ -45,12 +44,12 @@ class DialogueGenerator:
         prompt_data = self._loader.load(archetype_id)
 
         # Truncate paper content to avoid token overflow
-        truncated = paper_content[:MAX_PAPER_CHARS]
-        if len(paper_content) > MAX_PAPER_CHARS:
+        truncated = paper_content[:self._max_paper_chars]
+        if len(paper_content) > self._max_paper_chars:
             logger.warning(
                 "Paper content truncated from %d to %d chars",
                 len(paper_content),
-                MAX_PAPER_CHARS,
+                self._max_paper_chars,
             )
 
         user_prompt = prompt_data.dialogue_prompt.format(paper_content=truncated)
