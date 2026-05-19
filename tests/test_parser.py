@@ -96,11 +96,11 @@ def test_parse_mineru_backend_with_parse_pdf_api(tmp_path, monkeypatch):
 def test_parse_mineru_missing_dependency_raises(tmp_path, monkeypatch):
     pdf = tmp_path / "paper.pdf"
     pdf.write_bytes(b"%PDF-1.4 fake")
-    parser = PDFParser(backend="mineru")
     monkeypatch.setattr(
         "peripatos_core.parser.importlib.import_module",
         MagicMock(side_effect=ImportError("No module named mineru")),
     )
+    parser = PDFParser(backend="mineru")
     with pytest.raises(ParseError, match="mineru is not installed"):
         parser.parse(pdf)
 
