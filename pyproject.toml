@@ -14,6 +14,7 @@ dependencies = [
     "docling>=2.0",
     "requests>=2.31,<3.0",
     "pyyaml>=6.0,<7.0",
+    "json-repair>=0.30,<1.0",
 ]
 
 [project.scripts]
