@@ -79,3 +79,28 @@ def test_generate_uses_llm_title():
     gen = DialogueGenerator(llm=stub)
     script = gen.generate("content", title="Fallback Title")
     assert script.title == "LLM Title"
+
+
+def test_generate_handles_latex_escapes_via_repair():
+    # JSON with unescaped backslash before 'a' — invalid per JSON spec, but json-repair fixes it
+    # \a is not a valid JSON escape sequence (valid ones: \" \\ \/ \b \f \n \r \t \uXXXX)
+    broken_raw = '{"title": "Math Paper", "turns": [{"speaker": "Host", "text": "Consider \\alpha where \\sigma is defined."}, {"speaker": "Guest", "text": "Right, \\Sigma notation."}]}'
+    # Verify it's actually broken
+    import json as _json
+    try:
+        _json.loads(broken_raw)
+    except _json.JSONDecodeError:
+        pass  # Expected — this is the bug we're fixing
+    stub = StubLLMProvider(response=broken_raw)
+    gen = DialogueGenerator(llm=stub)
+    script = gen.generate("paper content", archetype=ArchetypeId.PEER)
+    assert isinstance(script, DialogueScript)
+    assert len(script.turns) == 2
+    assert script.title == "Math Paper"
+
+
+def test_generate_unrepairable_json_raises():
+    stub = StubLLMProvider(response="not json at all { { {")
+    gen = DialogueGenerator(llm=stub)
+    with pytest.raises(LLMError, match="invalid JSON"):
+        gen.generate("content", archetype=ArchetypeId.PEER)

@@ -2,7 +2,7 @@
 from __future__ import annotations
 import json
 import logging
-import re
+import json_repair  # pyright: ignore[reportMissingImports]
 import peripatos_core.archetypes as archetypes
 from peripatos_core.exceptions import LLMError
 from peripatos_core.providers.llm import LLMProvider
@@ -75,12 +75,16 @@ class DialogueGenerator:
             lines = cleaned.splitlines()
             cleaned = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
 
-        cleaned = re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', cleaned)
-
         try:
             data = json.loads(cleaned)
         except json.JSONDecodeError as exc:
-            raise LLMError(f"LLM returned invalid JSON: {exc}\nRaw: {raw[:200]}") from exc
+            logger.warning("LLM returned non-strict JSON; attempting repair: %s", exc)
+            repaired = json_repair.loads(cleaned)
+            if not repaired:
+                raise LLMError(
+                    f"LLM returned invalid JSON even after repair: {exc}\nRaw: {raw[:200]}"
+                ) from exc
+            data = repaired
 
         episode_title = data.get("title", title)
         turns_data = data.get("turns", [])
