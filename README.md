@@ -153,6 +153,10 @@ docker compose run --rm test pytest -v
 # Integration tests (requires real API keys in config)
 RUN_INTEGRATION=1 docker compose run --rm test pytest -v -m integration
 
+# Real-LLM end-to-end test (requires Peripatos/config.test.json with API key)
+# Fetches arxiv 2303.08774, runs the full pipeline against a real LLM, and verifies the output MP3 contains ID3 chapter markers.
+RUN_INTEGRATION=1 docker compose run --rm test pytest -v tests/test_e2e.py
+
 # Python 3.14 wheel-install smoke test (optional, requires Docker)
 docker compose run --rm install-test
 ```
