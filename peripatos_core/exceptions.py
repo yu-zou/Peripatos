@@ -27,3 +27,23 @@ class TTSError(PeriptatosError):
 
 class AudioError(PeriptatosError):
     """Raised when audio assembly or chapter-marking fails."""
+
+
+class RAGError(PeriptatosError):
+    """Base exception for RAG pipeline errors."""
+
+
+class EmbeddingError(RAGError):
+    """Raised when an embedding API call fails."""
+
+
+class RetrievalError(RAGError):
+    """Raised when vector store retrieval fails."""
+
+
+class IngestError(RAGError):
+    """Raised when source ingestion fails."""
+
+
+class AgentError(RAGError):
+    """Raised when the ReAct agent loop fails (e.g., zero turns produced)."""
