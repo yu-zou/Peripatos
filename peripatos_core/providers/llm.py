@@ -2,10 +2,40 @@
 from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
+
 from peripatos_core.config import LLMConfig
 
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class ToolSpec:
+    name: str
+    description: str
+    parameters: dict
+
+
+@dataclass
+class ToolCall:
+    id: str
+    name: str
+    arguments: dict
+
+
+@dataclass
+class ToolCallResult:
+    tool_call_id: str
+    content: str
+
+
+@dataclass
+class AgentMessage:
+    role: str
+    content: str | None
+    tool_calls: list[ToolCall] | None = None
+    tool_call_id: str | None = None
 
 
 class LLMProvider(ABC):
@@ -14,6 +44,14 @@ class LLMProvider(ABC):
     @abstractmethod
     def complete(self, system_prompt: str, user_prompt: str) -> str:
         """Send a chat completion request and return the response text."""
+
+    @abstractmethod
+    def complete_with_tools(
+        self,
+        messages: list[AgentMessage],
+        tools: list[ToolSpec],
+    ) -> AgentMessage:
+        """Send a chat completion with tool definitions and return the next message."""
 
 
 class OpenAICompatibleLLMProvider(LLMProvider):
