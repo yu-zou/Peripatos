@@ -1,4 +1,3 @@
-import pytest
 from peripatos_core.providers.llm import LLMProvider
 from peripatos_core.providers.llm_stub import StubLLMProvider
 
