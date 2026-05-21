@@ -46,3 +46,36 @@ def test_generate_help():
     result = runner.invoke(app, ["generate", "--help"])
     assert result.exit_code == 0
     assert "source" in result.output.lower() or "SOURCE" in result.output
+
+
+def test_doctor_shows_two_voices(tmp_path, monkeypatch):
+    """doctor command prints both host and interviewee voices."""
+    monkeypatch.setattr("peripatos_core.config.USER_GLOBAL_CONFIG_PATH", tmp_path / "nonexistent.json")
+    result = runner.invoke(app, ["doctor"])
+    assert result.exit_code == 0
+    assert "TTS host voice" in result.output
+    assert "TTS interviewee voice" in result.output
+
+
+def test_doctor_shows_voice_source(tmp_path, monkeypatch):
+    """doctor command shows voice source label."""
+    monkeypatch.setattr("peripatos_core.config.USER_GLOBAL_CONFIG_PATH", tmp_path / "nonexistent.json")
+    result = runner.invoke(app, ["doctor"])
+    assert result.exit_code == 0
+    assert "from default" in result.output or "from config" in result.output or "from legacy" in result.output
+
+
+def test_doctor_shows_config_voices(tmp_path, monkeypatch):
+    """doctor command shows voices from config when tts.voices is set."""
+    import json
+
+    monkeypatch.setattr("peripatos_core.config.USER_GLOBAL_CONFIG_PATH", tmp_path / "nonexistent.json")
+    cfg = tmp_path / "config.json"
+    cfg.write_text(json.dumps({
+        "tts": {"voices": {"host": "en-US-GuyNeural", "interviewee": "en-US-JennyNeural"}}
+    }))
+    result = runner.invoke(app, ["doctor", "--config", str(cfg)])
+    assert result.exit_code == 0
+    assert "en-US-GuyNeural" in result.output
+    assert "en-US-JennyNeural" in result.output
+    assert "from config" in result.output

@@ -1,6 +1,6 @@
 """Tests for AudioRenderer."""
 import pytest
-from pathlib import Path
+import importlib
 from peripatos_core.audio import AudioRenderer
 from peripatos_core.providers.tts_stub import StubTTSProvider
 from peripatos_core.types import ArchetypeId, ChapterMark, DialogueScript, DialogueTurn
@@ -23,7 +23,7 @@ def test_render_creates_output_file(tmp_path):
     renderer = AudioRenderer(tts=StubTTSProvider())
     script = _make_script(3)
     output = tmp_path / "output.mp3"
-    chapters = renderer.render(script, output)
+    renderer.render(script, output)
     assert output.exists()
     assert output.stat().st_size > 0
 
@@ -61,7 +61,7 @@ def test_render_output_has_id3_tags(tmp_path):
     script = _make_script(2)
     output = tmp_path / "output.mp3"
     renderer.render(script, output)
-    from mutagen.id3 import ID3
+    ID3 = importlib.import_module("mutagen.id3").ID3
     tags = ID3(str(output))
     assert "TIT2" in tags
     assert tags["TIT2"].text[0] == "Test Episode"

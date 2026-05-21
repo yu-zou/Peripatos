@@ -1,6 +1,10 @@
 """Provider registry — factory functions to build providers from Settings."""
 from __future__ import annotations
 
+# pyright: reportUnusedFunction=false
+
+from typing import Any
+
 from peripatos_core.config import LLMConfig, Settings, TTSConfig
 from peripatos_core.exceptions import ConfigError
 from peripatos_core.providers.llm import LLMProvider, OpenAICompatibleLLMProvider
@@ -10,6 +14,82 @@ from peripatos_core.providers.tts import (
     TTSProvider,
 )
 
+
+# Provider-aware default voice pairs
+DEFAULT_VOICES: dict[str, tuple[str, str]] = {
+    "edge": ("en-US-GuyNeural", "en-US-AriaNeural"),
+    "openai_compatible": ("onyx", "nova"),
+}
+
+
+def _resolve_voice_slots(settings: "Settings") -> tuple[str, str, str]:
+    """Resolve (host_voice, interviewee_voice, source) from settings.
+
+    Resolution order:
+    1. tts.voices.host / tts.voices.interviewee  (explicit config)
+    2. tts.voice (legacy single-voice — both speakers get same voice, deprecation warning emitted)
+    3. DEFAULT_VOICES[provider]  (provider-aware defaults)
+
+    Returns:
+        (host_voice, interviewee_voice, source) where source is one of:
+        "config", "legacy", "default"
+    """
+    import warnings
+
+    provider = settings.tts.provider.lower()
+    defaults = DEFAULT_VOICES.get(provider, DEFAULT_VOICES["edge"])
+
+    voices = settings.tts.voices  # dict[str, str], may be empty
+    host_cfg = voices.get("host")
+    interviewee_cfg = voices.get("interviewee")
+
+    if host_cfg or interviewee_cfg:
+        # At least one explicit voice configured
+        host_voice = host_cfg or defaults[0]
+        interviewee_voice = interviewee_cfg or defaults[1]
+        if host_voice == interviewee_voice:
+            warnings.warn(
+                "tts.voices.host and tts.voices.interviewee are the same voice — "
+                "both speakers will sound identical",
+                stacklevel=2,
+            )
+        return host_voice, interviewee_voice, "config"
+
+    # Legacy path: tts.voice set (non-default value means user explicitly set it)
+    legacy_voice = settings.tts.voice
+    legacy_default = "en-US-AriaNeural"  # TTSConfig default
+    if legacy_voice != legacy_default:
+        warnings.warn(
+            "tts.voice is deprecated; use tts.voices.host and tts.voices.interviewee instead. "
+            "Both speakers will use the same voice.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return legacy_voice, legacy_voice, "legacy"
+
+    # Provider-aware defaults
+    return defaults[0], defaults[1], "default"
+
+
+def build_voice_map(settings: "Settings", archetype_prompt: Any) -> dict[str, str]:
+    """Build a voice_map dict for AudioRenderer from settings and archetype.
+
+    Keys are the speaker names from the archetype (host_name, guest_name).
+    Values are the resolved TTS voice strings.
+
+    Args:
+        settings: Loaded Settings object.
+        archetype_prompt: The loaded ArchetypePrompt for the current archetype.
+
+    Returns:
+        dict mapping speaker name → voice string.
+        e.g. {"Alex": "en-US-GuyNeural", "Dr. Chen": "en-US-AriaNeural"}
+    """
+    host_voice, interviewee_voice, _ = _resolve_voice_slots(settings)
+    return {
+        archetype_prompt.host_name: host_voice,
+        archetype_prompt.guest_name: interviewee_voice,
+    }
 
 def build_llm_provider(cfg: LLMConfig) -> LLMProvider:
     """Build an LLM provider from config.

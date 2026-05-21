@@ -2,6 +2,7 @@
 from __future__ import annotations
 import logging
 import tempfile
+import shutil
 from pathlib import Path
 from peripatos_core.exceptions import AudioError
 from peripatos_core.providers.tts import TTSProvider
@@ -70,39 +71,28 @@ class AudioRenderer:
     def _get_duration(self, audio_path: Path) -> float:
         """Get audio duration in seconds using pydub."""
         try:
-            from pydub import AudioSegment as PydubSegment  # type: ignore[reportMissingImports]
-            seg = PydubSegment.from_file(str(audio_path))
-            return len(seg) / 1000.0
+            from mutagen.mp3 import MP3  # type: ignore[reportMissingImports]
+            return max(MP3(str(audio_path)).info.length, 0.1)
         except Exception as exc:
-            logger.warning("Could not read duration from %s (using 0.0): %s", audio_path, exc)
-            return 0.0
+            logger.warning("Could not read duration from %s (using 0.1): %s", audio_path, exc)
+            return 0.1
 
     def _concatenate_segments(self, segments: list[AudioSegment]) -> Path:
         """Concatenate all audio segments into a single MP3 file."""
-        try:
-            from pydub import AudioSegment as PydubSegment  # type: ignore[reportMissingImports]
-        except ImportError as exc:
-            raise AudioError("pydub is not installed") from exc
-
-        combined = None
-        for seg in segments:
-            try:
-                audio = PydubSegment.from_file(str(seg.audio_path))
-            except Exception as exc:
-                logger.warning("Could not decode %s, using silent segment: %s", seg.audio_path, exc)
-                audio = PydubSegment.silent(duration=int(seg.duration_s * 1000) or 100)
-            combined = audio if combined is None else combined + audio
-
-        if combined is None:
+        if not segments:
             raise AudioError("No audio segments to concatenate")
 
         try:
             tmp = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
             tmp.close()
             combined_path = Path(tmp.name)
-            combined.export(str(combined_path), format="mp3")
-        except AudioError:
-            raise
+            with combined_path.open("wb") as out:
+                for seg in segments:
+                    try:
+                        with seg.audio_path.open("rb") as inp:
+                            shutil.copyfileobj(inp, out)
+                    except OSError as exc:
+                        logger.warning("Could not read %s, using empty segment: %s", seg.audio_path, exc)
         except Exception as exc:
             raise AudioError(f"Failed to create/export concatenated audio: {exc}") from exc
         return combined_path

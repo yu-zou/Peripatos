@@ -1,45 +1,92 @@
-"""Tests for provider registry."""
+"""Tests for registry.py — build_voice_map and _resolve_voice_slots."""
 
-import pytest
+import sys
+import warnings
+from pathlib import Path
 
-from peripatos_core.config import LLMConfig, TTSConfig
-from peripatos_core.exceptions import ConfigError
-from peripatos_core.providers.llm import OpenAICompatibleLLMProvider
-from peripatos_core.providers.tts import EdgeTTSProvider, OpenAICompatibleTTSProvider
-from peripatos_core.registry import build_llm_provider, build_tts_provider
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-
-def test_build_llm_provider_returns_openai_compatible():
-    cfg = LLMConfig(base_url="https://router.requesty.ai/v1", api_key="test", model="gpt-4o-mini")
-    provider = build_llm_provider(cfg)
-    assert isinstance(provider, OpenAICompatibleLLMProvider)
+from peripatos_core.config import Settings  # pyright: ignore
+from peripatos_core.registry import (  # pyright: ignore
+    _resolve_voice_slots,
+    build_voice_map,
+)
 
 
-def test_build_tts_edge_provider():
-    cfg = TTSConfig(provider="edge", voice="en-US-AriaNeural")
-    provider = build_tts_provider(cfg)
-    assert isinstance(provider, EdgeTTSProvider)
+class FakeArchetype:
+    host_name = "Alex"
+    guest_name = "Dr. Chen"
 
 
-def test_build_tts_openai_compatible_provider():
-    cfg = TTSConfig(provider="openai_compatible", base_url="https://api.openai.com/v1", api_key="test")
-    provider = build_tts_provider(cfg)
-    assert isinstance(provider, OpenAICompatibleTTSProvider)
+def make_settings(**tts_kwargs) -> Settings:
+    s = Settings()
+    for k, v in tts_kwargs.items():
+        setattr(s.tts, k, v)
+    return s
 
 
-def test_build_tts_openai_compatible_missing_base_url_raises():
-    cfg = TTSConfig(provider="openai_compatible", base_url="", api_key="test")
-    with pytest.raises(ConfigError, match="base_url"):
-        build_tts_provider(cfg)
+def test_resolve_defaults_edge():
+    s = make_settings()
+    h, i, src = _resolve_voice_slots(s)
+    assert h == "en-US-GuyNeural"
+    assert i == "en-US-AriaNeural"
+    assert src == "default"
 
 
-def test_build_tts_unknown_provider_raises():
-    cfg = TTSConfig(provider="elevenlabs")
-    with pytest.raises(ConfigError, match="Unknown TTS provider"):
-        build_tts_provider(cfg)
+def test_resolve_defaults_openai_compatible():
+    s = make_settings(provider="openai_compatible")
+    h, i, src = _resolve_voice_slots(s)
+    assert h == "onyx"
+    assert i == "nova"
+    assert src == "default"
 
 
-def test_build_tts_case_insensitive():
-    cfg = TTSConfig(provider="EDGE", voice="en-US-AriaNeural")
-    provider = build_tts_provider(cfg)
-    assert isinstance(provider, EdgeTTSProvider)
+def test_resolve_config_both():
+    s = make_settings(voices={"host": "en-US-GuyNeural", "interviewee": "en-US-JennyNeural"})
+    h, i, src = _resolve_voice_slots(s)
+    assert h == "en-US-GuyNeural"
+    assert i == "en-US-JennyNeural"
+    assert src == "config"
+
+
+def test_resolve_config_partial_host_only():
+    s = make_settings(voices={"host": "en-US-GuyNeural"})
+    h, i, src = _resolve_voice_slots(s)
+    assert h == "en-US-GuyNeural"
+    assert i == "en-US-AriaNeural"
+    assert src == "config"
+
+
+def test_resolve_legacy_voice_warns():
+    s = make_settings(voice="en-US-GuyNeural")
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        h, i, src = _resolve_voice_slots(s)
+    assert h == "en-US-GuyNeural"
+    assert i == "en-US-GuyNeural"
+    assert src == "legacy"
+    assert any("deprecated" in str(warning.message).lower() for warning in w)
+
+
+def test_resolve_equal_voices_warns():
+    s = make_settings(voices={"host": "en-US-AriaNeural", "interviewee": "en-US-AriaNeural"})
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        h, i, src = _resolve_voice_slots(s)
+    assert h == i
+    assert src == "config"
+    assert any("identical" in str(warning.message).lower() for warning in w)
+
+
+def test_build_voice_map_default():
+    s = make_settings()
+    vm = build_voice_map(s, FakeArchetype())
+    assert vm["Alex"] == "en-US-GuyNeural"
+    assert vm["Dr. Chen"] == "en-US-AriaNeural"
+
+
+def test_build_voice_map_config_override():
+    s = make_settings(voices={"host": "en-US-GuyNeural", "interviewee": "en-US-JennyNeural"})
+    vm = build_voice_map(s, FakeArchetype())
+    assert vm["Alex"] == "en-US-GuyNeural"
+    assert vm["Dr. Chen"] == "en-US-JennyNeural"

@@ -20,7 +20,8 @@ USER_GLOBAL_CONFIG_PATH = Path.home() / ".config" / "peripatos" / "config.json"
 
 KNOWN_KEYS = {"llm", "tts", "defaults"}
 KNOWN_LLM_KEYS = {"base_url", "api_key", "model", "max_paper_chars"}
-KNOWN_TTS_KEYS = {"provider", "base_url", "api_key", "voice", "model"}
+KNOWN_TTS_KEYS = {"provider", "base_url", "api_key", "voice", "model", "voices"}
+KNOWN_TTS_VOICES_KEYS = {"host", "interviewee"}
 KNOWN_DEFAULTS_KEYS = {"archetype", "output_dir"}
 
 
@@ -39,6 +40,7 @@ class TTSConfig:
     api_key: str = ""
     voice: str = "en-US-AriaNeural"
     model: str = "tts-1"
+    voices: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -81,9 +83,18 @@ def _apply_overrides(settings: Settings, data: dict[str, Any]) -> None:
     if "tts" in data:
         tts_data = data["tts"]
         _warn_unknown("tts", tts_data, KNOWN_TTS_KEYS)
-        for k in KNOWN_TTS_KEYS:
+        for k in KNOWN_TTS_KEYS - {"voices"}:
             if k in tts_data:
                 setattr(settings.tts, k, tts_data[k])
+        if "voices" in tts_data:
+            voices_data = tts_data["voices"]
+            if isinstance(voices_data, dict):
+                _warn_unknown("tts.voices", voices_data, KNOWN_TTS_VOICES_KEYS)
+                for vk in KNOWN_TTS_VOICES_KEYS:
+                    if vk in voices_data:
+                        settings.tts.voices[vk] = voices_data[vk]
+            else:
+                warnings.warn("tts.voices must be a dict — ignored", stacklevel=3)
 
     if "defaults" in data:
         def_data = data["defaults"]

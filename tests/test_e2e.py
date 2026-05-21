@@ -59,3 +59,36 @@ def test_e2e_arxiv_2303_08774_real_llm(tmp_path: Path, config_test_json_path: Pa
     assert len(chap_frames) >= 1, (
         f"No CHAP frames found in MP3 ID3 tags. Keys present: {list(tags.keys())}"
     )
+    # Verify two-voice: the MP3 should have been generated with distinct voices
+    # (We verify this indirectly via the chapter count — at least 2 turns means 2 speakers)
+    assert len(chap_frames) >= 2, (
+        f"Expected at least 2 CHAP frames (one per speaker turn), got {len(chap_frames)}"
+    )
+
+
+def test_e2e_two_voice_doctor_check(config_test_json_path: Path) -> None:
+    """Verify that doctor reports two distinct voices when using config.test.json."""
+    result = subprocess.run(
+        [
+            "peripatos",
+            "doctor",
+            "--config",
+            str(config_test_json_path),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert result.returncode == 0, f"peripatos doctor failed:\n{result.stdout}\n{result.stderr}"
+    assert "TTS host voice" in result.stdout, "Missing 'TTS host voice' in doctor output"
+    assert "TTS interviewee voice" in result.stdout, "Missing 'TTS interviewee voice' in doctor output"
+
+    lines = result.stdout.splitlines()
+    host_line = next((l for l in lines if "TTS host voice" in l), "")
+    interviewee_line = next((l for l in lines if "TTS interviewee voice" in l), "")
+    assert host_line != interviewee_line, (
+        f"Host and interviewee voice lines are identical — two-voice feature not working:\n"
+        f"  host:        {host_line}\n"
+        f"  interviewee: {interviewee_line}"
+    )

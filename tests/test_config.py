@@ -77,3 +77,59 @@ def test_unknown_keys_warn(tmp_path, monkeypatch):
         warnings.simplefilter("always")
         load_settings(config_path=cfg)
     assert any("unknown_field" in str(warning.message) for warning in w)
+
+
+# ── Task 4: TDD red phase — voices parsing ──────────────────────────────────
+
+def test_voices_parsed_from_config(tmp_path, monkeypatch):
+    """tts.voices.host and tts.voices.interviewee are loaded into TTSConfig.voices."""
+    monkeypatch.setattr(
+        "peripatos_core.config.USER_GLOBAL_CONFIG_PATH", tmp_path / "nonexistent.json"
+    )
+    cfg = tmp_path / "config.json"
+    cfg.write_text(json.dumps({
+        "tts": {"voices": {"host": "en-US-GuyNeural", "interviewee": "en-US-AriaNeural"}}
+    }))
+    settings = load_settings(config_path=cfg)
+    assert settings.tts.voices.get("host") == "en-US-GuyNeural"
+    assert settings.tts.voices.get("interviewee") == "en-US-AriaNeural"
+
+
+def test_voices_partial_override_uses_defaults(tmp_path, monkeypatch):
+    """Only tts.voices.host set — interviewee falls back to provider default."""
+    monkeypatch.setattr(
+        "peripatos_core.config.USER_GLOBAL_CONFIG_PATH", tmp_path / "nonexistent.json"
+    )
+    cfg = tmp_path / "config.json"
+    cfg.write_text(json.dumps({"tts": {"voices": {"host": "en-US-GuyNeural"}}}))
+    settings = load_settings(config_path=cfg)
+    assert settings.tts.voices.get("host") == "en-US-GuyNeural"
+    # interviewee not set in config — voices dict should not have it
+    assert "interviewee" not in settings.tts.voices
+
+
+def test_voices_unknown_key_warns(tmp_path, monkeypatch):
+    """Unknown key inside tts.voices emits a warning."""
+    monkeypatch.setattr(
+        "peripatos_core.config.USER_GLOBAL_CONFIG_PATH", tmp_path / "nonexistent.json"
+    )
+    cfg = tmp_path / "config.json"
+    cfg.write_text(json.dumps({"tts": {"voices": {"host": "en-US-GuyNeural", "narrator": "bad"}}}))
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        load_settings(config_path=cfg)
+    assert any("narrator" in str(warning.message) for warning in w)
+
+
+def test_voices_non_dict_warns(tmp_path, monkeypatch):
+    """tts.voices set to a non-dict value emits a warning and is ignored."""
+    monkeypatch.setattr(
+        "peripatos_core.config.USER_GLOBAL_CONFIG_PATH", tmp_path / "nonexistent.json"
+    )
+    cfg = tmp_path / "config.json"
+    cfg.write_text(json.dumps({"tts": {"voices": "bad-value"}}))
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        settings = load_settings(config_path=cfg)
+    assert any("must be a dict" in str(warning.message) for warning in w)
+    assert settings.tts.voices == {}

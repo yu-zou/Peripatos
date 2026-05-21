@@ -12,6 +12,12 @@
 
 Peripatos fetches an ArXiv paper (or any PDF), generates a natural back-and-forth dialogue between two speakers using an LLM, and synthesises the script into an MP3 with ID3v2.4 chapter markers — one chapter per dialogue turn.
 
+## What's New in v1.0
+
+- **Two-voice TTS**: Host and interviewee now use distinct voices by default (`en-US-GuyNeural` for the host, `en-US-AriaNeural` for the interviewee with edge-tts; `onyx` + `nova` with openai_compatible).
+- Configure via `tts.voices.host` and `tts.voices.interviewee` in your config file.
+- The legacy `tts.voice` field still works but is deprecated.
+
 ## Installation
 
 ```bash
@@ -54,6 +60,10 @@ Configuration is resolved in this order:
     "base_url": "",
     "api_key": "",
     "voice": "en-US-AriaNeural",
+    "voices": {
+      "host": "en-US-GuyNeural",
+      "interviewee": "en-US-AriaNeural"
+    },
     "model": "tts-1"
   },
   "defaults": {
@@ -74,7 +84,11 @@ Configuration is resolved in this order:
   },
   "tts": {
     "provider": "edge",
-    "voice": "en-US-AriaNeural"
+    "voice": "en-US-AriaNeural",
+    "voices": {
+      "host": "en-US-GuyNeural",
+      "interviewee": "en-US-AriaNeural"
+    }
   },
   "defaults": {
     "archetype": "peer"
@@ -91,6 +105,11 @@ The `llm.base_url` accepts any OpenAI-compatible endpoint: [Requesty](https://re
 | Key | Default | Description |
 |---|---|---|
 | `llm.max_paper_chars` | `128000` | Maximum characters of paper content sent to the LLM. Increase for larger papers; decrease to reduce token usage. |
+| `tts.voice` | `"en-US-AriaNeural"` (edge) / `"nova"` (openai_compatible) | Single voice for both speakers. (deprecated) |
+| `tts.voices.host` | `"en-US-GuyNeural"` (edge) / `"onyx"` (openai_compatible) | Voice for the host speaker. |
+| `tts.voices.interviewee` | `"en-US-AriaNeural"` (edge) / `"nova"` (openai_compatible) | Voice for the interviewee speaker. |
+
+**Deprecated**: `tts.voice` (single voice for both speakers) still works but emits a deprecation warning. Use `tts.voices.host` and `tts.voices.interviewee` instead.
 
 ## Quick Start
 

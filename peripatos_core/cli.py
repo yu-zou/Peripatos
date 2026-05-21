@@ -64,7 +64,7 @@ def generate(
     from peripatos_core.dialogue import DialogueGenerator
     from peripatos_core.fetcher import PaperFetcher
     from peripatos_core.parser import PDFParser
-    from peripatos_core.registry import build_llm_provider, build_tts_provider
+    from peripatos_core.registry import build_llm_provider, build_tts_provider, build_voice_map
 
     effective_config = config or _config_path
     settings = _get_settings(effective_config)
@@ -89,7 +89,10 @@ def generate(
 
     typer.echo("[4/5] Synthesizing audio")
     tts = build_tts_provider(settings.tts)
-    renderer = AudioRenderer(tts=tts)
+    from peripatos_core.archetypes import ArchetypeLoader
+    archetype_prompt = ArchetypeLoader().load(archetype)
+    voice_map = build_voice_map(settings, archetype_prompt)
+    renderer = AudioRenderer(tts=tts, voice_map=voice_map)
     chapters = renderer.render(script, output)
 
     typer.echo(f"[5/5] Done! Output: {output} ({len(chapters)} chapters)")
@@ -118,6 +121,10 @@ def doctor(
     """Check configuration and print diagnostic info."""
     effective_config = config or _config_path
     settings = _get_settings(effective_config)
+    from peripatos_core.registry import _resolve_voice_slots
+
+    host_voice, interviewee_voice, source = _resolve_voice_slots(settings)
+    source_label = {"config": "from config", "default": "from default", "legacy": "from legacy tts.voice"}.get(source, source)
 
     typer.echo("Peripatos Doctor")
     typer.echo("=" * 40)
@@ -126,7 +133,8 @@ def doctor(
     typer.echo(f"LLM model:     {settings.llm.model}")
     typer.echo(f"LLM api_key:   {'present' if settings.llm.api_key else 'MISSING'}")
     typer.echo(f"TTS provider:  {settings.tts.provider}")
-    typer.echo(f"TTS voice:     {settings.tts.voice}")
+    typer.echo(f"TTS host voice:        {host_voice}  ({source_label})")
+    typer.echo(f"TTS interviewee voice: {interviewee_voice}  ({source_label})")
     typer.echo(f"Default arch:  {settings.defaults.archetype}")
     typer.echo(f"Output dir:    {settings.defaults.output_dir}")
     typer.echo("=" * 40)
