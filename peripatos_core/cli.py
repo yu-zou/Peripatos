@@ -38,7 +38,7 @@ def main(
 def generate(
     source: str = typer.Argument(
         ...,
-        help="ArXiv ID (e.g. 1706.03762), ArXiv URL, PDF URL, or local PDF path.",
+        help="ArXiv ID, ArXiv URL, PDF URL, local PDF path, HTML URL, or local .md/.txt file.",
     ),
     output: Path = typer.Option(
         Path("output.mp3"),
@@ -71,19 +71,24 @@ def generate(
 
     typer.echo(f"[1/5] Fetching paper: {source}")
     fetcher = PaperFetcher()
-    pdf_path, metadata = fetcher.fetch(source)
+    fetched_path, metadata = fetcher.fetch(source)
 
-    typer.echo(f"[2/5] Parsing PDF: {pdf_path.name}")
-    parser = PDFParser()
-    parsed = parser.parse(pdf_path)
+    typer.echo(f"[2/5] Processing source: {fetched_path.name}")
+    if fetched_path.suffix.lower() == ".pdf":
+        parser = PDFParser()
+        parsed = parser.parse(fetched_path)
+        paper_content = parsed.markdown
+    else:
+        paper_content = fetched_path.read_text(encoding="utf-8", errors="ignore")
 
     typer.echo(f"[3/5] Generating dialogue (archetype={archetype})")
     llm = build_llm_provider(settings.llm)
-    gen = DialogueGenerator(llm=llm)
+    gen = DialogueGenerator(llm=llm, settings=settings)
     script = gen.generate(
-        paper_content=parsed.markdown,
+        paper_content=paper_content,
         archetype=archetype,
         title=metadata.title,
+        metadata=metadata,
     )
     typer.echo(f"    Generated {len(script.turns)} turns: {script.title}")
 
