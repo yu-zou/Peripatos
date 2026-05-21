@@ -25,7 +25,7 @@ def build_tools(
     embedder: "Embedder",
     top_k: int,
     archetype: ArchetypeId = ArchetypeId.PEER,
-) -> tuple[list[ToolSpec], dict[str, Callable]]:
+) -> tuple[list[ToolSpec], dict[str, Callable], AgentState]:
     state = AgentState()
 
     def search(query: str) -> str:
@@ -50,7 +50,7 @@ def build_tools(
 
     def draft_turn(speaker: str, text: str) -> str:
         state.drafted_turns.append(
-            DialogueTurn(speaker=speaker, text=text, archetype=ArchetypeId.PEER)
+            DialogueTurn(speaker=speaker, text=text, archetype=archetype)
         )
         return f"ok, {len(state.drafted_turns)} turns drafted so far"
 
@@ -125,7 +125,7 @@ def build_tools(
         "finalize": _wrap(finalize),
     }
 
-    return specs, dispatcher
+    return specs, dispatcher, state
 
 
 __all__ = ["AgentState", "build_tools"]
