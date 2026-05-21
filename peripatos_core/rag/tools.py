@@ -24,6 +24,7 @@ def build_tools(
     store: "VectorStore",
     embedder: "Embedder",
     top_k: int,
+    archetype: ArchetypeId = ArchetypeId.PEER,
 ) -> tuple[list[ToolSpec], dict[str, Callable]]:
     state = AgentState()
 
