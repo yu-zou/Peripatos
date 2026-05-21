@@ -4,13 +4,23 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import faiss
-import numpy as np
+import numpy as np  # pyright: ignore[reportMissingImports]
 
 from peripatos_core.exceptions import RetrievalError
 from peripatos_core.rag.chunker import Chunk
+
+if TYPE_CHECKING:
+    import faiss  # pyright: ignore[reportMissingImports]
+
+
+def _faiss():
+    try:
+        import faiss  # pyright: ignore[reportMissingImports]
+    except ModuleNotFoundError as exc:
+        raise RetrievalError("faiss is required for vector store operations") from exc
+    return faiss
 
 
 class VectorStore:
@@ -21,7 +31,7 @@ class VectorStore:
         self.store_dir = cache_dir / content_hash[:16]
         self.index_path = self.store_dir / "index.faiss"
         self.mapping_path = self.store_dir / "mapping.json"
-        self.index: faiss.Index | None = None
+        self.index: "faiss.Index | None" = None
         self.mapping: dict[str, dict[str, Any]] = {}
 
     def has_cache(self) -> bool:
@@ -31,7 +41,7 @@ class VectorStore:
         if not self.has_cache():
             raise RetrievalError(f"Vector store cache not found: {self.store_dir}")
         try:
-            index = faiss.read_index(str(self.index_path))
+            index = _faiss().read_index(str(self.index_path))
             self.index = index
             self.dim = index.d
             self.mapping = json.loads(self.mapping_path.read_text(encoding="utf-8"))
@@ -50,6 +60,7 @@ class VectorStore:
                 f"Embedding dimension {embeddings.shape[1]} does not match vector store dim {dim}"
             )
 
+        faiss = _faiss()
         index = faiss.IndexFlatL2(dim)
         index.add(embeddings.astype(np.float32))
 

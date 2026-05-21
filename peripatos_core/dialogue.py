@@ -1,91 +1,87 @@
 """Dialogue generator — converts parsed paper text into a DialogueScript."""
 from __future__ import annotations
-import json
-import logging
-import json_repair  # pyright: ignore[reportMissingImports]
-import peripatos_core.archetypes as archetypes
-from peripatos_core.exceptions import LLMError
-from peripatos_core.providers.llm import LLMProvider
-from peripatos_core.types import DialogueScript, DialogueTurn
 
-logger = logging.getLogger(__name__)
+import hashlib
+from pathlib import Path
+
+from peripatos_core.archetypes import ArchetypeLoader
+from peripatos_core.config import Settings
+from peripatos_core.prompts import load_react_system
+from peripatos_core.providers.llm import LLMProvider
+from peripatos_core.rag.agent import run_agent
+from peripatos_core.rag.chunker import chunk_text
+from peripatos_core.rag.embedder import Embedder
+from peripatos_core.rag.vector_store import VectorStore
+from peripatos_core.types import ArchetypeId, DialogueScript, PaperMetadata
 
 
 class DialogueGenerator:
-    """Generates a Socratic dialogue from paper text using an LLM."""
+    """Generates a Socratic dialogue from paper text using the ReAct RAG agent."""
 
-    def __init__(
-        self,
-        llm: LLMProvider,
-        archetype_loader: archetypes.ArchetypeLoader | None = None,
-    ) -> None:
+    def __init__(self, llm: LLMProvider, settings: Settings | None = None) -> None:
         self._llm = llm
-        self._loader = archetype_loader or archetypes.ArchetypeLoader()
+        self._settings = settings or Settings()
+        self._loader = ArchetypeLoader()
 
     def generate(
         self,
         paper_content: str,
-        archetype: archetypes.ArchetypeId | str = archetypes.ArchetypeId.PEER,
+        archetype: ArchetypeId | str = ArchetypeId.PEER,
         title: str = "Untitled Paper",
+        metadata: PaperMetadata | None = None,
     ) -> DialogueScript:
-        """Generate a dialogue script from paper content.
-
-        Args:
-            paper_content: Markdown or plain text of the paper.
-            archetype: Which archetype to use for the dialogue style.
-            title: Paper title (used as fallback episode title).
-
-        Returns:
-            DialogueScript with turns populated.
-        """
-        archetype_id = archetypes.ArchetypeId(archetype) if isinstance(archetype, str) else archetype
+        """Generate a dialogue script from paper content."""
+        archetype_id = ArchetypeId(archetype) if isinstance(archetype, str) else archetype
         prompt_data = self._loader.load(archetype_id)
-
-        user_prompt = prompt_data.dialogue_prompt.format(paper_content=paper_content)
-
-        logger.debug("Calling LLM for dialogue generation (archetype=%s)", archetype_id.value)
-        raw_response = self._llm.complete(
-            system_prompt=prompt_data.system_prompt,
-            user_prompt=user_prompt,
+        rag = self._settings.rag
+        cache_dir = (
+            Path(rag.cache_dir)
+            if rag.cache_dir
+            else Path.home() / ".cache" / "peripatos" / "rag"
         )
 
-        return self._parse_response(raw_response, title, archetype_id)
+        content_hash = hashlib.sha256(paper_content.encode()).hexdigest()
 
-    def _parse_response(
-        self,
-        raw: str,
-        title: str,
-        archetype: archetypes.ArchetypeId,
-    ) -> DialogueScript:
-        """Parse LLM JSON response into a DialogueScript."""
-        # Strip markdown code fences if present
-        cleaned = raw.strip()
-        if cleaned.startswith("```"):
-            lines = cleaned.splitlines()
-            cleaned = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+        embedder = Embedder(
+            base_url=self._settings.llm.base_url,
+            api_key=self._settings.llm.api_key,
+            model=rag.embedding_model,
+        )
 
-        try:
-            data = json.loads(cleaned)
-        except json.JSONDecodeError as exc:
-            logger.warning("LLM returned non-strict JSON; attempting repair: %s", exc)
-            repaired = json_repair.loads(cleaned)
-            if not repaired:
-                raise LLMError(
-                    f"LLM returned invalid JSON even after repair: {exc}\nRaw: {raw[:200]}"
-                ) from exc
-            data = repaired
+        store = VectorStore(cache_dir=cache_dir, content_hash=content_hash)
+        if not store.has_cache():
+            chunks = chunk_text(
+                paper_content,
+                chunk_size=rag.chunk_size,
+                overlap=rag.chunk_overlap,
+            )
+            texts = [chunk.text for chunk in chunks]
+            embeddings = embedder.embed(texts)
+            store.build(chunks, embeddings)
+        else:
+            store.load()
 
-        episode_title = data.get("title", title)
-        turns_data = data.get("turns", [])
-        if not isinstance(turns_data, list):
-            raise LLMError("LLM response 'turns' is not a list")
+        sections_list = store.list_sections()
+        section_overview = (
+            "\n".join(f"{chunk_id}: {hint}" for chunk_id, hint in sections_list)
+            or "(no sections detected)"
+        )
 
-        turns = []
-        for i, turn in enumerate(turns_data):
-            if not isinstance(turn, dict):
-                raise LLMError(f"Turn {i} is not a dict: {turn}")
-            speaker = turn.get("speaker", "Unknown")
-            text = turn.get("text", "")
-            turns.append(DialogueTurn(speaker=speaker, text=text, archetype=archetype))
+        effective_title = (metadata.title if metadata else None) or title
+        effective_origin = (metadata.source_url if metadata else None) or "unknown"
+        system_prompt = load_react_system(
+            archetype_prompt=prompt_data.system_prompt,
+            title=effective_title,
+            origin=effective_origin,
+            sections=section_overview,
+        )
 
-        return DialogueScript(title=episode_title, turns=turns)
+        return run_agent(
+            llm=self._llm,
+            store=store,
+            embedder=embedder,
+            top_k=rag.top_k,
+            system_prompt=system_prompt,
+            user_prompt=prompt_data.dialogue_prompt,
+            archetype=archetype_id,
+        )

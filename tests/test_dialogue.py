@@ -1,96 +1,129 @@
 """Tests for DialogueGenerator."""
-import json
-import pytest
+from __future__ import annotations
+
+from unittest.mock import Mock, patch
+
+import numpy as np  # pyright: ignore[reportMissingImports]
+
+from peripatos_core.config import Settings
 from peripatos_core.dialogue import DialogueGenerator
+from peripatos_core.providers.llm import AgentMessage, ToolCall
 from peripatos_core.providers.llm_stub import StubLLMProvider
-from peripatos_core.types import ArchetypeId, DialogueScript
-from peripatos_core.exceptions import LLMError
+from peripatos_core.types import ArchetypeId, DialogueScript, PaperMetadata
 
 
-def _make_valid_response(title: str = "Test Episode", n_turns: int = 4) -> str:
-    turns = []
-    for i in range(n_turns):
-        speaker = "Host" if i % 2 == 0 else "Guest"
-        turns.append({"speaker": speaker, "text": f"Turn {i} text."})
-    return json.dumps({"title": title, "turns": turns})
+class CyclingStubLLMProvider(StubLLMProvider):
+    def __init__(self) -> None:
+        super().__init__()
+        self._tool_responses = [
+            AgentMessage(
+                role="assistant",
+                content=None,
+                tool_calls=[
+                    ToolCall(
+                        id="1",
+                        name="draft_turn",
+                        arguments={"speaker": "Host", "text": "Hello"},
+                    )
+                ],
+            ),
+            AgentMessage(
+                role="assistant",
+                content=None,
+                tool_calls=[
+                    ToolCall(id="2", name="finalize", arguments={"title": "Test"})
+                ],
+            ),
+            AgentMessage(role="assistant", content="done", tool_calls=None),
+        ]
+        self.tool_calls: list[list[AgentMessage]] = []
+
+    def complete_with_tools(self, messages, tools):  # noqa: ANN001, ANN201
+        self.tool_calls.append(list(messages))
+        return self._tool_responses.pop(0)
+
+
+def _generate_with_mocks(
+    *,
+    paper_content: str = "Some paper content",
+    archetype: ArchetypeId | str = ArchetypeId.PEER,
+    title: str = "Untitled Paper",
+    metadata: PaperMetadata | None = None,
+) -> tuple[DialogueScript, CyclingStubLLMProvider, Mock, Mock]:
+    stub = CyclingStubLLMProvider()
+    embedder = Mock()
+    embedder.embed.return_value = np.zeros((1, 4), dtype=np.float32)
+    store = Mock()
+    store.has_cache.return_value = True
+    store.load.return_value = None
+    store.list_sections.return_value = []
+    store.search.return_value = []
+
+    with (
+        patch("peripatos_core.dialogue.Embedder", return_value=embedder),
+        patch("peripatos_core.dialogue.VectorStore", return_value=store),
+    ):
+        script = DialogueGenerator(llm=stub, settings=Settings()).generate(
+            paper_content,
+            archetype=archetype,
+            title=title,
+            metadata=metadata,
+        )
+
+    return script, stub, embedder, store
 
 
 def test_generate_returns_dialogue_script():
-    stub = StubLLMProvider(response=_make_valid_response())
-    gen = DialogueGenerator(llm=stub)
-    script = gen.generate("Some paper content", archetype=ArchetypeId.PEER)
+    script, _, _, store = _generate_with_mocks()
+
     assert isinstance(script, DialogueScript)
-    assert len(script.turns) == 4
+    assert script.title == "Test"
+    assert len(script.turns) == 1
+    assert script.turns[0].speaker == "Host"
+    assert script.turns[0].text == "Hello"
+    assert script.turns[0].archetype == ArchetypeId.PEER
+    store.load.assert_called_once_with()
 
 
-def test_generate_uses_archetype_system_prompt():
-    stub = StubLLMProvider(response=_make_valid_response())
-    gen = DialogueGenerator(llm=stub)
-    gen.generate("content", archetype=ArchetypeId.PEER)
-    assert len(stub.calls) == 1
-    system_prompt, user_prompt = stub.calls[0]
-    assert len(system_prompt) > 10
-    assert "content" in user_prompt
+def test_generate_uses_react_system_prompt():
+    metadata = PaperMetadata(title="Paper Title", source_url="https://example.test/paper")
+    _, stub, _, _ = _generate_with_mocks(
+        paper_content="content",
+        title="Fallback Title",
+        metadata=metadata,
+    )
 
-
-def test_generate_strips_markdown_fences():
-    raw = "```json\n" + _make_valid_response() + "\n```"
-    stub = StubLLMProvider(response=raw)
-    gen = DialogueGenerator(llm=stub)
-    script = gen.generate("content", archetype=ArchetypeId.PEER)
-    assert len(script.turns) == 4
-
-
-def test_generate_invalid_json_raises():
-    stub = StubLLMProvider(response="not valid json at all")
-    gen = DialogueGenerator(llm=stub)
-    with pytest.raises(LLMError, match="invalid JSON"):
-        gen.generate("content", archetype=ArchetypeId.PEER)
+    initial_messages = stub.tool_calls[0]
+    assert initial_messages[0].role == "system"
+    assert "Paper Title" in (initial_messages[0].content or "")
+    assert "https://example.test/paper" in (initial_messages[0].content or "")
+    assert initial_messages[1].role == "user"
 
 
 def test_generate_by_string_archetype():
-    stub = StubLLMProvider(response=_make_valid_response())
-    gen = DialogueGenerator(llm=stub)
-    script = gen.generate("content", archetype="tutor")
+    script, _, _, _ = _generate_with_mocks(archetype="tutor")
+
     assert isinstance(script, DialogueScript)
+    assert script.turns[0].archetype == ArchetypeId.TUTOR
 
 
-def test_generate_uses_title_fallback():
-    response = json.dumps({"turns": [{"speaker": "A", "text": "hi"}]})
-    stub = StubLLMProvider(response=response)
-    gen = DialogueGenerator(llm=stub)
-    script = gen.generate("content", title="My Paper Title")
-    assert script.title == "My Paper Title"
+def test_generate_builds_vector_store_when_cache_missing():
+    stub = CyclingStubLLMProvider()
+    embedder = Mock()
+    embedder.embed.return_value = np.zeros((1, 4), dtype=np.float32)
+    store = Mock()
+    store.has_cache.return_value = False
+    store.list_sections.return_value = []
 
+    with (
+        patch("peripatos_core.dialogue.Embedder", return_value=embedder),
+        patch("peripatos_core.dialogue.VectorStore", return_value=store),
+    ):
+        script = DialogueGenerator(llm=stub, settings=Settings()).generate(
+            "# Intro\n\nSome paper content"
+        )
 
-def test_generate_uses_llm_title():
-    response = json.dumps({"title": "LLM Title", "turns": [{"speaker": "A", "text": "hi"}]})
-    stub = StubLLMProvider(response=response)
-    gen = DialogueGenerator(llm=stub)
-    script = gen.generate("content", title="Fallback Title")
-    assert script.title == "LLM Title"
-
-
-def test_generate_handles_latex_escapes_via_repair():
-    # JSON with unescaped backslash before 'a' — invalid per JSON spec, but json-repair fixes it
-    # \a is not a valid JSON escape sequence (valid ones: \" \\ \/ \b \f \n \r \t \uXXXX)
-    broken_raw = '{"title": "Math Paper", "turns": [{"speaker": "Host", "text": "Consider \\alpha where \\sigma is defined."}, {"speaker": "Guest", "text": "Right, \\Sigma notation."}]}'
-    # Verify it's actually broken
-    import json as _json
-    try:
-        _json.loads(broken_raw)
-    except _json.JSONDecodeError:
-        pass  # Expected — this is the bug we're fixing
-    stub = StubLLMProvider(response=broken_raw)
-    gen = DialogueGenerator(llm=stub)
-    script = gen.generate("paper content", archetype=ArchetypeId.PEER)
-    assert isinstance(script, DialogueScript)
-    assert len(script.turns) == 2
-    assert script.title == "Math Paper"
-
-
-def test_generate_unrepairable_json_raises():
-    stub = StubLLMProvider(response="not json at all { { {")
-    gen = DialogueGenerator(llm=stub)
-    with pytest.raises(LLMError, match="invalid JSON"):
-        gen.generate("content", archetype=ArchetypeId.PEER)
+    assert script.title == "Test"
+    embedder.embed.assert_called_once_with(["# Intro\n\nSome paper content"])
+    store.build.assert_called_once()
+    store.load.assert_not_called()
