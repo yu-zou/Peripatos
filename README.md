@@ -12,18 +12,6 @@
 
 Peripatos fetches an ArXiv paper (or any PDF), generates a natural back-and-forth dialogue between two speakers using an LLM, and synthesises the script into an MP3 with ID3v2.4 chapter markers — one chapter per dialogue turn.
 
-## What's New in v1.1.0
-
-- **Agentic RAG Pipeline**: Replaces single-pass dialogue generation with a ReAct agent that searches and reads chunks of the source document as needed.
-- **New Source Types**: Peripatos now supports HTML URLs, Markdown files (.md), and plain text files (.txt).
-- **Disk-cached Vector Store**: FAISS vector store with disk cache keyed by source SHA256 for lightning-fast subsequent runs.
-
-## What's New in v1.0
-
-- **Two-voice TTS**: Host and interviewee now use distinct voices by default (`en-US-GuyNeural` for the host, `en-US-AriaNeural` for the interviewee with edge-tts; `onyx` + `nova` with openai_compatible).
-- Configure via `tts.voices.host` and `tts.voices.interviewee` in your config file.
-- The legacy `tts.voice` field still works but is deprecated.
-
 ## Installation
 
 ```bash
