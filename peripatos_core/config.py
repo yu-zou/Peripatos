@@ -34,13 +34,33 @@ class LLMConfig:
 
 
 @dataclass
+class TTSVoices:
+    host: str = ""
+    interviewee: str = ""
+
+    def get(self, key: str, default: Any = None) -> Any:
+        return getattr(self, key, default)
+
+    def __contains__(self, key: object) -> bool:
+        return isinstance(key, str) and getattr(self, key, "") != ""
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, TTSVoices):
+            return self.host == other.host and self.interviewee == other.interviewee
+        if isinstance(other, dict):
+            return {k: v for k, v in {"host": self.host, "interviewee": self.interviewee}.items() if v} == other
+        return NotImplemented
+
+
+@dataclass
 class TTSConfig:
     provider: str = "edge"
     base_url: str = ""
     api_key: str = ""
     voice: str = "en-US-AriaNeural"
     model: str = "tts-1"
-    voices: dict[str, str] = field(default_factory=dict)
+    voices: TTSVoices = field(default_factory=TTSVoices)
+    _voice_explicitly_set: bool = field(default=False, repr=False, compare=False)
 
 
 @dataclass
@@ -86,13 +106,15 @@ def _apply_overrides(settings: Settings, data: dict[str, Any]) -> None:
         for k in KNOWN_TTS_KEYS - {"voices"}:
             if k in tts_data:
                 setattr(settings.tts, k, tts_data[k])
+        if "voice" in tts_data:
+            settings.tts._voice_explicitly_set = True
         if "voices" in tts_data:
             voices_data = tts_data["voices"]
             if isinstance(voices_data, dict):
                 _warn_unknown("tts.voices", voices_data, KNOWN_TTS_VOICES_KEYS)
                 for vk in KNOWN_TTS_VOICES_KEYS:
                     if vk in voices_data:
-                        settings.tts.voices[vk] = voices_data[vk]
+                        setattr(settings.tts.voices, vk, voices_data[vk])
             else:
                 warnings.warn("tts.voices must be a dict — ignored", stacklevel=3)
 
@@ -126,5 +148,13 @@ def load_settings(config_path: Path | None = None) -> Settings:
             raise ConfigError(f"Config file not found: {config_path}")
         logger.debug("Loading explicit config: %s", config_path)
         _apply_overrides(settings, _load_json(config_path))
+
+    if settings.tts._voice_explicitly_set and not settings.tts.voices.host and not settings.tts.voices.interviewee:
+        warnings.warn(
+            "tts.voice is deprecated; use tts.voices.host and tts.voices.interviewee instead. "
+            "Both speakers will use the same voice.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
     return settings

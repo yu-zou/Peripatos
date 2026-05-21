@@ -27,7 +27,7 @@ def _resolve_voice_slots(settings: "Settings") -> tuple[str, str, str]:
 
     Resolution order:
     1. tts.voices.host / tts.voices.interviewee  (explicit config)
-    2. tts.voice (legacy single-voice — both speakers get same voice, deprecation warning emitted)
+    2. tts.voice (legacy single-voice — both speakers get same voice)
     3. DEFAULT_VOICES[provider]  (provider-aware defaults)
 
     Returns:
@@ -39,9 +39,13 @@ def _resolve_voice_slots(settings: "Settings") -> tuple[str, str, str]:
     provider = settings.tts.provider.lower()
     defaults = DEFAULT_VOICES.get(provider, DEFAULT_VOICES["edge"])
 
-    voices = settings.tts.voices  # dict[str, str], may be empty
-    host_cfg = voices.get("host")
-    interviewee_cfg = voices.get("interviewee")
+    voices = settings.tts.voices
+    if isinstance(voices, dict):
+        host_cfg = voices.get("host")
+        interviewee_cfg = voices.get("interviewee")
+    else:
+        host_cfg = voices.host
+        interviewee_cfg = voices.interviewee
 
     if host_cfg or interviewee_cfg:
         # At least one explicit voice configured
@@ -55,17 +59,18 @@ def _resolve_voice_slots(settings: "Settings") -> tuple[str, str, str]:
             )
         return host_voice, interviewee_voice, "config"
 
-    # Legacy path: tts.voice set (non-default value means user explicitly set it)
+    # Legacy path: tts.voice was explicitly set or manually overridden
     legacy_voice = settings.tts.voice
-    legacy_default = "en-US-AriaNeural"  # TTSConfig default
-    if legacy_voice != legacy_default:
-        warnings.warn(
-            "tts.voice is deprecated; use tts.voices.host and tts.voices.interviewee instead. "
-            "Both speakers will use the same voice.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return legacy_voice, legacy_voice, "legacy"
+    legacy_default = "en-US-AriaNeural"
+    if not host_cfg and not interviewee_cfg and (settings.tts._voice_explicitly_set or legacy_voice != legacy_default):
+        if legacy_voice != legacy_default and not settings.tts._voice_explicitly_set:
+            warnings.warn(
+                "tts.voice is deprecated; use tts.voices.host and tts.voices.interviewee instead. "
+                "Both speakers will use the same voice.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        return settings.tts.voice, settings.tts.voice, "legacy"
 
     # Provider-aware defaults
     return defaults[0], defaults[1], "default"
@@ -83,7 +88,7 @@ def build_voice_map(settings: "Settings", archetype_prompt: Any) -> dict[str, st
 
     Returns:
         dict mapping speaker name → voice string.
-        e.g. {"Alex": "en-US-GuyNeural", "Dr. Chen": "en-US-AriaNeural"}
+        e.g. {archetype.host_name: "en-US-GuyNeural", archetype.guest_name: "en-US-AriaNeural"}
     """
     host_voice, interviewee_voice, _ = _resolve_voice_slots(settings)
     return {
