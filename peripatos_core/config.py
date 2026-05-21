@@ -18,8 +18,9 @@ logger = logging.getLogger(__name__)
 
 USER_GLOBAL_CONFIG_PATH = Path.home() / ".config" / "peripatos" / "config.json"
 
-KNOWN_KEYS = {"llm", "tts", "defaults"}
-KNOWN_LLM_KEYS = {"base_url", "api_key", "model", "max_paper_chars"}
+KNOWN_KEYS = {"llm", "tts", "defaults", "rag"}
+KNOWN_LLM_KEYS = {"base_url", "api_key", "model"}
+KNOWN_RAG_KEYS = {"embedding_model", "chunk_size", "chunk_overlap", "top_k", "cache_dir"}
 KNOWN_TTS_KEYS = {"provider", "base_url", "api_key", "voice", "model", "voices"}
 KNOWN_TTS_VOICES_KEYS = {"host", "interviewee"}
 KNOWN_DEFAULTS_KEYS = {"archetype", "output_dir"}
@@ -30,7 +31,15 @@ class LLMConfig:
     base_url: str = "https://router.requesty.ai/v1"
     api_key: str = ""
     model: str = "openai/gpt-4o-mini"
-    max_paper_chars: int = 128_000
+
+
+@dataclass
+class RAGConfig:
+    embedding_model: str = "text-embedding-3-small"
+    chunk_size: int = 1000
+    chunk_overlap: int = 200
+    top_k: int = 5
+    cache_dir: str | None = None
 
 
 @dataclass
@@ -74,6 +83,7 @@ class Settings:
     llm: LLMConfig = field(default_factory=LLMConfig)
     tts: TTSConfig = field(default_factory=TTSConfig)
     defaults: Defaults = field(default_factory=Defaults)
+    rag: RAGConfig = field(default_factory=RAGConfig)
 
 
 def _warn_unknown(section: str, data: dict[str, Any], known: set[str]) -> None:
@@ -99,6 +109,13 @@ def _apply_overrides(settings: Settings, data: dict[str, Any]) -> None:
         for k in KNOWN_LLM_KEYS:
             if k in llm_data:
                 setattr(settings.llm, k, llm_data[k])
+
+    if "rag" in data:
+        rag_data = data["rag"]
+        _warn_unknown("rag", rag_data, KNOWN_RAG_KEYS)
+        for k in KNOWN_RAG_KEYS:
+            if k in rag_data:
+                setattr(settings.rag, k, rag_data[k])
 
     if "tts" in data:
         tts_data = data["tts"]
