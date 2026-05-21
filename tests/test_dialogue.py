@@ -33,16 +33,6 @@ def test_generate_uses_archetype_system_prompt():
     assert "content" in user_prompt
 
 
-def test_generate_truncates_long_content():
-    stub = StubLLMProvider(response=_make_valid_response())
-    gen = DialogueGenerator(llm=stub, max_paper_chars=1000)
-    long_content = "x" * 20_000
-    gen.generate(long_content, archetype=ArchetypeId.PEER)
-    _, user_prompt = stub.calls[0]
-    assert "x" * 100 in user_prompt
-    assert len(user_prompt) < 2_500
-
-
 def test_generate_strips_markdown_fences():
     raw = "```json\n" + _make_valid_response() + "\n```"
     stub = StubLLMProvider(response=raw)

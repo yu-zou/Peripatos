@@ -2,8 +2,7 @@
   "llm": {
     "base_url": "https://router.requesty.ai/v1",
     "api_key": "YOUR_REQUESTY_API_KEY_HERE",
-    "model": "openai/gpt-4o-mini",
-    "max_paper_chars": 128000
+    "model": "openai/gpt-4o-mini"
   },
   "tts": {
     "provider": "edge",

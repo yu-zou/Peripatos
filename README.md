@@ -104,7 +104,6 @@ The `llm.base_url` accepts any OpenAI-compatible endpoint: [Requesty](https://re
 
 | Key | Default | Description |
 |---|---|---|
-| `llm.max_paper_chars` | `128000` | Maximum characters of paper content sent to the LLM. Increase for larger papers; decrease to reduce token usage. |
 | `tts.voice` | `"en-US-AriaNeural"` (edge) / `"nova"` (openai_compatible) | Single voice for both speakers. (deprecated) |
 | `tts.voices.host` | `"en-US-GuyNeural"` (edge) / `"onyx"` (openai_compatible) | Voice for the host speaker. |
 | `tts.voices.interviewee` | `"en-US-AriaNeural"` (edge) / `"nova"` (openai_compatible) | Voice for the interviewee speaker. |

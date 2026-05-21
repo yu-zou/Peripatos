@@ -79,7 +79,7 @@ def generate(
 
     typer.echo(f"[3/5] Generating dialogue (archetype={archetype})")
     llm = build_llm_provider(settings.llm)
-    gen = DialogueGenerator(llm=llm, max_paper_chars=settings.llm.max_paper_chars)
+    gen = DialogueGenerator(llm=llm)
     script = gen.generate(
         paper_content=parsed.markdown,
         archetype=archetype,

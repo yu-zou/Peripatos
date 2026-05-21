@@ -18,11 +18,9 @@ class DialogueGenerator:
         self,
         llm: LLMProvider,
         archetype_loader: archetypes.ArchetypeLoader | None = None,
-        max_paper_chars: int = 128_000,
     ) -> None:
         self._llm = llm
         self._loader = archetype_loader or archetypes.ArchetypeLoader()
-        self._max_paper_chars = max_paper_chars
 
     def generate(
         self,
@@ -43,16 +41,7 @@ class DialogueGenerator:
         archetype_id = archetypes.ArchetypeId(archetype) if isinstance(archetype, str) else archetype
         prompt_data = self._loader.load(archetype_id)
 
-        # Truncate paper content to avoid token overflow
-        truncated = paper_content[:self._max_paper_chars]
-        if len(paper_content) > self._max_paper_chars:
-            logger.warning(
-                "Paper content truncated from %d to %d chars",
-                len(paper_content),
-                self._max_paper_chars,
-            )
-
-        user_prompt = prompt_data.dialogue_prompt.format(paper_content=truncated)
+        user_prompt = prompt_data.dialogue_prompt.format(paper_content=paper_content)
 
         logger.debug("Calling LLM for dialogue generation (archetype=%s)", archetype_id.value)
         raw_response = self._llm.complete(
