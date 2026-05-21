@@ -2,6 +2,19 @@
 
 All notable changes to Peripatos are documented here.
 
+## [1.1.0] - 2026-05-21
+
+### Added
+- Agentic ReAct RAG pipeline replaces single-pass dialogue generator
+- New source types: HTML URLs, Markdown files (.md), plain text files (.txt)
+- `rag` config block: `embedding_model`, `chunk_size`, `chunk_overlap`, `top_k`, `cache_dir`
+- FAISS vector store with disk cache keyed by source SHA256
+- Native OpenAI function-calling tools: `search`, `read_chunk`, `list_sections`, `draft_turn`, `finalize`
+
+### Removed
+- `llm.max_paper_chars` config field (use `rag.chunk_size` instead)
+- Single-pass `DialogueGenerator` (replaced by ReAct agent)
+
 ## [1.0.0] — 2026-05-21
 
 ### Added

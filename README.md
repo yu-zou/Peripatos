@@ -12,6 +12,12 @@
 
 Peripatos fetches an ArXiv paper (or any PDF), generates a natural back-and-forth dialogue between two speakers using an LLM, and synthesises the script into an MP3 with ID3v2.4 chapter markers — one chapter per dialogue turn.
 
+## What's New in v1.1.0
+
+- **Agentic RAG Pipeline**: Replaces single-pass dialogue generation with a ReAct agent that searches and reads chunks of the source document as needed.
+- **New Source Types**: Peripatos now supports HTML URLs, Markdown files (.md), and plain text files (.txt).
+- **Disk-cached Vector Store**: FAISS vector store with disk cache keyed by source SHA256 for lightning-fast subsequent runs.
+
 ## What's New in v1.0
 
 - **Two-voice TTS**: Host and interviewee now use distinct voices by default (`en-US-GuyNeural` for the host, `en-US-AriaNeural` for the interviewee with edge-tts; `onyx` + `nova` with openai_compatible).
@@ -108,6 +114,16 @@ The `llm.base_url` accepts any OpenAI-compatible endpoint: [Requesty](https://re
 | `tts.voices.host` | `"en-US-GuyNeural"` (edge) / `"onyx"` (openai_compatible) | Voice for the host speaker. |
 | `tts.voices.interviewee` | `"en-US-AriaNeural"` (edge) / `"nova"` (openai_compatible) | Voice for the interviewee speaker. |
 
+### RAG Configuration
+
+| Key | Default | Description |
+|---|---|---|
+| `rag.embedding_model` | `"text-embedding-3-small"` | OpenAI-compatible embedding model for the vector store. |
+| `rag.chunk_size` | `1000` | Size of text chunks for indexing (characters). |
+| `rag.chunk_overlap` | `200` | Overlap between adjacent chunks (characters). |
+| `rag.top_k` | `5` | Number of chunks to retrieve for each search query. |
+| `rag.cache_dir` | `null` | Directory to store FAISS indices. Defaults to `~/.cache/peripatos/rag/`. |
+
 **Deprecated**: `tts.voice` (single voice for both speakers) still works but emits a deprecation warning. Use `tts.voices.host` and `tts.voices.interviewee` instead.
 
 ## Quick Start
@@ -124,6 +140,13 @@ peripatos generate ./paper.pdf --output podcast.mp3
 
 # Choose an archetype
 peripatos generate 1706.03762 --archetype tutor --output lecture.mp3
+
+# HTML URL
+peripatos generate https://example.com/article.html -o podcast.mp3
+
+# Markdown or Text files
+peripatos generate ./notes.md -o podcast.mp3
+peripatos generate ./transcript.txt -o podcast.mp3
 ```
 
 ## CLI Reference
