@@ -1,6 +1,7 @@
 """LLM provider abstraction for Peripatos Core."""
 from __future__ import annotations
 import logging
+import json
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
@@ -94,6 +95,72 @@ class OpenAICompatibleLLMProvider(LLMProvider):
             if content is None:
                 raise LLMError("LLM returned empty response")
             return content
+        except Exception as exc:
+            if isinstance(exc, LLMError):
+                raise
+            raise LLMError(f"LLM API call failed: {exc}") from exc
+
+    def complete_with_tools(
+        self,
+        messages: list[AgentMessage],
+        tools: list[ToolSpec],
+    ) -> AgentMessage:
+        from peripatos_core.exceptions import LLMError
+
+        try:
+            openai_messages = []
+            for msg in messages:
+                openai_msg: dict = {"role": msg.role, "content": msg.content}
+                if msg.tool_call_id is not None:
+                    openai_msg["tool_call_id"] = msg.tool_call_id
+                if msg.tool_calls:
+                    openai_msg["tool_calls"] = [
+                        {
+                            "id": tool_call.id,
+                            "type": "function",
+                            "function": {
+                                "name": tool_call.name,
+                                "arguments": json.dumps(tool_call.arguments),
+                            },
+                        }
+                        for tool_call in msg.tool_calls
+                    ]
+                openai_messages.append(openai_msg)
+
+            openai_tools = [
+                {
+                    "type": "function",
+                    "function": {
+                        "name": tool_spec.name,
+                        "description": tool_spec.description,
+                        "parameters": tool_spec.parameters,
+                    },
+                }
+                for tool_spec in tools
+            ]
+
+            response = self._client.chat.completions.create(
+                model=self._model,
+                messages=openai_messages,
+                tools=openai_tools,
+                tool_choice="auto",
+            )
+            response_message = response.choices[0].message
+            response_tool_calls = []
+            for tool_call in response_message.tool_calls or []:
+                response_tool_calls.append(
+                    ToolCall(
+                        id=tool_call.id,
+                        name=tool_call.function.name,
+                        arguments=json.loads(tool_call.function.arguments),
+                    )
+                )
+
+            return AgentMessage(
+                role="assistant",
+                content=response_message.content,
+                tool_calls=response_tool_calls or None,
+            )
         except Exception as exc:
             if isinstance(exc, LLMError):
                 raise
