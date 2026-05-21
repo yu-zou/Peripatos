@@ -1,9 +1,10 @@
-"""Paper fetcher — resolves ArXiv ID, URL, or local path to a local PDF file."""
+"""Paper fetcher — resolves ArXiv ID, URL, or local path to a local file."""
 from __future__ import annotations
 import re
 import time
 import tempfile
 from pathlib import Path
+from urllib.parse import urlparse
 import requests
 from peripatos_core.exceptions import FetchError
 from peripatos_core.types import PaperMetadata
@@ -23,21 +24,23 @@ class PaperFetcher:
         self._output_dir = output_dir or Path(tempfile.gettempdir())
 
     def fetch(self, source: str) -> tuple[Path, PaperMetadata]:
-        """Fetch a paper and return (local_pdf_path, metadata).
+        """Fetch a paper and return (local_path, metadata).
 
         Args:
-            source: ArXiv ID (e.g. "1706.03762"), ArXiv URL, arbitrary PDF URL,
-                    or local file path.
+            source: ArXiv ID (e.g. "1706.03762"), ArXiv URL, arbitrary PDF/HTML URL,
+                    or local file path (.pdf, .md, .txt).
 
         Returns:
-            Tuple of (path to local PDF, PaperMetadata).
+            Tuple of (path to local file, PaperMetadata).
         """
         source = source.strip()
 
         # Local file
         local = Path(source)
-        if local.exists() and local.suffix.lower() == ".pdf":
-            return local, PaperMetadata(title=local.stem, source_url=str(local))
+        if local.exists():
+            suffix = local.suffix.lower()
+            if suffix in (".pdf", ".md", ".txt"):
+                return local, PaperMetadata(title=local.stem, source_url=str(local))
 
         # ArXiv ID
         if ARXIV_ID_RE.match(source):
@@ -48,9 +51,16 @@ class PaperFetcher:
         if m:
             return self._fetch_arxiv(m.group(1))
 
-        # Generic URL
+        # Generic URL — PDF or HTML
         if source.startswith("http://") or source.startswith("https://"):
-            return self._fetch_url(source, PaperMetadata(title="paper"))
+            parsed_path = urlparse(source).path.lower()
+            if parsed_path.endswith(".pdf"):
+                return self._fetch_url(source, PaperMetadata(title="paper", source_url=source))
+            return self._fetch_url(
+                source,
+                PaperMetadata(title=source, source_url=source),
+                suffix=".html",
+            )
 
         raise FetchError(f"Cannot resolve source: {source!r}")
 
@@ -64,14 +74,18 @@ class PaperFetcher:
         time.sleep(self.request_delay_s)
         return self._fetch_url(pdf_url, metadata)
 
-    def _fetch_url(self, url: str, metadata: PaperMetadata) -> tuple[Path, PaperMetadata]:
+    def _fetch_url(
+        self,
+        url: str,
+        metadata: PaperMetadata,
+        suffix: str = ".pdf",
+    ) -> tuple[Path, PaperMetadata]:
         try:
             resp = requests.get(url, timeout=60, stream=True)
             resp.raise_for_status()
         except requests.RequestException as exc:
             raise FetchError(f"Failed to download {url}: {exc}") from exc
 
-        suffix = ".pdf"
         tmp = tempfile.NamedTemporaryFile(
             dir=self._output_dir, suffix=suffix, delete=False
         )
