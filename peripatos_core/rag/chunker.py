@@ -1,0 +1,1 @@
+"""Paragraph-aware text chunker."""
