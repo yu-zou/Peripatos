@@ -20,30 +20,7 @@ pip install git+https://github.com/yu-zou/Peripatos.git
 
 ## Configuration
 
-Peripatos is configured via a single JSON file. Create the configuration file and fill in your API key:
-
-```bash
-mkdir -p ~/.config/peripatos
-cat > ~/.config/peripatos/config.json << 'EOF'
-{
-  "llm": {
-    "base_url": "https://router.requesty.ai/v1",
-    "api_key": "YOUR_API_KEY",
-    "model": "openai/gpt-4o-mini"
-  },
-  "tts": {
-    "provider": "edge",
-    "voices": {
-      "host": "en-US-GuyNeural",
-      "interviewee": "en-US-AriaNeural"
-    }
-  },
-  "defaults": {
-    "archetype": "peer"
-  }
-}
-EOF
-```
+Peripatos is configured via a single JSON file. Create a config file anywhere (e.g. `~/my-peripatos.json`) using the example below, fill in your API key, then point Peripatos to it.
 
 Configuration is resolved in this order:
 1. `--config PATH` flag
