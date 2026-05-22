@@ -78,6 +78,15 @@ def generate(
         parser = PDFParser()
         parsed = parser.parse(fetched_path)
         paper_content = parsed.markdown
+    elif fetched_path.suffix.lower() == ".html":
+        from bs4 import BeautifulSoup  # type: ignore[reportMissingImports]
+
+        raw_html = fetched_path.read_text(encoding="utf-8", errors="ignore")
+        soup = BeautifulSoup(raw_html, "html.parser")
+        for tag in soup(["script", "style", "nav", "footer"]):
+            tag.decompose()
+        body = soup.body or soup
+        paper_content = body.get_text(separator="\n\n", strip=True)
     else:
         paper_content = fetched_path.read_text(encoding="utf-8", errors="ignore")
 
