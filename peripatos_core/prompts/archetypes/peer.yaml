@@ -13,14 +13,7 @@ dialogue_prompt: |
   3. Focus on the paper's core derivation, algorithmic steps, and implementation details with exactness.
   4. Maintain a peer-to-peer tone that emphasizes technical nuance, not hype or broad framing.
 
-  Paper content:
-  {paper_content}
-
-  Output format — return ONLY valid JSON, no markdown fences:
-  {{
-    "title": "Episode title",
-    "turns": [
-      {{"speaker": "Alex", "text": "..."}},
-      {{"speaker": "Dr. Chen", "text": "..."}}
-    ]
-  }}
+  Use the available RAG tools to gather evidence. Draft the conversation by calling
+  `draft_turn` once per turn, alternating Alex and Dr. Chen. When the dialogue is
+  complete, call `finalize` with the episode title. Do not return JSON or direct
+  assistant text; only tool calls are accepted.

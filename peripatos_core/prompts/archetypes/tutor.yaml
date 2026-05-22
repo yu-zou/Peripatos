@@ -12,14 +12,7 @@ dialogue_prompt: |
   3. Translate formulas and technical steps into intuitive analogies or physical metaphors.
   4. Keep the dialogue accessible without being shallow; preserve the paper's real technical content.
 
-  Paper content:
-  {paper_content}
-
-  Output format — return ONLY valid JSON, no markdown fences:
-  {{
-    "title": "Episode title",
-    "turns": [
-      {{"speaker": "Alex", "text": "..."}},
-      {{"speaker": "Dr. Chen", "text": "..."}}
-    ]
-  }}
+  Use the available RAG tools to gather evidence. Draft the conversation by calling
+  `draft_turn` once per turn, alternating Alex and Dr. Chen. When the dialogue is
+  complete, call `finalize` with the episode title. Do not return JSON or direct
+  assistant text; only tool calls are accepted.
