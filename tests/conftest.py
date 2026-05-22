@@ -3,9 +3,14 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import pytest
+
+collect_ignore_glob = (
+    [] if os.environ.get("RUN_INTEGRATION") == "1" else ["test_e2e.py"]
+)
 
 
 @pytest.fixture(scope="session")

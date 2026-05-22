@@ -12,7 +12,7 @@ def test_load_all_four_archetypes():
         assert isinstance(prompt, ArchetypePrompt)
         assert prompt.archetype == archetype.value
         assert len(prompt.system_prompt) > 10
-        assert "{paper_content}" in prompt.dialogue_prompt
+        assert "draft_turn" in prompt.dialogue_prompt
 
 
 def test_load_by_string():

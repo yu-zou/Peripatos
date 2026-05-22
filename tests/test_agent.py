@@ -107,7 +107,7 @@ def test_react_agent_iteration_cap_warns_and_returns_partial_script():
     )
     agent = make_agent(llm)
 
-    with pytest.warns(UserWarning, match=r"ReAct iteration cap reached \(40\)"):
+    with pytest.warns(UserWarning, match=r"ReAct iteration cap reached \(80\)"):
         script = agent.run("system", "user")
 
     assert script.title == "Untitled"
@@ -135,3 +135,5 @@ def test_react_agent_empty_turns_raises_agent_error():
 
     with pytest.raises(AgentError, match="agent produced no turns"):
         agent.run("system", "user")
+
+
