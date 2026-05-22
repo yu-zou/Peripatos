@@ -18,21 +18,31 @@ Peripatos fetches an ArXiv paper (or any PDF), generates a natural back-and-fort
 pip install git+https://github.com/yu-zou/Peripatos.git
 ```
 
-For development:
-
-```bash
-git clone https://github.com/yu-zou/Peripatos.git
-cd Peripatos
-pip install -e .
-```
-
 ## Configuration
 
-Peripatos is configured via a single JSON file. Copy the example and fill in your API key:
+Peripatos is configured via a single JSON file. Create the configuration file and fill in your API key:
 
 ```bash
 mkdir -p ~/.config/peripatos
-cp config.example.json ~/.config/peripatos/config.json
+cat > ~/.config/peripatos/config.json << 'EOF'
+{
+  "llm": {
+    "base_url": "https://router.requesty.ai/v1",
+    "api_key": "YOUR_API_KEY",
+    "model": "openai/gpt-4o-mini"
+  },
+  "tts": {
+    "provider": "edge",
+    "voices": {
+      "host": "en-US-GuyNeural",
+      "interviewee": "en-US-AriaNeural"
+    }
+  },
+  "defaults": {
+    "archetype": "peer"
+  }
+}
+EOF
 ```
 
 Configuration is resolved in this order:
@@ -63,6 +73,13 @@ Configuration is resolved in this order:
   "defaults": {
     "archetype": "peer",
     "output_dir": "."
+  },
+  "rag": {
+    "embedding_model": "text-embedding-3-small",
+    "chunk_size": 1000,
+    "chunk_overlap": 200,
+    "top_k": 5,
+    "cache_dir": null
   }
 }
 ```
@@ -153,7 +170,7 @@ Print all available archetypes with descriptions.
 
 ### `peripatos doctor`
 
-Verify your configuration and provider connectivity.
+Print diagnostic info for the resolved configuration (accepts `--config` to target a specific file, otherwise reads `~/.config/peripatos/config.json`).
 
 ## Archetypes
 
@@ -171,7 +188,17 @@ The generated MP3 embeds ID3v2.4 metadata:
 - **Chapter markers** (`CHAP` / `CTOC`) — one per dialogue turn; skip between speakers in any chapter-aware player
 - **Title & artist** — extracted from the paper
 
-## Running Tests
+## Contributing
+
+### Development Setup
+
+```bash
+git clone https://github.com/yu-zou/Peripatos.git
+cd Peripatos
+pip install -e .
+```
+
+### Running Tests
 
 All tests run inside Docker:
 
