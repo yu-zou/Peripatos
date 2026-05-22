@@ -53,6 +53,37 @@ def chunk_text(text: str, *, chunk_size: int = 1000, overlap: int = 200) -> list
     chunk_id = 0
 
     for para, start, end in paragraphs:
+        if len(para) > chunk_size:
+            if current_text.strip():
+                chunks.append(
+                    Chunk(
+                        id=chunk_id,
+                        text=current_text,
+                        char_start=current_start,
+                        char_end=current_end,
+                        section_hint=_section_hint(current_text),
+                    )
+                )
+                chunk_id += 1
+                current_text = ""
+
+            for i in range(0, len(para), chunk_size):
+                piece = para[i : i + chunk_size]
+                chunks.append(
+                    Chunk(
+                        id=chunk_id,
+                        text=piece,
+                        char_start=start + i,
+                        char_end=start + i + len(piece),
+                        section_hint=_section_hint(piece) if i == 0 else None,
+                    )
+                )
+                chunk_id += 1
+
+            current_start = end
+            current_end = end
+            continue
+
         if current_text and len(current_text) + len(para) > chunk_size:
             chunks.append(
                 Chunk(

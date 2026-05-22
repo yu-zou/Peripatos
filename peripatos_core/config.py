@@ -35,7 +35,7 @@ class LLMConfig:
 
 @dataclass
 class RAGConfig:
-    embedding_model: str = "text-embedding-3-small"
+    embedding_model: str = "openai/text-embedding-3-small"
     chunk_size: int = 1000
     chunk_overlap: int = 200
     top_k: int = 5

@@ -12,6 +12,10 @@ services:
     environment:
       - RUN_INTEGRATION=${RUN_INTEGRATION:-0}
       - PYTHONPATH=/workspace
+      - HTTP_PROXY=
+      - HTTPS_PROXY=
+      - http_proxy=
+      - https_proxy=
   install-test:
     build:
       context: .

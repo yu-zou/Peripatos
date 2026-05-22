@@ -52,7 +52,7 @@ Configuration is resolved in this order:
     "output_dir": "."
   },
   "rag": {
-    "embedding_model": "text-embedding-3-small",
+    "embedding_model": "openai/text-embedding-3-small",
     "chunk_size": 1000,
     "chunk_overlap": 200,
     "top_k": 5,
@@ -100,7 +100,7 @@ The `llm.base_url` accepts any OpenAI-compatible endpoint: [Requesty](https://re
 
 | Key | Default | Description |
 |---|---|---|
-| `rag.embedding_model` | `"text-embedding-3-small"` | OpenAI-compatible embedding model for the vector store. |
+| `rag.embedding_model` | `"openai/text-embedding-3-small"` | OpenAI-compatible embedding model for the vector store. |
 | `rag.chunk_size` | `1000` | Size of text chunks for indexing (characters). |
 | `rag.chunk_overlap` | `200` | Overlap between adjacent chunks (characters). |
 | `rag.top_k` | `5` | Number of chunks to retrieve for each search query. |
