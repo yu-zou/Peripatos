@@ -38,7 +38,7 @@ def test_e2e_arxiv_2303_08774_real_llm(tmp_path: Path, config_test_json_path: Pa
         ],
         capture_output=True,
         text=True,
-        timeout=300,
+        timeout=600,
         check=False,
     )
 

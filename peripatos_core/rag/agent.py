@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from peripatos_core.rag.vector_store import VectorStore
 
 
-MAX_ITERATIONS = 40
+MAX_ITERATIONS = 80
 
 
 class ReActAgent:

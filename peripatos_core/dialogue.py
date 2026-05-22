@@ -62,8 +62,13 @@ class DialogueGenerator:
             store.load()
 
         sections_list = store.list_sections()
+        seen: dict[str, int] = {}
+        for chunk_id, hint in sections_list:
+            if hint not in seen:
+                seen[hint] = chunk_id
+        deduped = list(seen.items())[:20]
         section_overview = (
-            "\n".join(f"{chunk_id}: {hint}" for chunk_id, hint in sections_list)
+            "\n".join(f"{chunk_id}: {hint}" for hint, chunk_id in deduped)
             or "(no sections detected)"
         )
 
