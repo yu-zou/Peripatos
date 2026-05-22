@@ -18,6 +18,7 @@ class AgentState:
     drafted_turns: list[DialogueTurn] = field(default_factory=list)
     title: str | None = None
     finalized: bool = False
+    read_chunk_calls: int = 0
 
 
 def build_tools(
@@ -39,13 +40,19 @@ def build_tools(
         )
 
     def read_chunk(chunk_id: int) -> str:
+        state.read_chunk_calls += 1
         entry = store.get_chunk(chunk_id)
         return entry["text"]
 
     def list_sections() -> str:
         sections = store.list_sections()
+        seen: dict[str, int] = {}
+        for chunk_id, hint in sections:
+            if hint not in seen:
+                seen[hint] = chunk_id
+        deduped = list(seen.items())[:20]
         return json.dumps(
-            [{"id": chunk_id, "section_hint": hint} for chunk_id, hint in sections]
+            [{"id": chunk_id, "section_hint": hint} for hint, chunk_id in deduped]
         )
 
     def draft_turn(speaker: str, text: str) -> str:

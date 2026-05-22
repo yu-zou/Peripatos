@@ -31,6 +31,6 @@ Produce a natural, high-quality dialogue between two speakers (the host and the 
 - Grounding: Every technical claim or specific detail must be supported by content retrieved via `read_chunk`.
 - Voice: Adhere strictly to the host and guest personas defined in the archetype.
 - Accuracy: Do not hallucinate findings. If the paper doesn't say it, the speakers shouldn't either.
-- Efficiency: Limit exploration to at most 10 `read_chunk` calls total. After that, begin drafting turns immediately using what you have retrieved. Do not read the paper exhaustively.
+- Efficiency: Limit exploration to at most 10 `read_chunk` calls total. After that, begin drafting turns immediately using what you have retrieved. Do not read the paper exhaustively. You must call `finalize` within 60 total tool calls.
 
 Begin the exploration now.
