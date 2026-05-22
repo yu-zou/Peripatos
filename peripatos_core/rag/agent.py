@@ -15,8 +15,6 @@ if TYPE_CHECKING:
 
 
 MAX_ITERATIONS = 80
-LEGACY_ITERATION_CAP = 40
-READ_CHUNK_LIMIT = 10
 
 
 class ReActAgent:
@@ -49,12 +47,7 @@ class ReActAgent:
         ]
 
         for _ in range(MAX_ITERATIONS):
-            active_specs = (
-                [spec for spec in specs if spec.name in {"draft_turn", "finalize"}]
-                if state.read_chunk_calls >= READ_CHUNK_LIMIT
-                else specs
-            )
-            response = self.llm.complete_with_tools(messages, active_specs)
+            response = self.llm.complete_with_tools(messages, specs)
             messages.append(response)
 
             if not response.tool_calls:
@@ -74,8 +67,7 @@ class ReActAgent:
                 break
         else:
             warnings.warn(
-                f"ReAct iteration cap reached ({LEGACY_ITERATION_CAP}); "
-                f"current cap is {MAX_ITERATIONS}",
+                f"ReAct iteration cap reached ({MAX_ITERATIONS})",
                 UserWarning,
                 stacklevel=2,
             )

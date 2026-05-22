@@ -18,7 +18,6 @@ class AgentState:
     drafted_turns: list[DialogueTurn] = field(default_factory=list)
     title: str | None = None
     finalized: bool = False
-    read_chunk_calls: int = 0
 
 
 def build_tools(
@@ -38,11 +37,6 @@ def build_tools(
                 for chunk_id, distance, text in results
             ]
         )
-
-    def read_chunk(chunk_id: int) -> str:
-        state.read_chunk_calls += 1
-        entry = store.get_chunk(chunk_id)
-        return entry["text"]
 
     def list_sections() -> str:
         sections = store.list_sections()
@@ -74,24 +68,13 @@ def build_tools(
     specs: list[ToolSpec] = [
         ToolSpec(
             name="search",
-            description="Search the paper for relevant chunks via semantic similarity.",
+            description="Search the paper for relevant chunks via semantic similarity. Returns full chunk text.",
             parameters={
                 "type": "object",
                 "properties": {
                     "query": {"type": "string", "description": "Search query"}
                 },
                 "required": ["query"],
-            },
-        ),
-        ToolSpec(
-            name="read_chunk",
-            description="Read the full text of a chunk by its ID.",
-            parameters={
-                "type": "object",
-                "properties": {
-                    "chunk_id": {"type": "integer", "description": "Chunk ID to read"}
-                },
-                "required": ["chunk_id"],
             },
         ),
         ToolSpec(
@@ -126,7 +109,6 @@ def build_tools(
 
     dispatcher: dict[str, Callable] = {
         "search": _wrap(search),
-        "read_chunk": _wrap(read_chunk),
         "list_sections": _wrap(list_sections),
         "draft_turn": _wrap(draft_turn),
         "finalize": _wrap(finalize),

@@ -16,21 +16,19 @@ Produce a natural, high-quality dialogue between two speakers (the host and the 
 
 # Available Tools
 - `list_sections`: Get more detail about the paper's structure.
-- `search`: Find relevant chunks across the entire paper using a text query.
-- `read_chunk`: Read a specific text chunk from the paper.
+- `search`: Find relevant chunks across the entire paper using a text query. Returns full chunk text.
 - `draft_turn`: Record a draft turn of the dialogue.
 - `finalize`: Finish the session once the dialogue is complete and fully grounded.
 
 # Workflow
-1. **Explore**: Use `list_sections` and `search` to understand the broad landscape and specific details of the paper.
-2. **Retrieve**: Use `read_chunk` to get the exact evidence needed for each claim.
-3. **Draft**: Use `draft_turn` to build the dialogue one turn at a time. Ensure the voice matches the archetype guidelines.
-4. **Finalize**: Once the conversation has covered the paper comprehensively, use `finalize`.
+1. **Explore**: Use `list_sections` and `search` to understand the paper. `search` returns full chunk text — use it directly for grounding.
+2. **Draft**: Use `draft_turn` to build the dialogue one turn at a time. Ensure the voice matches the archetype guidelines.
+3. **Finalize**: Once the conversation has covered the paper comprehensively, use `finalize`.
 
 # Constraints
-- Grounding: Every technical claim or specific detail must be supported by content retrieved via `read_chunk`.
+- Grounding: Use `search` results directly to ground claims. You do not need to look up chunks by ID.
 - Voice: Adhere strictly to the host and guest personas defined in the archetype.
 - Accuracy: Do not hallucinate findings. If the paper doesn't say it, the speakers shouldn't either.
-- Efficiency: Limit exploration to at most 10 `read_chunk` calls total. After that, begin drafting turns immediately using what you have retrieved. Do not read the paper exhaustively. You must call `finalize` within 60 total tool calls.
+- Efficiency: Do 3–5 searches to cover the key topics, then start drafting immediately. Do not search exhaustively.
 
 Begin the exploration now.
