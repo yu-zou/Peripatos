@@ -23,8 +23,19 @@ class PDFParser:
     def _get_converter(self):
         if self._converter is None:
             try:
-                from docling.document_converter import DocumentConverter
-                self._converter = DocumentConverter()
+                from docling.datamodel.accelerator_options import AcceleratorDevice, AcceleratorOptions
+                from docling.datamodel.base_models import InputFormat
+                from docling.datamodel.pipeline_options import PdfPipelineOptions
+                from docling.document_converter import DocumentConverter, PdfFormatOption
+                pipeline_options = PdfPipelineOptions()
+                pipeline_options.accelerator_options = AcceleratorOptions(
+                    device=AcceleratorDevice.CPU
+                )
+                self._converter = DocumentConverter(
+                    format_options={
+                        InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options),
+                    }
+                )
             except ImportError as exc:
                 raise ParseError("docling is not installed") from exc
         return self._converter
