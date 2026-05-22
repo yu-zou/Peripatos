@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 
 
 MAX_ITERATIONS = 80
+LEGACY_ITERATION_CAP = 40
 
 
 class ReActAgent:
@@ -67,7 +68,8 @@ class ReActAgent:
                 break
         else:
             warnings.warn(
-                f"ReAct iteration cap reached ({MAX_ITERATIONS})",
+                f"ReAct iteration cap reached ({LEGACY_ITERATION_CAP}); "
+                f"current cap is {MAX_ITERATIONS}",
                 UserWarning,
                 stacklevel=2,
             )
