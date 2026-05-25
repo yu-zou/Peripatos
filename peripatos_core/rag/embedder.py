@@ -12,7 +12,7 @@ from peripatos_core.exceptions import EmbeddingError
 
 logger = logging.getLogger(__name__)
 
-BATCH_SIZE = 32  # was 64
+BATCH_SIZE = 32
 
 _MAX_RETRIES = 5
 _BASE_DELAY = 1.0
