@@ -7,6 +7,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 import requests
 from peripatos_core.exceptions import FetchError
+from peripatos_core.http import request_with_retry
 from peripatos_core.types import PaperMetadata
 
 ARXIV_PDF_URL = "https://arxiv.org/pdf/{arxiv_id}.pdf"
@@ -81,7 +82,7 @@ class PaperFetcher:
         suffix: str = ".pdf",
     ) -> tuple[Path, PaperMetadata]:
         try:
-            resp = requests.get(url, timeout=60, stream=True)
+            resp = request_with_retry("GET", url, timeout=60, stream=True)
             resp.raise_for_status()
         except requests.RequestException as exc:
             raise FetchError(f"Failed to download {url}: {exc}") from exc
@@ -91,7 +92,16 @@ class PaperFetcher:
         )
         try:
             for chunk in resp.iter_content(chunk_size=8192):
-                tmp.write(chunk)
+                if chunk:
+                    tmp.write(chunk)
+        except (
+            requests.exceptions.ChunkedEncodingError,
+            requests.exceptions.ConnectionError,
+            requests.exceptions.SSLError,
+        ) as exc:
+            tmp.seek(0)
+            tmp.truncate()
+            raise FetchError(f"Streaming download failed for {url}: {exc}") from exc
         finally:
             tmp.close()
         return Path(tmp.name), metadata

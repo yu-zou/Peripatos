@@ -47,10 +47,10 @@ def test_fetch_arxiv_id_calls_url(tmp_path):
     mock_resp = MagicMock()
     mock_resp.raise_for_status = MagicMock()
     mock_resp.iter_content = MagicMock(return_value=[b"%PDF-1.4 fake"])
-    with patch("peripatos_core.fetcher.requests.get", return_value=mock_resp) as mock_get:
+    with patch("peripatos_core.http.requests.request", return_value=mock_resp) as mock_get:
         path, meta = fetcher.fetch("1706.03762")
     assert mock_get.called
-    assert "1706.03762" in mock_get.call_args[0][0]
+    assert "1706.03762" in mock_get.call_args[0][1]
     assert meta.arxiv_id == "1706.03762"
     assert path.exists()
 
@@ -58,6 +58,6 @@ def test_fetch_arxiv_id_calls_url(tmp_path):
 def test_fetch_url_network_error(tmp_path):
     import requests as req
     fetcher = PaperFetcher(output_dir=tmp_path)
-    with patch("peripatos_core.fetcher.requests.get", side_effect=req.ConnectionError("fail")):
+    with patch("peripatos_core.http.requests.request", side_effect=req.ConnectionError("fail")):
         with pytest.raises(FetchError, match="Failed to download"):
             fetcher.fetch("https://example.com/paper.pdf")
