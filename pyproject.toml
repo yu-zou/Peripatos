@@ -23,6 +23,11 @@ dependencies = [
 [project.scripts]
 peripatos = "peripatos_core.cli:app"
 
+[project.optional-dependencies]
+dev = [
+    "responses>=0.25.0",
+]
+
 [build-system]
 requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
