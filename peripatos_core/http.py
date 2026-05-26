@@ -91,7 +91,7 @@ def _get_delay(resp: requests.Response, attempt: int, base_delay: float) -> floa
     retry_after = resp.headers.get("Retry-After")
     if retry_after is not None:
         try:
-            return min(float(retry_after), _MAX_RETRY_AFTER_SECONDS)
+            return max(0.0, min(float(retry_after), _MAX_RETRY_AFTER_SECONDS))
         except ValueError:
             pass
     return random.uniform(0, base_delay * (2 ** attempt))
