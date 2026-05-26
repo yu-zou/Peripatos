@@ -7,10 +7,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-import requests
 from bs4 import BeautifulSoup
 
 from peripatos_core.exceptions import IngestError
+from peripatos_core.http import request_with_retry
 from peripatos_core.fetcher import PaperFetcher
 from peripatos_core.parser import PDFParser
 
@@ -64,7 +64,7 @@ def _load_arxiv_or_pdf(source_input: str, kind: SourceKind) -> Source:
 
 
 def _load_html(source_input: str) -> Source:
-    resp = requests.get(source_input, timeout=60)
+    resp = request_with_retry("GET", source_input, timeout=60)
     resp.raise_for_status()
     raw_bytes = resp.content
     text = _strip_html(raw_bytes)
