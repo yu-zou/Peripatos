@@ -105,7 +105,7 @@ def generate(
     tts = build_tts_provider(settings.tts)
     from peripatos_core.archetypes import ArchetypeLoader
     archetype_prompt = ArchetypeLoader().load(archetype)
-    voice_map = build_voice_map(settings, archetype_prompt)
+    voice_map = build_voice_map(settings, archetype_prompt, language=settings.defaults.language)
     renderer = AudioRenderer(tts=tts, voice_map=voice_map)
     chapters = renderer.render(script, output)
 
@@ -137,7 +137,7 @@ def doctor(
     settings = _get_settings(effective_config)
     from peripatos_core.registry import _resolve_voice_slots
 
-    host_voice, interviewee_voice, source = _resolve_voice_slots(settings)
+    host_voice, interviewee_voice, source = _resolve_voice_slots(settings, language=settings.defaults.language)
     source_label = {"config": "from config", "default": "from default", "legacy": "from legacy tts.voice"}.get(source, source)
 
     typer.echo("Peripatos Doctor")
