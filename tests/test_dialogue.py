@@ -440,3 +440,53 @@ def test_run_phase_c_single_chapter_no_transition():
 
     assert result[0].transition_in_text is None
     llm.complete.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Language instruction injection tests
+# ---------------------------------------------------------------------------
+
+
+def test_language_instruction_zh_CN_passed_to_react_system():
+    """With language='zh-CN', load_react_system receives Mandarin instruction."""
+    from peripatos_core.config import Defaults
+    from peripatos_core.prompts import load_react_system as _real_load
+
+    captured_kwargs: dict = {}
+
+    def _capture_load(*args, **kwargs):  # noqa: ANN202
+        captured_kwargs.clear()
+        captured_kwargs.update(kwargs)
+        return _real_load(*args, **kwargs)
+
+    stub = PipelineStubLLMProvider()
+    embedder = Mock()
+    embedder.embed.return_value = np.zeros((1, 4), dtype=np.float32)
+    store = Mock()
+    store.has_cache.return_value = True
+    store.load.return_value = None
+    store.list_sections.return_value = []
+    store.search.return_value = []
+
+    with (
+        patch("peripatos_core.dialogue.Embedder", return_value=embedder),
+        patch("peripatos_core.dialogue.VectorStore", return_value=store),
+        patch("peripatos_core.dialogue.load_react_system", side_effect=_capture_load),
+    ):
+        settings = Settings(defaults=Defaults(language="zh-CN"))
+        DialogueGenerator(llm=stub, settings=settings).generate("Some paper content")
+
+    assert "language_instruction" in captured_kwargs, (
+        f"load_react_system kwargs: {list(captured_kwargs.keys())}"
+    )
+    assert "Mandarin" in captured_kwargs["language_instruction"]
+
+
+def test_language_instruction_en_in_phase_a_prompt():
+    """With language='en', Phase A user prompt contains 'Respond in English'."""
+    script, stub, _, _ = _generate_with_mocks()
+
+    assert isinstance(script, DialogueScript)
+    # First complete call is Phase A — (system_prompt, user_prompt)
+    phase_a_user_prompt = stub.complete_calls[0][1]
+    assert "Respond in English" in phase_a_user_prompt
