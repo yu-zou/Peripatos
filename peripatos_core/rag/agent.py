@@ -2,12 +2,12 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 from peripatos_core.exceptions import AgentError
 from peripatos_core.providers.llm import AgentMessage, LLMProvider
-from peripatos_core.rag.tools import build_tools
-from peripatos_core.types import ArchetypeId, Chapter, DialogueScript
+from peripatos_core.rag.tools import AgentState, build_tools
+from peripatos_core.types import ArchetypeId, Chapter, DialogueScript, DialogueTurn
 
 if TYPE_CHECKING:
     from peripatos_core.rag.embedder import Embedder
@@ -15,6 +15,98 @@ if TYPE_CHECKING:
 
 
 MAX_ITERATIONS = 80
+
+
+def _normalize_archetype(archetype: ArchetypeId | str) -> ArchetypeId:
+    if isinstance(archetype, ArchetypeId):
+        return archetype
+    return ArchetypeId(archetype)
+
+
+def _run_single_question_state(
+    llm: LLMProvider,
+    store: "VectorStore",
+    embedder: "Embedder",
+    system_prompt: str,
+    user_prompt: str,
+    top_k: int,
+    archetype: ArchetypeId | str = ArchetypeId.PEER,
+    max_turns: int | None = None,
+) -> AgentState:
+    archetype_id = _normalize_archetype(archetype)
+    specs, dispatcher, state = build_tools(
+        store,
+        embedder,
+        top_k,
+        archetype_id,
+    )
+    messages = [
+        AgentMessage(role="system", content=system_prompt),
+        AgentMessage(role="user", content=user_prompt),
+    ]
+
+    for _ in range(MAX_ITERATIONS):
+        response = llm.complete_with_tools(messages, specs)
+        messages.append(response)
+
+        if not response.tool_calls:
+            break
+
+        for tool_call in response.tool_calls:
+            if (
+                tool_call.name == "draft_turn"
+                and max_turns is not None
+                and len(state.drafted_turns) >= max_turns
+            ):
+                result_str = f"max turns reached ({max_turns})"
+            else:
+                result_str = dispatcher[tool_call.name](**tool_call.arguments)
+            messages.append(
+                AgentMessage(
+                    role="tool",
+                    content=result_str,
+                    tool_call_id=tool_call.id,
+                )
+            )
+
+        if state.finalized or (
+            max_turns is not None and len(state.drafted_turns) >= max_turns
+        ):
+            break
+    else:
+        warnings.warn(
+            f"ReAct iteration cap reached ({MAX_ITERATIONS})",
+            UserWarning,
+            stacklevel=2,
+        )
+
+    if len(state.drafted_turns) == 0:
+        raise AgentError("agent produced no turns")
+
+    return state
+
+
+def _run_single_question(
+    llm: LLMProvider,
+    store: "VectorStore",
+    embedder: "Embedder",
+    system_prompt: str,
+    user_prompt: str,
+    top_k: int,
+    archetype: ArchetypeId | str = ArchetypeId.PEER,
+    max_turns: int = 5,
+) -> list[DialogueTurn]:
+    state = _run_single_question_state(
+        llm=llm,
+        store=store,
+        embedder=embedder,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        top_k=top_k,
+        archetype=archetype,
+        max_turns=max_turns,
+    )
+    return state.drafted_turns[:max_turns]
 
 
 class ReActAgent:
@@ -35,46 +127,15 @@ class ReActAgent:
         self.archetype = archetype
 
     def run(self, system_prompt: str, user_prompt: str) -> DialogueScript:
-        specs, dispatcher, state = build_tools(
-            self.store,
-            self.embedder,
-            self.top_k,
-            self.archetype,
+        state = _run_single_question_state(
+            llm=self.llm,
+            store=self.store,
+            embedder=self.embedder,
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            top_k=self.top_k,
+            archetype=self.archetype,
         )
-        messages = [
-            AgentMessage(role="system", content=system_prompt),
-            AgentMessage(role="user", content=user_prompt),
-        ]
-
-        for _ in range(MAX_ITERATIONS):
-            response = self.llm.complete_with_tools(messages, specs)
-            messages.append(response)
-
-            if not response.tool_calls:
-                break
-
-            for tool_call in response.tool_calls:
-                result_str = dispatcher[tool_call.name](**tool_call.arguments)
-                messages.append(
-                    AgentMessage(
-                        role="tool",
-                        content=result_str,
-                        tool_call_id=tool_call.id,
-                    )
-                )
-
-            if state.finalized:
-                break
-        else:
-            warnings.warn(
-                f"ReAct iteration cap reached ({MAX_ITERATIONS})",
-                UserWarning,
-                stacklevel=2,
-            )
-
-        if len(state.drafted_turns) == 0:
-            raise AgentError("agent produced no turns")
-
         return DialogueScript(
             title=state.title or "Untitled",
             chapters=[Chapter(title="", turns=state.drafted_turns)],
@@ -85,20 +146,54 @@ def run_agent(
     llm: LLMProvider,
     store: "VectorStore",
     embedder: "Embedder",
-    top_k: int,
-    system_prompt: str,
-    user_prompt: str,
-    archetype: ArchetypeId = ArchetypeId.PEER,
-) -> DialogueScript:
-    """Run a ReActAgent without explicitly instantiating it."""
-    agent = ReActAgent(
-        llm=llm,
-        store=store,
-        embedder=embedder,
-        top_k=top_k,
-        archetype=archetype,
-    )
-    return agent.run(system_prompt, user_prompt)
+    questions: list[str] | None = None,
+    system_prompt: str = "",
+    chapter_title: str = "",
+    top_k: int = 4,
+    archetype: ArchetypeId | str = ArchetypeId.PEER,
+    **legacy_kwargs,
+) -> list[list[DialogueTurn]]:
+    """Run per-question RAG agent sessions. Returns one turn-list per question."""
+    legacy_user_prompt = legacy_kwargs.pop("user_prompt", None)
+    if legacy_kwargs:
+        unexpected = next(iter(legacy_kwargs))
+        raise TypeError(f"run_agent() got an unexpected keyword argument '{unexpected}'")
+    if questions is None:
+        if legacy_user_prompt is None:
+            raise TypeError("run_agent() missing required argument: 'questions'")
+        agent = ReActAgent(
+            llm=llm,
+            store=store,
+            embedder=embedder,
+            top_k=top_k,
+            archetype=_normalize_archetype(archetype),
+        )
+        return cast(Any, agent.run(system_prompt, legacy_user_prompt))
+
+    all_turns: list[list[DialogueTurn]] = []
+    for question in questions:
+        question_system = system_prompt.replace("{question}", question).replace(
+            "{chapter_title}", chapter_title
+        )
+        if chapter_title:
+            question_system += (
+                "\n\n# Current Chapter\n"
+                f"You are answering questions for the chapter: {chapter_title}"
+            )
+        question_user = f"Answer this question using the paper's content:\n\n{question}"
+        turns = _run_single_question(
+            llm=llm,
+            store=store,
+            embedder=embedder,
+            system_prompt=question_system,
+            user_prompt=question_user,
+            top_k=top_k,
+            archetype=archetype,
+            max_turns=5,
+        )
+        all_turns.append(turns)
+
+    return all_turns
 
 
 __all__ = ["MAX_ITERATIONS", "ReActAgent", "run_agent"]
