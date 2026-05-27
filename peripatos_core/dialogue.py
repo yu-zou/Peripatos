@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import hashlib
+import json
+import logging
 from pathlib import Path
 
 from peripatos_core.archetypes import ArchetypeLoader
@@ -14,6 +16,65 @@ from peripatos_core.rag.embedder import Embedder
 from peripatos_core.rag.vector_store import VectorStore
 from peripatos_core.types import ArchetypeId, DialogueScript, PaperMetadata
 
+_logger = logging.getLogger(__name__)
+
+_MAX_PARSE_RETRIES = 2
+_MIN_CHAPTERS = 3
+_MAX_CHAPTERS = 7
+_MIN_QUESTIONS = 2
+_MAX_QUESTIONS = 5
+_MAX_TITLE_LEN = 80
+
+_FALLBACK_CHAPTERS: list[dict] = [
+    {"title": "Introduction", "questions": ["What is the paper's main contribution?"]},
+    {"title": "Background", "questions": ["What prior work does this build on?"]},
+    {"title": "Methodology", "questions": ["How does the proposed approach work?"]},
+    {"title": "Results", "questions": ["What were the key findings?"]},
+    {"title": "Outlook", "questions": ["What are the limitations and future work?"]},
+]
+
+
+def _parse_phase_a_output(raw_output: str) -> list[dict]:
+    """Parse and validate Phase A LLM output into a list of chapter dicts.
+
+    Each dict has keys: 'title' (str, ≤80 chars), 'questions' (list[str], 2-5 items).
+    Returns 5-chapter fallback on unrecoverable parse failure.
+    """
+    try:
+        data = json.loads(raw_output)
+    except json.JSONDecodeError:
+        _logger.warning("Phase A output is not valid JSON")
+        return _FALLBACK_CHAPTERS
+
+    chapters = data.get("chapters", [])
+    if not isinstance(chapters, list):
+        _logger.warning("Phase A output 'chapters' is not a list")
+        return _FALLBACK_CHAPTERS
+
+    if not (_MIN_CHAPTERS <= len(chapters) <= _MAX_CHAPTERS):
+        _logger.warning(
+            "Phase A produced %d chapters (expected %d-%d)",
+            len(chapters), _MIN_CHAPTERS, _MAX_CHAPTERS,
+        )
+        return _FALLBACK_CHAPTERS
+
+    validated = []
+    for i, ch in enumerate(chapters):
+        title = ch.get("title", "")
+        questions = ch.get("questions", [])
+        if not isinstance(title, str) or not title.strip() or len(title) > _MAX_TITLE_LEN:
+            _logger.warning("Chapter %d has invalid title", i)
+            return _FALLBACK_CHAPTERS
+        if not isinstance(questions, list) or not (_MIN_QUESTIONS <= len(questions) <= _MAX_QUESTIONS):
+            _logger.warning("Chapter %d has invalid questions count: %d", i, len(questions))
+            return _FALLBACK_CHAPTERS
+        if not all(isinstance(q, str) and q.strip() for q in questions):
+            _logger.warning("Chapter %d has non-string or empty questions", i)
+            return _FALLBACK_CHAPTERS
+        validated.append({"title": title.strip(), "questions": [q.strip() for q in questions]})
+
+    return validated
+
 
 class DialogueGenerator:
     """Generates a Socratic dialogue from paper text using the ReAct RAG agent."""
@@ -22,6 +83,41 @@ class DialogueGenerator:
         self._llm = llm
         self._settings = settings or Settings()
         self._loader = ArchetypeLoader()
+
+    def _run_phase_a(
+        self,
+        archetype_system_prompt: str,
+        title: str,
+        origin: str,
+        section_overview: str,
+    ) -> list[dict]:
+        """Run Phase A: plan chapters and questions. Returns validated chapter list."""
+        prompt_template = (Path(__file__).parent / "prompts" / "host_questions.txt").read_text()
+        user_prompt = (
+            prompt_template
+            .replace("{archetype_system_prompt}", archetype_system_prompt)
+            .replace("{paper_title}", title)
+            .replace("{paper_origin}", origin)
+            .replace("{section_overview}", section_overview)
+        )
+
+        total_attempts = 1 + _MAX_PARSE_RETRIES  # 1 initial + 2 retries = 3
+        for attempt in range(total_attempts):
+            raw = self._llm.complete(
+                system_prompt="You are a podcast host planning interview chapters.",
+                user_prompt=user_prompt,
+            )
+            chapters = _parse_phase_a_output(raw)
+            if chapters is not _FALLBACK_CHAPTERS:
+                return chapters
+            if attempt < _MAX_PARSE_RETRIES:
+                _logger.warning(
+                    "Phase A parse failed (attempt %d/%d), retrying LLM",
+                    attempt + 1, total_attempts,
+                )
+
+        _logger.warning("Phase A exhausted %d attempts, using fallback", total_attempts)
+        return _FALLBACK_CHAPTERS
 
     def generate(
         self,
