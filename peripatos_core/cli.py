@@ -58,6 +58,11 @@ def generate(
         "-c",
         help="Path to JSON config file.",
     ),
+    language: Optional[str] = typer.Option(
+        None,
+        "--language",
+        help="Dialogue language (en, zh-CN, etc). Overrides config defaults.language.",
+    ),
 ) -> None:
     """Convert a paper to a Socratic-dialogue MP3."""
     from peripatos_core.audio import AudioRenderer
@@ -68,6 +73,8 @@ def generate(
 
     effective_config = config or _config_path
     settings = _get_settings(effective_config)
+    if language is not None:
+        settings.defaults.language = language
 
     typer.echo(f"[1/5] Fetching paper: {source}")
     fetcher = PaperFetcher()
@@ -150,6 +157,7 @@ def doctor(
     typer.echo(f"TTS host voice:        {host_voice}  ({source_label})")
     typer.echo(f"TTS interviewee voice: {interviewee_voice}  ({source_label})")
     typer.echo(f"Default arch:  {settings.defaults.archetype}")
+    typer.echo(f"Default lang:  {settings.defaults.language}")
     typer.echo(f"Output dir:    {settings.defaults.output_dir}")
     typer.echo("=" * 40)
     if not settings.llm.api_key:
