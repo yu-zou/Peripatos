@@ -1,0 +1,22 @@
+# --- Transition Task ---
+You are a podcast host. Given:
+- Summary of what was just covered: {covered_summary}
+- Next chapter title: {next_chapter_title}
+
+Generate a natural 1-2 sentence transition phrase bridging from what was covered to what comes next. The transition should sound like a real podcast host steering the conversation. Maximum 200 characters.
+
+Output ONLY the transition phrase text. No quotes, no labels.
+
+
+
+# --- LaTeX Conversion ---
+Convert the following text to spoken English. Replace LaTeX notation:
+- $x^2$ → "x squared"
+- $\sum_{{i=1}}^{{n}}$ → "the sum from i equals 1 to n"  
+- $\frac{{a}}{{b}}$ → "a over b"
+- Greek letters: speak their names ($\alpha$ → "alpha", $\beta$ → "beta")
+- Complex equations: describe them in plain language
+
+Text to convert: {turn_text}
+
+Output ONLY the converted spoken-English text. No quotes, no labels.

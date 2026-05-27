@@ -10,11 +10,12 @@ from peripatos_core.config import Settings
 from peripatos_core.dialogue import (
     DialogueGenerator,
     _FALLBACK_CHAPTERS,
+    _contains_latex,
     _parse_phase_a_output,
 )
 from peripatos_core.providers.llm import AgentMessage, LLMProvider, ToolCall
 from peripatos_core.providers.llm_stub import StubLLMProvider
-from peripatos_core.types import ArchetypeId, DialogueScript, PaperMetadata
+from peripatos_core.types import ArchetypeId, Chapter, DialogueScript, DialogueTurn, PaperMetadata
 
 
 class CyclingStubLLMProvider(StubLLMProvider):
@@ -284,3 +285,115 @@ def test_run_phase_a_exhausted():
     )
     assert result is _FALLBACK_CHAPTERS
     assert gen._llm.complete.call_count == 3  # type: ignore[union-attr]
+
+
+# ---------------------------------------------------------------------------
+# _contains_latex tests
+# ---------------------------------------------------------------------------
+
+
+def test_contains_latex_dollar():
+    assert _contains_latex("$x^2$") is True
+
+
+def test_contains_latex_no_math():
+    assert _contains_latex("no math here") is False
+
+
+def test_contains_latex_frac():
+    assert _contains_latex(r"\frac{a}{b}") is True
+
+
+# ---------------------------------------------------------------------------
+# Phase C _run_phase_c tests
+# ---------------------------------------------------------------------------
+
+
+def test_run_phase_c_transitions():
+    """Mock LLM returning a transition → chapter 1 gets transition_in_text, chapter 0 stays None."""
+    llm = Mock(spec=LLMProvider)
+    llm.complete.return_value = "Now let's discuss Methods."
+    gen = DialogueGenerator(llm=llm, settings=Settings())
+
+    chapters = [
+        Chapter(title="Introduction", turns=[DialogueTurn(speaker="Host", text="Today we explore AI.", archetype=ArchetypeId.PEER)]),
+        Chapter(title="Methods", turns=[DialogueTurn(speaker="Host", text="Let me explain the model.", archetype=ArchetypeId.PEER)]),
+        Chapter(title="Results", turns=[DialogueTurn(speaker="Host", text="Here are the numbers.", archetype=ArchetypeId.PEER)]),
+    ]
+
+    result = gen._run_phase_c(chapters)
+
+    assert result[0].transition_in_text is None
+    assert result[1].transition_in_text == "Now let's discuss Methods."
+    assert result[2].transition_in_text == "Now let's discuss Methods."
+    assert llm.complete.call_count == 2
+
+
+def test_run_phase_c_latex_conversion():
+    """Mock LLM converting LaTeX → turn.text no longer contains $ after conversion."""
+    llm = Mock(spec=LLMProvider)
+    llm.complete.return_value = "x squared expression"
+
+    gen = DialogueGenerator(llm=llm, settings=Settings())
+    chapters = [
+        Chapter(
+            title="Math Intro",
+            turns=[DialogueTurn(speaker="Host", text="Consider $x^2$ for this example.", archetype=ArchetypeId.PEER)],
+        ),
+    ]
+
+    result = gen._run_phase_c(chapters)
+
+    assert "$" not in result[0].turns[0].text
+    assert result[0].turns[0].text == "x squared expression"
+
+
+def test_run_phase_c_transition_truncation():
+    """Transition longer than 200 chars → truncated to 200 with ... suffix."""
+    llm = Mock(spec=LLMProvider)
+    llm.complete.return_value = "X" * 250
+
+    gen = DialogueGenerator(llm=llm, settings=Settings())
+    chapters = [
+        Chapter(title="Intro", turns=[DialogueTurn(speaker="Host", text="Hello.", archetype=ArchetypeId.PEER)]),
+        Chapter(title="Methods", turns=[DialogueTurn(speaker="Host", text="Details.", archetype=ArchetypeId.PEER)]),
+    ]
+
+    result = gen._run_phase_c(chapters)
+
+    transition = result[1].transition_in_text or ""
+    assert len(transition) <= 200
+    assert transition.endswith("...")
+
+
+def test_run_phase_c_no_latex_unchanged():
+    """Turns without LaTeX are left unchanged."""
+    llm = Mock(spec=LLMProvider)
+    llm.complete.return_value = "some transition"
+    gen = DialogueGenerator(llm=llm, settings=Settings())
+
+    original_text = "Just plain English here."
+    chapters = [
+        Chapter(title="A", turns=[DialogueTurn(speaker="Host", text=original_text, archetype=ArchetypeId.PEER)]),
+        Chapter(title="B", turns=[DialogueTurn(speaker="Host", text=original_text, archetype=ArchetypeId.PEER)]),
+    ]
+
+    result = gen._run_phase_c(chapters)
+
+    assert result[0].turns[0].text == original_text
+    assert result[1].turns[0].text == original_text
+
+
+def test_run_phase_c_single_chapter_no_transition():
+    """Single chapter → no transitions generated (nothing to bridge from)."""
+    llm = Mock(spec=LLMProvider)
+    gen = DialogueGenerator(llm=llm, settings=Settings())
+
+    chapters = [
+        Chapter(title="Only Chapter", turns=[DialogueTurn(speaker="Host", text="Content.", archetype=ArchetypeId.PEER)]),
+    ]
+
+    result = gen._run_phase_c(chapters)
+
+    assert result[0].transition_in_text is None
+    llm.complete.assert_not_called()

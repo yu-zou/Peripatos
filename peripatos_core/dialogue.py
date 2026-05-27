@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 from pathlib import Path
 
 from peripatos_core.archetypes import ArchetypeLoader
@@ -14,7 +15,7 @@ from peripatos_core.rag.agent import run_agent
 from peripatos_core.rag.chunker import chunk_text
 from peripatos_core.rag.embedder import Embedder
 from peripatos_core.rag.vector_store import VectorStore
-from peripatos_core.types import ArchetypeId, DialogueScript, PaperMetadata
+from peripatos_core.types import ArchetypeId, Chapter, DialogueScript, PaperMetadata
 
 _logger = logging.getLogger(__name__)
 
@@ -32,6 +33,35 @@ _FALLBACK_CHAPTERS: list[dict] = [
     {"title": "Results", "questions": ["What were the key findings?"]},
     {"title": "Outlook", "questions": ["What are the limitations and future work?"]},
 ]
+
+_LATEX_PATTERNS = re.compile(
+    r'\$[^$]+\$|\$\$[^$]+\$\$|'
+    r'\\frac|\\sum|\\alpha|\\beta|\\gamma|\\delta|\\epsilon|\\lambda|\\mu|\\sigma|\\omega|'
+    r'\\int|\\prod|\\partial|\\nabla|\\sqrt|\\text'
+)
+
+
+def _contains_latex(text: str) -> bool:
+    """Return True if text contains LaTeX notation."""
+    return bool(_LATEX_PATTERNS.search(text))
+
+
+# Phase C prompt sections loaded once at module import.
+_SYNTHESIS_RAW = (Path(__file__).parent / "prompts" / "synthesis.txt").read_text()
+_sections = _SYNTHESIS_RAW.split("# --- LaTeX Conversion ---")
+_TRANSITION_PROMPT = _sections[0].replace("# --- Transition Task ---", "").strip()
+_latex_part = _sections[1] if len(_sections) > 1 else _SYNTHESIS_RAW
+_LATEX_PROMPT = ("# --- LaTeX Conversion ---" + _latex_part).strip()
+
+_TRANSITION_TEMPLATE = _TRANSITION_PROMPT
+
+for _tmpl, _keys in [
+    (_TRANSITION_TEMPLATE, ("{covered_summary}", "{next_chapter_title}")),
+    (_LATEX_PROMPT, ("{turn_text}",)),
+]:
+    for _k in _keys:
+        if _k not in _tmpl:
+            raise ValueError(f"Prompt template missing placeholder: {_k}")
 
 
 def _parse_phase_a_output(raw_output: str) -> list[dict]:
@@ -118,6 +148,45 @@ class DialogueGenerator:
 
         _logger.warning("Phase A exhausted %d attempts, using fallback", total_attempts)
         return _FALLBACK_CHAPTERS
+
+    def _run_phase_c(
+        self,
+        chapters: list[Chapter],
+    ) -> list[Chapter]:
+        """Phase C: generate transitions and convert LaTeX.
+
+        For each chapter i (1..N-1): generate transition_in_text bridging from
+        the previous chapter. For each turn containing LaTeX: convert to spoken
+        English.
+        """
+        for i in range(1, len(chapters)):
+            prev = chapters[i - 1]
+            curr = chapters[i]
+            covered = prev.turns[0].text[:100] if prev.turns else "(unknown)"
+            user_prompt = _TRANSITION_TEMPLATE.format(
+                covered_summary=covered,
+                next_chapter_title=curr.title,
+            )
+            raw = self._llm.complete(
+                system_prompt="You are a podcast host creating natural transitions between chapters.",
+                user_prompt=user_prompt,
+            )
+            transition = raw.strip().strip('"').strip("'")
+            if len(transition) > 200:
+                transition = transition[:197] + "..."
+            curr.transition_in_text = transition
+
+        for chapter in chapters:
+            for turn in chapter.turns:
+                if _contains_latex(turn.text):
+                    user_prompt = _LATEX_PROMPT.format(turn_text=turn.text)
+                    raw = self._llm.complete(
+                        system_prompt="You are an expert at converting mathematical notation to spoken English. Output ONLY the converted text.",
+                        user_prompt=user_prompt,
+                    )
+                    turn.text = raw.strip().strip('"').strip("'")
+
+        return chapters
 
     def generate(
         self,
