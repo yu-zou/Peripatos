@@ -23,7 +23,7 @@ KNOWN_LLM_KEYS = {"base_url", "api_key", "model"}
 KNOWN_RAG_KEYS = {"embedding_model", "chunk_size", "chunk_overlap", "top_k", "cache_dir"}
 KNOWN_TTS_KEYS = {"provider", "base_url", "api_key", "voice", "model", "voices"}
 KNOWN_TTS_VOICES_KEYS = {"host", "interviewee"}
-KNOWN_DEFAULTS_KEYS = {"archetype", "output_dir"}
+KNOWN_DEFAULTS_KEYS = {"archetype", "output_dir", "language"}
 
 
 @dataclass
@@ -76,6 +76,38 @@ class TTSConfig:
 class Defaults:
     archetype: str = "peer"
     output_dir: str = "."
+    language: str = "en"
+
+
+SUPPORTED_LANGUAGES = {"en", "zh-CN"}
+
+LANGUAGE_INSTRUCTIONS = {
+    "en": "Respond in English.",
+    "zh-CN": "Respond in Mandarin Chinese (简体中文). Keep technical terms, acronyms, and proper nouns (e.g., 'Transformer', 'Attention Mechanism', 'RAG') in English. Use natural bilingual code-switching.",
+}
+
+
+def get_language_instruction(language: str) -> str:
+    """Return the language instruction for LLM prompts."""
+    if language not in SUPPORTED_LANGUAGES:
+        import warnings
+        warnings.warn(
+            f"Unsupported language '{language}' — falling back to English",
+            stacklevel=2,
+        )
+        return LANGUAGE_INSTRUCTIONS["en"]
+    return LANGUAGE_INSTRUCTIONS[language]
+
+
+LANGUAGE_VOICES: dict[str, dict[str, str]] = {
+    "en": {"host": "en-US-GuyNeural", "interviewee": "en-US-AriaNeural"},
+    "zh-CN": {"host": "zh-CN-YunxiNeural", "interviewee": "zh-CN-XiaoxiaoNeural"},
+}
+
+
+def get_default_voices(language: str) -> dict[str, str]:
+    """Return default TTS voices for the given language."""
+    return LANGUAGE_VOICES.get(language, LANGUAGE_VOICES["en"])
 
 
 @dataclass

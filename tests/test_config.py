@@ -133,3 +133,84 @@ def test_voices_non_dict_warns(tmp_path, monkeypatch):
         settings = load_settings(config_path=cfg)
     assert any("must be a dict" in str(warning.message) for warning in w)
     assert settings.tts.voices == {}
+
+
+# ── Task 2: Language instruction constants and prompt placeholders ──────────
+
+
+def test_get_default_voices_en():
+    from peripatos_core.config import get_default_voices
+    voices = get_default_voices("en")
+    assert voices["host"] == "en-US-GuyNeural"
+    assert voices["interviewee"] == "en-US-AriaNeural"
+
+
+def test_get_default_voices_zh_cn():
+    from peripatos_core.config import get_default_voices
+    voices = get_default_voices("zh-CN")
+    assert voices["host"] == "zh-CN-YunxiNeural"
+    assert voices["interviewee"] == "zh-CN-XiaoxiaoNeural"
+
+
+def test_get_default_voices_unknown_falls_back_to_en():
+    from peripatos_core.config import get_default_voices
+    voices = get_default_voices("fr")
+    assert voices == get_default_voices("en")
+
+
+def test_host_questions_has_language_placeholder():
+    from pathlib import Path
+    text = Path("peripatos_core/prompts/host_questions.txt").read_text()
+    assert "{language_instruction}" in text
+
+
+def test_react_system_has_language_placeholder():
+    from pathlib import Path
+    text = Path("peripatos_core/prompts/react_system.txt").read_text()
+    assert "{language_instruction}" in text
+
+
+# ── Task 5: TDD — language field ─────────────────────────────────────────────
+
+
+def test_defaults_language_is_english_by_default():
+    from peripatos_core.config import Defaults
+
+    d = Defaults()
+    assert d.language == "en"
+
+
+def test_config_parses_language_zh_cn():
+    from peripatos_core.config import Settings, _apply_overrides
+
+    s = Settings()
+    _apply_overrides(s, {"defaults": {"language": "zh-CN"}})
+    assert s.defaults.language == "zh-CN"
+
+
+def test_get_language_instruction_zh_cn():
+    from peripatos_core.config import get_language_instruction
+
+    instr = get_language_instruction("zh-CN")
+    assert "Mandarin" in instr
+    assert "English" in instr
+
+
+def test_get_language_instruction_en():
+    from peripatos_core.config import get_language_instruction
+
+    instr = get_language_instruction("en")
+    assert "English" in instr
+
+
+def test_unknown_language_warns_and_falls_back():
+    import warnings
+
+    from peripatos_core.config import get_language_instruction
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        instr = get_language_instruction("fr")
+        assert len(w) == 1
+        assert "Unsupported language" in str(w[0].message)
+        assert instr == get_language_instruction("en")
