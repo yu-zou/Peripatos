@@ -8,7 +8,7 @@ import re
 from pathlib import Path
 
 from peripatos_core.archetypes import ArchetypeLoader
-from peripatos_core.config import Settings
+from peripatos_core.config import Settings, get_language_instruction
 from peripatos_core.prompts import load_react_system
 from peripatos_core.providers.llm import LLMProvider
 from peripatos_core.rag.chunker import chunk_text
@@ -122,12 +122,14 @@ class DialogueGenerator:
     ) -> list[dict]:
         """Run Phase A: plan chapters and questions. Returns validated chapter list."""
         prompt_template = (Path(__file__).parent / "prompts" / "host_questions.txt").read_text()
+        language_instruction = get_language_instruction(self._settings.defaults.language)
         user_prompt = (
             prompt_template
             .replace("{archetype_system_prompt}", archetype_system_prompt)
             .replace("{paper_title}", title)
             .replace("{paper_origin}", origin)
             .replace("{section_overview}", section_overview)
+            .replace("{language_instruction}", language_instruction)
         )
 
         total_attempts = 1 + _MAX_PARSE_RETRIES  # 1 initial + 2 retries = 3
@@ -248,6 +250,7 @@ class DialogueGenerator:
             title=effective_title,
             origin=effective_origin,
             sections=section_overview,
+            language_instruction=get_language_instruction(self._settings.defaults.language),
         )
 
         all_chapters: list[Chapter] = []

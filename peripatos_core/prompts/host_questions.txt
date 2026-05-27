@@ -29,3 +29,6 @@ Output strictly as valid JSON:
 - Each chapter must have between 2 and 5 questions.
 - Questions must be answerable from the paper content — do not ask speculative or impossible questions.
 - The output must be valid JSON with no additional text before or after.
+
+# Language
+{language_instruction}

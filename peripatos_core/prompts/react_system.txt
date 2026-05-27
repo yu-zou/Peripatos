@@ -31,6 +31,9 @@ Answer the following question using the paper's actual content. Use `search` and
 2. **Draft**: Use `draft_turn` to build a focused dialogue answer one turn at a time. Ensure the voice matches the archetype guidelines.
 3. **Finalize**: Once the focused answer is complete and grounded, use `finalize`.
 
+# Language
+{language_instruction}
+
 # Constraints
 - Grounding: Use `search` results directly to ground claims. You do not need to look up chunks by ID.
 - Voice: Adhere strictly to the host and guest personas defined in the archetype.
