@@ -3,7 +3,7 @@ import pytest
 import importlib
 from peripatos_core.audio import AudioRenderer
 from peripatos_core.providers.tts_stub import StubTTSProvider
-from peripatos_core.types import ArchetypeId, ChapterMark, DialogueScript, DialogueTurn
+from peripatos_core.types import ArchetypeId, Chapter, ChapterMark, DialogueScript, DialogueTurn
 from peripatos_core.exceptions import AudioError
 
 
@@ -16,7 +16,7 @@ def _make_script(n_turns: int = 3) -> DialogueScript:
             text=f"This is turn {i}.",
         archetype=ArchetypeId.PEER,
         ))
-    return DialogueScript(title="Test Episode", turns=turns)
+    return DialogueScript(title="Test Episode", chapters=[Chapter(title="", turns=turns)])
 
 
 def test_render_creates_output_file(tmp_path):
@@ -51,7 +51,7 @@ def test_render_chapter_titles_match_speakers(tmp_path):
 
 def test_render_empty_script_raises(tmp_path):
     renderer = AudioRenderer(tts=StubTTSProvider())
-    script = DialogueScript(title="Empty", turns=[])
+    script = DialogueScript(title="Empty", chapters=[Chapter(title="", turns=[])])
     with pytest.raises(AudioError, match="empty"):
         renderer.render(script, tmp_path / "output.mp3")
 

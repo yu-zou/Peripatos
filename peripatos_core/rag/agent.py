@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from peripatos_core.exceptions import AgentError
 from peripatos_core.providers.llm import AgentMessage, LLMProvider
 from peripatos_core.rag.tools import build_tools
-from peripatos_core.types import ArchetypeId, DialogueScript
+from peripatos_core.types import ArchetypeId, Chapter, DialogueScript
 
 if TYPE_CHECKING:
     from peripatos_core.rag.embedder import Embedder
@@ -75,7 +75,10 @@ class ReActAgent:
         if len(state.drafted_turns) == 0:
             raise AgentError("agent produced no turns")
 
-        return DialogueScript(title=state.title or "Untitled", turns=state.drafted_turns)
+        return DialogueScript(
+            title=state.title or "Untitled",
+            chapters=[Chapter(title="", turns=state.drafted_turns)],
+        )
 
 
 def run_agent(

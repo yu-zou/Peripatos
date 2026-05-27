@@ -10,4 +10,4 @@ _os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 _os.environ.setdefault("OMP_NUM_THREADS", "1")
 del _os
 
-__version__ = "0.1.0"
+__version__ = "1.2.0"

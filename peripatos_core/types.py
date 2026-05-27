@@ -21,9 +21,27 @@ class DialogueTurn:
 
 
 @dataclass
-class DialogueScript:
+class Chapter:
     title: str
     turns: list[DialogueTurn] = field(default_factory=list)
+    transition_in_text: str | None = None
+
+
+@dataclass
+class DialogueScript:
+    title: str
+    chapters: list[Chapter] = field(default_factory=list)
+
+    @property
+    def turns(self) -> list[DialogueTurn]:
+        import warnings
+
+        warnings.warn(
+            "DialogueScript.turns is deprecated, use .chapters instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return [turn for chapter in self.chapters for turn in chapter.turns]
 
 
 @dataclass
