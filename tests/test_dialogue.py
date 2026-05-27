@@ -5,6 +5,7 @@ import json
 from unittest.mock import Mock, patch
 
 import numpy as np  # pyright: ignore[reportMissingImports]
+import pytest
 
 from peripatos_core.config import Settings
 from peripatos_core.dialogue import (
@@ -18,35 +19,49 @@ from peripatos_core.providers.llm_stub import StubLLMProvider
 from peripatos_core.types import ArchetypeId, Chapter, DialogueScript, DialogueTurn, PaperMetadata
 
 
-class CyclingStubLLMProvider(StubLLMProvider):
+class PipelineStubLLMProvider(StubLLMProvider):
     def __init__(self) -> None:
         super().__init__()
-        self._tool_responses = [
-            AgentMessage(
+        self.complete_calls: list[tuple[str, str]] = []
+        self.tool_calls: list[list[AgentMessage]] = []
+        self._tool_response_count = 0
+
+    def complete(self, system_prompt: str, user_prompt: str) -> str:
+        self.complete_calls.append((system_prompt, user_prompt))
+        if "planning interview chapters" in system_prompt:
+            return VALID_CHAPTERS_JSON
+        return "A smooth bridge into the next chapter."
+
+    def complete_with_tools(self, messages, tools):  # noqa: ANN001, ANN201
+        self.tool_calls.append(list(messages))
+        self._tool_response_count += 1
+        if self._tool_response_count % 2 == 1:
+            turn_no = (self._tool_response_count + 1) // 2
+            return AgentMessage(
                 role="assistant",
                 content=None,
                 tool_calls=[
                     ToolCall(
-                        id="1",
+                        id=f"draft-{turn_no}",
                         name="draft_turn",
-                        arguments={"speaker": "Host", "text": "Hello"},
+                        arguments={
+                            "speaker": "Host",
+                            "text": f"Content-based answer {turn_no}",
+                        },
                     )
                 ],
-            ),
-            AgentMessage(
-                role="assistant",
-                content=None,
-                tool_calls=[
-                    ToolCall(id="2", name="finalize", arguments={"title": "Test"})
-                ],
-            ),
-            AgentMessage(role="assistant", content="done", tool_calls=None),
-        ]
-        self.tool_calls: list[list[AgentMessage]] = []
-
-    def complete_with_tools(self, messages, tools):  # noqa: ANN001, ANN201
-        self.tool_calls.append(list(messages))
-        return self._tool_responses.pop(0)
+            )
+        return AgentMessage(
+            role="assistant",
+            content=None,
+            tool_calls=[
+                ToolCall(
+                    id=f"finalize-{self._tool_response_count // 2}",
+                    name="finalize",
+                    arguments={"title": "Ignored Agent Title"},
+                )
+            ],
+        )
 
 
 def _generate_with_mocks(
@@ -55,8 +70,8 @@ def _generate_with_mocks(
     archetype: ArchetypeId | str = ArchetypeId.PEER,
     title: str = "Untitled Paper",
     metadata: PaperMetadata | None = None,
-) -> tuple[DialogueScript, CyclingStubLLMProvider, Mock, Mock]:
-    stub = CyclingStubLLMProvider()
+) -> tuple[DialogueScript, PipelineStubLLMProvider, Mock, Mock]:
+    stub = PipelineStubLLMProvider()
     embedder = Mock()
     embedder.embed.return_value = np.zeros((1, 4), dtype=np.float32)
     store = Mock()
@@ -79,16 +94,41 @@ def _generate_with_mocks(
     return script, stub, embedder, store
 
 
-def test_generate_returns_dialogue_script():
+def test_generate_returns_chaptered_script():
     script, _, _, store = _generate_with_mocks()
 
     assert isinstance(script, DialogueScript)
-    assert script.title == "Test"
-    assert len(script.turns) == 1
-    assert script.turns[0].speaker == "Host"
-    assert script.turns[0].text == "Hello"
-    assert script.turns[0].archetype == ArchetypeId.PEER
+    assert script.title == "Untitled Paper"
+    assert isinstance(script.chapters, list)
+    assert 3 <= len(script.chapters) <= 7
+    assert all(isinstance(chapter, Chapter) for chapter in script.chapters)
+    assert all(chapter.turns for chapter in script.chapters)
     store.load.assert_called_once_with()
+
+
+def test_generate_chapter_titles_content_based():
+    script, _, _, _ = _generate_with_mocks()
+
+    assert script.chapters[0].title == "Introduction"
+    assert script.chapters[0].title not in {"Host", "Guest", "Peer", "Tutor"}
+
+
+def test_generate_transitions_populated():
+    script, _, _, _ = _generate_with_mocks()
+
+    assert script.chapters[0].transition_in_text is None
+    assert script.chapters[1].transition_in_text is not None
+    assert script.chapters[2].transition_in_text is not None
+
+
+def test_generate_turns_deprecated():
+    script, _, _, _ = _generate_with_mocks()
+
+    with pytest.warns(DeprecationWarning):
+        turns = script.turns
+
+    assert turns == [turn for chapter in script.chapters for turn in chapter.turns]
+    assert len(turns) == 6
 
 
 def test_generate_uses_react_system_prompt():
@@ -104,17 +144,20 @@ def test_generate_uses_react_system_prompt():
     assert "Paper Title" in (initial_messages[0].content or "")
     assert "https://example.test/paper" in (initial_messages[0].content or "")
     assert initial_messages[1].role == "user"
+    assert "Answer this question" in (initial_messages[1].content or "")
 
 
 def test_generate_by_string_archetype():
     script, _, _, _ = _generate_with_mocks(archetype="tutor")
 
     assert isinstance(script, DialogueScript)
-    assert script.turns[0].archetype == ArchetypeId.TUTOR
+    with pytest.warns(DeprecationWarning):
+        turns = script.turns
+    assert turns[0].archetype == ArchetypeId.TUTOR
 
 
 def test_generate_builds_vector_store_when_cache_missing():
-    stub = CyclingStubLLMProvider()
+    stub = PipelineStubLLMProvider()
     embedder = Mock()
     embedder.embed.return_value = np.zeros((1, 4), dtype=np.float32)
     store = Mock()
@@ -129,7 +172,7 @@ def test_generate_builds_vector_store_when_cache_missing():
             "# Intro\n\nSome paper content"
         )
 
-    assert script.title == "Test"
+    assert script.title == "Untitled Paper"
     embedder.embed.assert_called_once_with(["# Intro\n\nSome paper content"])
     store.build.assert_called_once()
     store.load.assert_not_called()
