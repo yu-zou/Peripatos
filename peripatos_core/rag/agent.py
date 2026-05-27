@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, overload
 
 from peripatos_core.exceptions import AgentError
 from peripatos_core.providers.llm import AgentMessage, LLMProvider
@@ -17,10 +17,34 @@ if TYPE_CHECKING:
 MAX_ITERATIONS = 80
 
 
+LEGACY_QUESTION_PLACEHOLDERS = ("{{question}}", "{question}")
+LEGACY_CHAPTER_PLACEHOLDERS = ("{{chapter_title}}", "{chapter_title}")
+
+
 def _normalize_archetype(archetype: ArchetypeId | str) -> ArchetypeId:
     if isinstance(archetype, ArchetypeId):
         return archetype
     return ArchetypeId(archetype)
+
+
+def _replace_focused_placeholders(
+    system_prompt: str,
+    question: str,
+    chapter_title: str,
+) -> str:
+    question_system = system_prompt
+    for placeholder in LEGACY_QUESTION_PLACEHOLDERS:
+        question_system = question_system.replace(placeholder, question)
+    for placeholder in LEGACY_CHAPTER_PLACEHOLDERS:
+        question_system = question_system.replace(placeholder, chapter_title)
+    return question_system
+
+
+def _strip_focused_placeholders(system_prompt: str) -> str:
+    legacy_system = system_prompt
+    for placeholder in LEGACY_QUESTION_PLACEHOLDERS + LEGACY_CHAPTER_PLACEHOLDERS:
+        legacy_system = legacy_system.replace(placeholder, "")
+    return legacy_system
 
 
 def _run_single_question_state(
@@ -142,6 +166,32 @@ class ReActAgent:
         )
 
 
+@overload
+def run_agent(
+    llm: LLMProvider,
+    store: "VectorStore",
+    embedder: "Embedder",
+    questions: list[str],
+    system_prompt: str,
+    chapter_title: str = "",
+    top_k: int = 4,
+    archetype: ArchetypeId | str = ArchetypeId.PEER,
+) -> list[list[DialogueTurn]]: ...
+
+
+@overload
+def run_agent(
+    llm: LLMProvider,
+    store: "VectorStore",
+    embedder: "Embedder",
+    *,
+    top_k: int,
+    system_prompt: str,
+    user_prompt: str,
+    archetype: ArchetypeId | str = ArchetypeId.PEER,
+) -> DialogueScript: ...
+
+
 def run_agent(
     llm: LLMProvider,
     store: "VectorStore",
@@ -152,7 +202,7 @@ def run_agent(
     top_k: int = 4,
     archetype: ArchetypeId | str = ArchetypeId.PEER,
     **legacy_kwargs,
-) -> list[list[DialogueTurn]]:
+) -> list[list[DialogueTurn]] | DialogueScript:
     """Run per-question RAG agent sessions. Returns one turn-list per question."""
     legacy_user_prompt = legacy_kwargs.pop("user_prompt", None)
     if legacy_kwargs:
@@ -168,18 +218,15 @@ def run_agent(
             top_k=top_k,
             archetype=_normalize_archetype(archetype),
         )
-        return cast(Any, agent.run(system_prompt, legacy_user_prompt))
+        return agent.run(_strip_focused_placeholders(system_prompt), legacy_user_prompt)
 
     all_turns: list[list[DialogueTurn]] = []
     for question in questions:
-        question_system = system_prompt.replace("{question}", question).replace(
-            "{chapter_title}", chapter_title
+        question_system = _replace_focused_placeholders(
+            system_prompt,
+            question,
+            chapter_title,
         )
-        if chapter_title:
-            question_system += (
-                "\n\n# Current Chapter\n"
-                f"You are answering questions for the chapter: {chapter_title}"
-            )
         question_user = f"Answer this question using the paper's content:\n\n{question}"
         turns = _run_single_question(
             llm=llm,

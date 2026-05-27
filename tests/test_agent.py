@@ -208,6 +208,68 @@ def test_per_question_two_questions():
     assert "What is beta?" in (llm.messages_seen[1][1].content or "")
 
 
+def test_per_question_replaces_real_prompt_placeholders():
+    llm = CyclingStubLLMProvider(
+        [
+            AgentMessage(
+                role="assistant",
+                content=None,
+                tool_calls=[draft_call("draft", "Host", "Focused answer")],
+            )
+        ]
+    )
+
+    result = run_agent(
+        llm=llm,
+        store=cast(Any, EmptyStore()),
+        embedder=cast(Any, EmptyEmbedder()),
+        questions=["What is alpha?"],
+        system_prompt="Chapter: {{chapter_title}}\nQuestion: {{question}}",
+        chapter_title="Chapter A",
+        top_k=3,
+    )
+
+    system_message = llm.messages_seen[0][0].content or ""
+    assert len(result) == 1
+    assert result[0][0].text == "Focused answer"
+    assert "Chapter: Chapter A" in system_message
+    assert "Question: What is alpha?" in system_message
+    assert "{chapter_title}" not in system_message
+    assert "{question}" not in system_message
+
+
+def test_legacy_run_agent_strips_focused_placeholders():
+    llm = CyclingStubLLMProvider(
+        [
+            AgentMessage(
+                role="assistant",
+                content=None,
+                tool_calls=[draft_call("draft", "Host", "Legacy answer")],
+            ),
+            AgentMessage(
+                role="assistant",
+                content=None,
+                tool_calls=[finalize_call("final")],
+            ),
+        ]
+    )
+
+    result = run_agent(
+        llm=llm,
+        store=cast(Any, EmptyStore()),
+        embedder=cast(Any, EmptyEmbedder()),
+        system_prompt="Chapter: {chapter_title}\nQuestion: {question}",
+        user_prompt="legacy user prompt",
+        top_k=3,
+    )
+
+    system_message = llm.messages_seen[0][0].content or ""
+    assert isinstance(result, DialogueScript)
+    assert result.turns[0].text == "Legacy answer"
+    assert "{chapter_title}" not in system_message
+    assert "{question}" not in system_message
+
+
 def test_per_question_grounding():
     llm = CyclingStubLLMProvider(
         [
