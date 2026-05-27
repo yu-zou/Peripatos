@@ -4,9 +4,9 @@ import logging
 import tempfile
 import shutil
 from pathlib import Path
-from peripatos_core.exceptions import AudioError
+from peripatos_core.exceptions import AudioError, TTSError
 from peripatos_core.providers.tts import TTSProvider
-from peripatos_core.types import AudioSegment, ChapterMark, DialogueScript
+from peripatos_core.types import AudioSegment, Chapter, ChapterMark, DialogueScript
 
 logger = logging.getLogger(__name__)
 
@@ -36,14 +36,67 @@ class AudioRenderer:
             output_path: Where to write the final MP3.
 
         Returns:
-            List of ChapterMark objects (one per turn).
+            List of ChapterMark objects (one per chapter).
         """
-        if not script.turns:
+        if not script.chapters or not any(ch.turns for ch in script.chapters):
             raise AudioError("Cannot render empty dialogue script")
 
-        segments = self._synthesize_turns(script)
-        combined_path = self._concatenate_segments(segments)
-        chapters = self._compute_chapters(segments)
+        chapter_segments: list[list[AudioSegment]] = []
+
+        for chapter in script.chapters:
+            segments: list[AudioSegment] = []
+
+            # Synthesize transition audio if this chapter has one
+            if chapter.transition_in_text:
+                host_voice = self._voice_map.get("Host")
+                if host_voice is None and chapter.turns:
+                    host_voice = self._voice_map.get(chapter.turns[0].speaker)
+
+                logger.debug("Synthesizing transition for chapter '%s': %s",
+                             chapter.title, chapter.transition_in_text[:60])
+                try:
+                    audio_path = self._tts.synthesize(
+                        chapter.transition_in_text, speaker_voice=host_voice,
+                    )
+                except Exception as exc:
+                    raise TTSError(
+                        f"TTS failed for transition in chapter '{chapter.title}': {exc}"
+                    ) from exc
+
+                duration_s = self._get_duration(audio_path)
+                segments.append(AudioSegment(
+                    speaker="Host",
+                    text=chapter.transition_in_text,
+                    audio_path=audio_path,
+                    duration_s=duration_s,
+                ))
+
+            # Synthesize turns in this chapter
+            for i, turn in enumerate(chapter.turns):
+                voice = self._voice_map.get(turn.speaker)
+                logger.debug("Synthesizing turn %d/%d in chapter '%s': %s",
+                             i + 1, len(chapter.turns), chapter.title, turn.speaker)
+                try:
+                    audio_path = self._tts.synthesize(turn.text, speaker_voice=voice)
+                except Exception as exc:
+                    raise TTSError(
+                        f"TTS failed for turn {i} ({turn.speaker}) in chapter "
+                        f"'{chapter.title}': {exc}"
+                    ) from exc
+
+                duration_s = self._get_duration(audio_path)
+                segments.append(AudioSegment(
+                    speaker=turn.speaker,
+                    text=turn.text,
+                    audio_path=audio_path,
+                    duration_s=duration_s,
+                ))
+
+            chapter_segments.append(segments)
+
+        all_segments = [seg for group in chapter_segments for seg in group]
+        combined_path = self._concatenate_segments(all_segments)
+        chapters = self._compute_chapters(chapter_segments, script.chapters)
         self._write_with_chapters(combined_path, output_path, script.title, chapters)
         return chapters
 
@@ -97,19 +150,31 @@ class AudioRenderer:
             raise AudioError(f"Failed to create/export concatenated audio: {exc}") from exc
         return combined_path
 
-    def _compute_chapters(self, segments: list[AudioSegment]) -> list[ChapterMark]:
-        """Compute chapter marks from segment durations."""
-        chapters = []
-        cursor_ms = 0
-        for seg in segments:
-            duration_ms = int(seg.duration_s * 1000)
-            chapters.append(ChapterMark(
-                title=seg.speaker,
-                start_ms=cursor_ms,
-                end_ms=cursor_ms + duration_ms,
+    def _compute_chapters(
+        self,
+        chapter_segments: list[list[AudioSegment]],
+        chapters: list[Chapter],
+    ) -> list[ChapterMark]:
+        """Compute chapter marks from per-chapter segment groups.
+
+        Returns one ChapterMark per chapter. The mark title comes from
+        chapter.title (content-based), not from speaker names.
+        """
+        marks: list[ChapterMark] = []
+        cumulative_ms = 0
+
+        for chapter, segments in zip(chapters, chapter_segments):
+            chapter_start_ms = cumulative_ms
+            for seg in segments:
+                cumulative_ms += int(seg.duration_s * 1000)
+
+            marks.append(ChapterMark(
+                title=chapter.title,
+                start_ms=chapter_start_ms,
+                end_ms=cumulative_ms,
             ))
-            cursor_ms += duration_ms
-        return chapters
+
+        return marks
 
     def _write_with_chapters(
         self,
