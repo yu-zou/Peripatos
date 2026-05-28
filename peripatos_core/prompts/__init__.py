@@ -7,6 +7,7 @@ _PROMPTS_DIR = Path(__file__).parent
 def load_react_system(
     archetype_prompt: str, title: str, origin: str, sections: str,
     language_instruction: str = "",
+    target_turns: str = "",
 ) -> str:
     """Load and format the ReAct system prompt template."""
     template_path = _PROMPTS_DIR / "react_system.txt"
@@ -19,4 +20,5 @@ def load_react_system(
         paper_origin=origin,
         section_overview=sections,
         language_instruction=language_instruction,
+        target_turns=target_turns,
     )
