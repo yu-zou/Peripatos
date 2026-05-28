@@ -269,3 +269,189 @@ def test_multi_chapter_mark_count():
         assert marks[1].title == "Results"
     finally:
         out.unlink(missing_ok=True)
+
+
+# --- Intro/Outro chapter tests ---
+
+def _make_script_with_intro(n_chapter_turns: int = 2) -> DialogueScript:
+    """Script with intro_turns + 1 content chapter."""
+    intro_turns = [
+        DialogueTurn(speaker="Host", text="Welcome to the show.", archetype=ArchetypeId.PEER),
+        DialogueTurn(speaker="Host", text="Today we cover a great paper.", archetype=ArchetypeId.PEER),
+    ]
+    chapter = Chapter(
+        title="Core Discussion",
+        turns=[
+            DialogueTurn(speaker="Host", text="Let's begin.", archetype=ArchetypeId.PEER),
+            DialogueTurn(speaker="Guest", text="The key insight is...", archetype=ArchetypeId.PEER),
+        ],
+    )
+    return DialogueScript(
+        title="Test Episode with Intro",
+        chapters=[chapter],
+        intro_turns=intro_turns,
+    )
+
+
+def _make_script_with_outro() -> DialogueScript:
+    """Script with outro_turns + 1 content chapter."""
+    outro_turns = [
+        DialogueTurn(speaker="Host", text="Thanks for listening.", archetype=ArchetypeId.PEER),
+        DialogueTurn(speaker="Guest", text="See you next time.", archetype=ArchetypeId.PEER),
+    ]
+    chapter = Chapter(
+        title="Core Discussion",
+        turns=[
+            DialogueTurn(speaker="Host", text="Let's begin.", archetype=ArchetypeId.PEER),
+            DialogueTurn(speaker="Guest", text="The key insight is...", archetype=ArchetypeId.PEER),
+        ],
+    )
+    return DialogueScript(
+        title="Test Episode with Outro",
+        chapters=[chapter],
+        outro_turns=outro_turns,
+    )
+
+
+def _make_script_with_intro_and_outro() -> DialogueScript:
+    """Script with both intro and outro turns."""
+    intro_turns = [
+        DialogueTurn(speaker="Host", text="Welcome.", archetype=ArchetypeId.PEER),
+    ]
+    outro_turns = [
+        DialogueTurn(speaker="Host", text="Goodbye.", archetype=ArchetypeId.PEER),
+    ]
+    chapter = Chapter(
+        title="Core Discussion",
+        turns=[
+            DialogueTurn(speaker="Host", text="Let's begin.", archetype=ArchetypeId.PEER),
+        ],
+    )
+    return DialogueScript(
+        title="Full Episode",
+        chapters=[chapter],
+        intro_turns=intro_turns,
+        outro_turns=outro_turns,
+    )
+
+
+def test_intro_turns_as_first_chapter(tmp_path):
+    """Intro turns produce a leading 'Introduction' ChapterMark."""
+    stub = StubTTSProvider()
+    renderer = AudioRenderer(tts=stub)
+    script = _make_script_with_intro()
+    output = tmp_path / "output.mp3"
+    marks = renderer.render(script, output)
+
+    assert len(marks) == 2  # Introduction + Core Discussion
+    assert marks[0].title == "Introduction"
+    assert marks[0].start_ms == 0
+    assert marks[0].end_ms > 0
+    assert marks[1].title == "Core Discussion"
+
+
+def test_outro_turns_as_last_chapter(tmp_path):
+    """Outro turns produce a trailing 'Outro' ChapterMark."""
+    stub = StubTTSProvider()
+    renderer = AudioRenderer(tts=stub)
+    script = _make_script_with_outro()
+    output = tmp_path / "output.mp3"
+    marks = renderer.render(script, output)
+
+    assert len(marks) == 2  # Core Discussion + Outro
+    assert marks[0].title == "Core Discussion"
+    assert marks[1].title == "Outro"
+    assert marks[1].start_ms > marks[0].start_ms
+    assert marks[1].end_ms > marks[1].start_ms
+
+
+def test_intro_and_outro_ordering(tmp_path):
+    """Full ordering: Introduction → content → Outro."""
+    stub = StubTTSProvider()
+    renderer = AudioRenderer(tts=stub)
+    script = _make_script_with_intro_and_outro()
+    output = tmp_path / "output.mp3"
+    marks = renderer.render(script, output)
+
+    assert len(marks) == 3
+    assert marks[0].title == "Introduction"
+    assert marks[1].title == "Core Discussion"
+    assert marks[2].title == "Outro"
+
+    # Verify chronological ordering
+    assert marks[0].start_ms < marks[0].end_ms
+    assert marks[0].end_ms == marks[1].start_ms
+    assert marks[1].start_ms < marks[1].end_ms
+    assert marks[1].end_ms == marks[2].start_ms
+    assert marks[2].start_ms < marks[2].end_ms
+
+
+def test_no_intro_outro_unchanged(tmp_path):
+    """Without intro/outro, behavior matches pre-refactor behavior."""
+    renderer = AudioRenderer(tts=StubTTSProvider())
+    script = _make_script(3, chapter_title="Introduction")
+    output = tmp_path / "output.mp3"
+    marks = renderer.render(script, output)
+
+    assert len(marks) == 1
+    assert marks[0].title == "Introduction"
+    assert marks[0].start_ms == 0
+    assert marks[0].end_ms > 0
+
+
+def test_intro_outro_id3_chapter_tags(tmp_path):
+    """ID3 tags include 'Introduction' and 'Outro' CHAP frames."""
+    import importlib
+    stub = StubTTSProvider()
+    renderer = AudioRenderer(tts=stub)
+    script = _make_script_with_intro_and_outro()
+    output = tmp_path / "output.mp3"
+    renderer.render(script, output)
+
+    ID3 = importlib.import_module("mutagen.id3").ID3
+    tags = ID3(str(output))
+
+    # Check CHAP frames exist (sorted by start_time since mutagen iter order varies)
+    chap_frames = [tags[tn] for tn in tags if tn.startswith("CHAP:")]
+    assert len(chap_frames) == 3
+    chap_frames.sort(key=lambda c: c.start_time)
+    assert "Introduction" in str(chap_frames[0])
+    assert "Outro" in str(chap_frames[-1])
+
+
+def test_intro_outro_with_multichapter(tmp_path):
+    """Intro + multi-chapter + outro: correct marks and ordering."""
+    stub = StubTTSProvider()
+    intro_turns = [
+        DialogueTurn(speaker="Host", text="Welcome.", archetype=ArchetypeId.PEER),
+    ]
+    outro_turns = [
+        DialogueTurn(speaker="Host", text="Goodbye.", archetype=ArchetypeId.PEER),
+    ]
+    ch1 = Chapter(
+        title="Methodology",
+        turns=[
+            DialogueTurn(speaker="Host", text="Methods.", archetype=ArchetypeId.PEER),
+        ],
+    )
+    ch2 = Chapter(
+        title="Results",
+        turns=[
+            DialogueTurn(speaker="Guest", text="Results.", archetype=ArchetypeId.PEER),
+        ],
+    )
+    script = DialogueScript(
+        title="Multi with Intro/Outro",
+        chapters=[ch1, ch2],
+        intro_turns=intro_turns,
+        outro_turns=outro_turns,
+    )
+    renderer = AudioRenderer(tts=stub)
+    output = tmp_path / "output.mp3"
+    marks = renderer.render(script, output)
+
+    assert len(marks) == 4
+    assert marks[0].title == "Introduction"
+    assert marks[1].title == "Methodology"
+    assert marks[2].title == "Results"
+    assert marks[3].title == "Outro"

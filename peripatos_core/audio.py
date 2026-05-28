@@ -42,63 +42,66 @@ class AudioRenderer:
             raise AudioError("Cannot render empty dialogue script")
 
         chapter_segments: list[list[AudioSegment]] = []
+        all_chapter_marks: list[ChapterMark] = []
+        cumulative_ms = 0
 
+        # PREPEND: Intro chapter
+        if script.intro_turns:
+            intro_segments: list[AudioSegment] = []
+            for turn in script.intro_turns:
+                seg = self._synthesize_segment(turn)
+                intro_segments.append(seg)
+                cumulative_ms += int(seg.duration_s * 1000)
+            all_chapter_marks.append(ChapterMark(
+                title="Introduction",
+                start_ms=0,
+                end_ms=cumulative_ms,
+            ))
+            chapter_segments.append(intro_segments)
+
+        # MAIN: Content chapters
         for chapter in script.chapters:
+            start_ms = cumulative_ms
             segments: list[AudioSegment] = []
 
             # Synthesize transition audio if this chapter has one
             if chapter.transition_in_text:
-                host_voice = self._voice_map.get("Host")
-                if host_voice is None and chapter.turns:
-                    host_voice = self._voice_map.get(chapter.turns[0].speaker)
-
-                logger.debug("Synthesizing transition for chapter '%s': %s",
-                             chapter.title, chapter.transition_in_text[:60])
-                try:
-                    audio_path = self._tts.synthesize(
-                        chapter.transition_in_text, speaker_voice=host_voice,
-                    )
-                except Exception as exc:
-                    raise TTSError(
-                        f"TTS failed for transition in chapter '{chapter.title}': {exc}"
-                    ) from exc
-
-                duration_s = self._get_duration(audio_path)
-                segments.append(AudioSegment(
-                    speaker="Host",
-                    text=chapter.transition_in_text,
-                    audio_path=audio_path,
-                    duration_s=duration_s,
-                ))
+                seg = self._synthesize_transition(chapter)
+                segments.append(seg)
+                cumulative_ms += int(seg.duration_s * 1000)
 
             # Synthesize turns in this chapter
-            for i, turn in enumerate(chapter.turns):
-                voice = self._voice_map.get(turn.speaker)
-                logger.debug("Synthesizing turn %d/%d in chapter '%s': %s",
-                             i + 1, len(chapter.turns), chapter.title, turn.speaker)
-                try:
-                    audio_path = self._tts.synthesize(turn.text, speaker_voice=voice)
-                except Exception as exc:
-                    raise TTSError(
-                        f"TTS failed for turn {i} ({turn.speaker}) in chapter "
-                        f"'{chapter.title}': {exc}"
-                    ) from exc
-
-                duration_s = self._get_duration(audio_path)
-                segments.append(AudioSegment(
-                    speaker=turn.speaker,
-                    text=turn.text,
-                    audio_path=audio_path,
-                    duration_s=duration_s,
-                ))
+            for turn in chapter.turns:
+                seg = self._synthesize_segment(turn)
+                segments.append(seg)
+                cumulative_ms += int(seg.duration_s * 1000)
 
             chapter_segments.append(segments)
+            all_chapter_marks.append(ChapterMark(
+                title=chapter.title,
+                start_ms=start_ms,
+                end_ms=cumulative_ms,
+            ))
+
+        # APPEND: Outro chapter
+        if script.outro_turns:
+            outro_start_ms = cumulative_ms
+            outro_segments: list[AudioSegment] = []
+            for turn in script.outro_turns:
+                seg = self._synthesize_segment(turn)
+                outro_segments.append(seg)
+                cumulative_ms += int(seg.duration_s * 1000)
+            all_chapter_marks.append(ChapterMark(
+                title="Outro",
+                start_ms=outro_start_ms,
+                end_ms=cumulative_ms,
+            ))
+            chapter_segments.append(outro_segments)
 
         all_segments = [seg for group in chapter_segments for seg in group]
         combined_path = self._concatenate_segments(all_segments)
-        chapters = self._compute_chapters(chapter_segments, script.chapters)
-        self._write_with_chapters(combined_path, output_path, script.title, chapters)
-        return chapters
+        self._write_with_chapters(combined_path, output_path, script.title, all_chapter_marks)
+        return all_chapter_marks
 
     def _synthesize_turns(self, script: DialogueScript) -> list[AudioSegment]:
         """Synthesize each turn and return AudioSegment list."""
@@ -129,6 +132,38 @@ class AudioRenderer:
         except Exception as exc:
             logger.warning("Could not read duration from %s (using 0.1): %s", audio_path, exc)
             return 0.1
+
+    def _synthesize_segment(self, turn: DialogueTurn) -> AudioSegment:
+        """Synthesize a single dialogue turn."""
+        voice = self._voice_map.get(turn.speaker)
+        try:
+            audio_path = self._tts.synthesize(turn.text, speaker_voice=voice)
+        except Exception as exc:
+            raise TTSError(f"TTS failed for turn ({turn.speaker}): {exc}") from exc
+        duration_s = self._get_duration(audio_path)
+        return AudioSegment(
+            speaker=turn.speaker, text=turn.text,
+            audio_path=audio_path, duration_s=duration_s,
+        )
+
+    def _synthesize_transition(self, chapter: Chapter) -> AudioSegment:
+        """Synthesize a chapter transition."""
+        host_voice = self._voice_map.get("Host")
+        if host_voice is None and chapter.turns:
+            host_voice = self._voice_map.get(chapter.turns[0].speaker)
+        try:
+            audio_path = self._tts.synthesize(
+                chapter.transition_in_text, speaker_voice=host_voice,
+            )
+        except Exception as exc:
+            raise TTSError(
+                f"TTS failed for transition in chapter '{chapter.title}': {exc}"
+            ) from exc
+        duration_s = self._get_duration(audio_path)
+        return AudioSegment(
+            speaker="Host", text=chapter.transition_in_text,
+            audio_path=audio_path, duration_s=duration_s,
+        )
 
     def _concatenate_segments(self, segments: list[AudioSegment]) -> Path:
         """Concatenate all audio segments into a single MP3 file."""
