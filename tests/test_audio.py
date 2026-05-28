@@ -273,7 +273,7 @@ def test_multi_chapter_mark_count():
 
 # --- Intro/Outro chapter tests ---
 
-def _make_script_with_intro(n_chapter_turns: int = 2) -> DialogueScript:
+def _make_script_with_intro() -> DialogueScript:
     """Script with intro_turns + 1 content chapter."""
     intro_turns = [
         DialogueTurn(speaker="Host", text="Welcome to the show.", archetype=ArchetypeId.PEER),

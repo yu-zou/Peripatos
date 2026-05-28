@@ -6,7 +6,7 @@ import shutil
 from pathlib import Path
 from peripatos_core.exceptions import AudioError, TTSError
 from peripatos_core.providers.tts import TTSProvider
-from peripatos_core.types import AudioSegment, Chapter, ChapterMark, DialogueScript
+from peripatos_core.types import AudioSegment, Chapter, ChapterMark, DialogueScript, DialogueTurn
 
 logger = logging.getLogger(__name__)
 
@@ -148,6 +148,8 @@ class AudioRenderer:
 
     def _synthesize_transition(self, chapter: Chapter) -> AudioSegment:
         """Synthesize a chapter transition."""
+        assert chapter.transition_in_text is not None, \
+            "chapter.transition_in_text must not be None when synthesizing transition"
         host_voice = self._voice_map.get("Host")
         if host_voice is None and chapter.turns:
             host_voice = self._voice_map.get(chapter.turns[0].speaker)
