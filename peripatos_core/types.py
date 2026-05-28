@@ -31,6 +31,8 @@ class Chapter:
 class DialogueScript:
     title: str
     chapters: list[Chapter] = field(default_factory=list)
+    intro_turns: list[DialogueTurn] = field(default_factory=list)
+    outro_turns: list[DialogueTurn] = field(default_factory=list)
 
     @property
     def turns(self) -> list[DialogueTurn]:
@@ -66,3 +68,15 @@ class PaperMetadata:
     abstract: str = ""
     arxiv_id: str | None = None
     source_url: str | None = None
+
+
+def _calculate_target_turns(paper_content: str) -> int:
+    """Estimate target dialogue turns based on paper length.
+
+    ~300 words per double-column page. Aim for ~2 turns per page.
+    Min 10 turns, max 40 turns.
+    """
+    word_count = len(paper_content.split())
+    pages = word_count / 300
+    target = int(pages * 2)
+    return max(10, min(40, target))

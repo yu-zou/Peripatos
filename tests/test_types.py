@@ -9,6 +9,7 @@ from peripatos_core.types import (
     DialogueScript,
     DialogueTurn,
     PaperMetadata,
+    _calculate_target_turns,
 )
 
 
@@ -45,3 +46,27 @@ def test_paper_metadata_defaults():
     assert meta.authors == []
     assert meta.abstract == ""
     assert meta.arxiv_id is None
+
+
+def test_dialogue_script_has_intro_outro_fields():
+    s = DialogueScript(title="Test")
+    assert hasattr(s, "intro_turns")
+    assert hasattr(s, "outro_turns")
+    assert s.intro_turns == []
+    assert s.outro_turns == []
+
+
+def test_calculate_target_turns_12_page_paper():
+    # 12 pages * 300 words = 3600 words, * 2 = 24 turns
+    paper = "word " * 3600
+    assert _calculate_target_turns(paper) == 24
+
+
+def test_calculate_target_turns_short_paper_min():
+    paper = "word " * 100  # <5 pages → would be <10, clamped to 10
+    assert _calculate_target_turns(paper) == 10
+
+
+def test_calculate_target_turns_long_paper_max():
+    paper = "word " * 100000  # >>20 pages → clamped to 40
+    assert _calculate_target_turns(paper) == 40
