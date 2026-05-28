@@ -21,7 +21,7 @@ dependencies = [
 ]
 
 [project.scripts]
-peripatos = "peripatos_core.cli:app"
+peripatos = "peripatos_core.cli:main"
 
 [project.optional-dependencies]
 dev = [

@@ -1,69 +1,16 @@
-"""Typer CLI for Peripatos Core."""
+"""Peripatos Core - convert academic papers to Socratic-dialogue podcasts."""
 from __future__ import annotations
+import argparse
+import sys
 from pathlib import Path
-from typing import Optional
-import typer
-
-app = typer.Typer(
-    name="peripatos",
-    help="Convert academic papers to Socratic-dialogue podcasts.",
-    add_completion=False,
-)
-
-# Global state for config path (set via callback)
-_config_path: Optional[Path] = None
 
 
-def _get_settings(config_path: Optional[Path] = None):
+def _get_settings(config_path=None):
     from peripatos_core.config import load_settings
-    return load_settings(config_path=config_path or _config_path)
+    return load_settings(config_path=config_path)
 
 
-@app.callback()
-def main(
-    config: Optional[Path] = typer.Option(
-        None,
-        "--config",
-        "-c",
-        help="Path to JSON config file. Overrides ~/.config/peripatos/config.json.",
-        envvar=None,
-    ),
-) -> None:
-    """Peripatos Core - convert academic papers to Socratic-dialogue podcasts."""
-    global _config_path
-    _config_path = config
-
-
-@app.command()
-def generate(
-    source: str = typer.Argument(
-        ...,
-        help="ArXiv ID, ArXiv URL, PDF URL, local PDF path, HTML URL, or local .md/.txt file.",
-    ),
-    output: Path = typer.Option(
-        Path("output.mp3"),
-        "--output",
-        "-o",
-        help="Output MP3 file path.",
-    ),
-    archetype: str = typer.Option(
-        "peer",
-        "--archetype",
-        "-a",
-        help="Dialogue archetype: peer, skeptic, tutor, enthusiast.",
-    ),
-    config: Optional[Path] = typer.Option(
-        None,
-        "--config",
-        "-c",
-        help="Path to JSON config file.",
-    ),
-    language: Optional[str] = typer.Option(
-        None,
-        "--language",
-        help="Dialogue language (en, zh-CN, etc). Overrides config defaults.language.",
-    ),
-) -> None:
+def cmd_generate(args):
     """Convert a paper to a Socratic-dialogue MP3."""
     from peripatos_core.audio import AudioRenderer
     from peripatos_core.dialogue import DialogueGenerator
@@ -71,16 +18,15 @@ def generate(
     from peripatos_core.parser import PDFParser
     from peripatos_core.registry import build_llm_provider, build_tts_provider, build_voice_map
 
-    effective_config = config or _config_path
-    settings = _get_settings(effective_config)
-    if language is not None:
-        settings.defaults.language = language
+    settings = _get_settings(args.config)
+    if args.language is not None:
+        settings.defaults.language = args.language
 
-    typer.echo(f"[1/5] Fetching paper: {source}")
+    print(f"Fetching paper: {args.source}")
     fetcher = PaperFetcher()
-    fetched_path, metadata = fetcher.fetch(source)
+    fetched_path, metadata = fetcher.fetch(args.source)
 
-    typer.echo(f"[2/5] Processing source: {fetched_path.name}")
+    print(f"Processing source: {fetched_path.name}")
     if fetched_path.suffix.lower() == ".pdf":
         parser = PDFParser()
         parsed = parser.parse(fetched_path)
@@ -97,68 +43,104 @@ def generate(
     else:
         paper_content = fetched_path.read_text(encoding="utf-8", errors="ignore")
 
-    typer.echo(f"[3/5] Generating dialogue (archetype={archetype})")
+    print(f"Generating dialogue (archetype={args.archetype})")
     llm = build_llm_provider(settings.llm)
     gen = DialogueGenerator(llm=llm, settings=settings)
     script = gen.generate(
         paper_content=paper_content,
-        archetype=archetype,
+        archetype=args.archetype,
         title=metadata.title,
         metadata=metadata,
     )
-    typer.echo(f"    Generated {len(script.turns)} turns: {script.title}")
+    print(f"  Generated {len(script.turns)} turns: {script.title}")
 
-    typer.echo("[4/5] Synthesizing audio")
+    print("Synthesizing audio")
     tts = build_tts_provider(settings.tts)
     from peripatos_core.archetypes import ArchetypeLoader
-    archetype_prompt = ArchetypeLoader().load(archetype)
+    archetype_prompt = ArchetypeLoader().load(args.archetype)
     voice_map = build_voice_map(settings, archetype_prompt, language=settings.defaults.language)
     renderer = AudioRenderer(tts=tts, voice_map=voice_map)
-    chapters = renderer.render(script, output)
+    chapters = renderer.render(script, args.output)
 
-    typer.echo(f"[5/5] Done! Output: {output} ({len(chapters)} chapters)")
-
-
-@app.command(name="list-archetypes")
-def list_archetypes() -> None:
-    """List available dialogue archetypes."""
-    from peripatos_core.archetypes import ArchetypeLoader
-    loader = ArchetypeLoader()
-    available = sorted(loader.list_available())
-    typer.echo("Available archetypes:")
-    for name in available:
-        typer.echo(f"  - {name}")
+    print(f"Done! Output: {args.output} ({len(chapters)} chapters)")
 
 
-@app.command()
-def doctor(
-    config: Optional[Path] = typer.Option(
-        None,
-        "--config",
-        "-c",
-        help="Path to JSON config file.",
-    ),
-) -> None:
+def cmd_doctor(args):
     """Check configuration and print diagnostic info."""
-    effective_config = config or _config_path
-    settings = _get_settings(effective_config)
+    settings = _get_settings(args.config)
     from peripatos_core.registry import _resolve_voice_slots
 
     host_voice, interviewee_voice, source = _resolve_voice_slots(settings, language=settings.defaults.language)
     source_label = {"config": "from config", "default": "from default", "legacy": "from legacy tts.voice"}.get(source, source)
 
-    typer.echo("Peripatos Doctor")
-    typer.echo("=" * 40)
-    typer.echo(f"LLM provider:  openai_compatible")
-    typer.echo(f"LLM base_url:  {settings.llm.base_url}")
-    typer.echo(f"LLM model:     {settings.llm.model}")
-    typer.echo(f"LLM api_key:   {'present' if settings.llm.api_key else 'MISSING'}")
-    typer.echo(f"TTS provider:  {settings.tts.provider}")
-    typer.echo(f"TTS host voice:        {host_voice}  ({source_label})")
-    typer.echo(f"TTS interviewee voice: {interviewee_voice}  ({source_label})")
-    typer.echo(f"Default arch:  {settings.defaults.archetype}")
-    typer.echo(f"Default lang:  {settings.defaults.language}")
-    typer.echo(f"Output dir:    {settings.defaults.output_dir}")
-    typer.echo("=" * 40)
+    print("Peripatos Doctor")
+    print("=" * 40)
+    print("LLM provider:  openai_compatible")
+    print(f"LLM base_url:  {settings.llm.base_url}")
+    print(f"LLM model:     {settings.llm.model}")
+    print(f"LLM api_key:   {'present' if settings.llm.api_key else 'MISSING'}")
+    print(f"TTS provider:  {settings.tts.provider}")
+    print(f"TTS host voice:        {host_voice}  ({source_label})")
+    print(f"TTS interviewee voice: {interviewee_voice}  ({source_label})")
+    print(f"Default arch:  {settings.defaults.archetype}")
+    print(f"Default lang:  {settings.defaults.language}")
+    print(f"Output dir:    {settings.defaults.output_dir}")
+    print("=" * 40)
     if not settings.llm.api_key:
-        typer.echo("WARNING: llm.api_key is not set. Set it in your config file.", err=True)
+        print("WARNING: llm.api_key is not set. Set it in your config file.", file=sys.stderr)
+
+
+def cmd_list_archetypes(_args):
+    """List available dialogue archetypes."""
+    from peripatos_core.archetypes import ArchetypeLoader
+    loader = ArchetypeLoader()
+    available = sorted(loader.list_available())
+    print("Available archetypes:")
+    for name in available:
+        print(f"  - {name}")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        prog="peripatos",
+        description="Convert academic papers to Socratic-dialogue podcasts.",
+    )
+    parser.add_argument("--config", "-c", type=Path, default=None,
+                        help="Path to JSON config file.")
+
+    subparsers = parser.add_subparsers(dest="command")
+
+    # generate
+    gen = subparsers.add_parser("generate", help="Convert a paper to MP3.")
+    gen.add_argument("source",
+                     help="ArXiv ID, ArXiv URL, PDF URL, local PDF path, HTML URL, or local .md/.txt file.")
+    gen.add_argument("--output", "-o", type=Path, default=Path("output.mp3"),
+                     help="Output MP3 file path.")
+    gen.add_argument("--archetype", "-a", default="peer",
+                     help="Dialogue archetype: peer, skeptic, tutor, enthusiast.")
+    gen.add_argument("--config", "-c", type=Path, default=None,
+                     help="Path to JSON config file.")
+    gen.add_argument("--language", default=None,
+                     help="Dialogue language (en, zh-CN, etc). Overrides config defaults.language.")
+    gen.set_defaults(func=cmd_generate)
+
+    # doctor
+    doc = subparsers.add_parser("doctor", help="Check configuration and print diagnostic info.")
+    doc.add_argument("--config", "-c", type=Path, default=None,
+                     help="Path to JSON config file.")
+    doc.set_defaults(func=cmd_doctor)
+
+    # list-archetypes
+    la = subparsers.add_parser("list-archetypes", help="List available dialogue archetypes.")
+    la.set_defaults(func=cmd_list_archetypes)
+
+    args = parser.parse_args()
+    if hasattr(args, "func"):
+        args.func(args)
+    else:
+        parser.print_help()
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

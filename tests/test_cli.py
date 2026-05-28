@@ -1,34 +1,48 @@
 """Tests for CLI commands."""
-from typer.testing import CliRunner
-from peripatos_core.cli import app
+import sys
+from io import StringIO
+from contextlib import redirect_stdout
+from unittest.mock import patch
 
-runner = CliRunner()
+from peripatos_core.cli import main
+
+
+def _run_cli(*args):
+    """Run CLI with given args and return (stdout, exit_code)."""
+    f = StringIO()
+    exit_code = 0
+    with redirect_stdout(f), patch.object(sys, "argv", ["peripatos"] + list(args)):
+        try:
+            main()
+        except SystemExit as e:
+            exit_code = e.code
+    return f.getvalue(), exit_code
 
 
 def test_help():
-    result = runner.invoke(app, ["--help"])
-    assert result.exit_code == 0
-    assert "generate" in result.output
-    assert "list-archetypes" in result.output
-    assert "doctor" in result.output
+    stdout, code = _run_cli("--help")
+    assert code == 0
+    assert "generate" in stdout
+    assert "list-archetypes" in stdout
+    assert "doctor" in stdout
 
 
 def test_list_archetypes():
-    result = runner.invoke(app, ["list-archetypes"])
-    assert result.exit_code == 0
-    assert "peer" in result.output
-    assert "skeptic" in result.output
-    assert "tutor" in result.output
-    assert "enthusiast" in result.output
+    stdout, code = _run_cli("list-archetypes")
+    assert code == 0
+    assert "peer" in stdout
+    assert "skeptic" in stdout
+    assert "tutor" in stdout
+    assert "enthusiast" in stdout
 
 
 def test_doctor_no_config(tmp_path, monkeypatch):
     """doctor runs without error even with no config file."""
     monkeypatch.setattr("peripatos_core.config.USER_GLOBAL_CONFIG_PATH", tmp_path / "nonexistent.json")
-    result = runner.invoke(app, ["doctor"])
-    assert result.exit_code == 0
-    assert "LLM provider" in result.output
-    assert "TTS provider" in result.output
+    stdout, code = _run_cli("doctor")
+    assert code == 0
+    assert "LLM provider" in stdout
+    assert "TTS provider" in stdout
 
 
 def test_doctor_with_config(tmp_path, monkeypatch):
@@ -36,33 +50,33 @@ def test_doctor_with_config(tmp_path, monkeypatch):
     monkeypatch.setattr("peripatos_core.config.USER_GLOBAL_CONFIG_PATH", tmp_path / "nonexistent.json")
     cfg = tmp_path / "config.json"
     cfg.write_text(json.dumps({"llm": {"api_key": "test-key", "model": "gpt-4o"}}))
-    result = runner.invoke(app, ["doctor", "--config", str(cfg)])
-    assert result.exit_code == 0
-    assert "present" in result.output
-    assert "gpt-4o" in result.output
+    stdout, code = _run_cli("doctor", "--config", str(cfg))
+    assert code == 0
+    assert "present" in stdout
+    assert "gpt-4o" in stdout
 
 
 def test_generate_help():
-    result = runner.invoke(app, ["generate", "--help"])
-    assert result.exit_code == 0
-    assert "source" in result.output.lower() or "SOURCE" in result.output
+    stdout, code = _run_cli("generate", "--help")
+    assert code == 0
+    assert "source" in stdout.lower()
 
 
 def test_doctor_shows_two_voices(tmp_path, monkeypatch):
     """doctor command prints both host and interviewee voices."""
     monkeypatch.setattr("peripatos_core.config.USER_GLOBAL_CONFIG_PATH", tmp_path / "nonexistent.json")
-    result = runner.invoke(app, ["doctor"])
-    assert result.exit_code == 0
-    assert "TTS host voice" in result.output
-    assert "TTS interviewee voice" in result.output
+    stdout, code = _run_cli("doctor")
+    assert code == 0
+    assert "TTS host voice" in stdout
+    assert "TTS interviewee voice" in stdout
 
 
 def test_doctor_shows_voice_source(tmp_path, monkeypatch):
     """doctor command shows voice source label."""
     monkeypatch.setattr("peripatos_core.config.USER_GLOBAL_CONFIG_PATH", tmp_path / "nonexistent.json")
-    result = runner.invoke(app, ["doctor"])
-    assert result.exit_code == 0
-    assert "from default" in result.output or "from config" in result.output or "from legacy" in result.output
+    stdout, code = _run_cli("doctor")
+    assert code == 0
+    assert "from default" in stdout or "from config" in stdout or "from legacy" in stdout
 
 
 def test_doctor_shows_config_voices(tmp_path, monkeypatch):
@@ -74,8 +88,8 @@ def test_doctor_shows_config_voices(tmp_path, monkeypatch):
     cfg.write_text(json.dumps({
         "tts": {"voices": {"host": "en-US-GuyNeural", "interviewee": "en-US-JennyNeural"}}
     }))
-    result = runner.invoke(app, ["doctor", "--config", str(cfg)])
-    assert result.exit_code == 0
-    assert "en-US-GuyNeural" in result.output
-    assert "en-US-JennyNeural" in result.output
-    assert "from config" in result.output
+    stdout, code = _run_cli("doctor", "--config", str(cfg))
+    assert code == 0
+    assert "en-US-GuyNeural" in stdout
+    assert "en-US-JennyNeural" in stdout
+    assert "from config" in stdout
