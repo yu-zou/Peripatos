@@ -28,6 +28,10 @@ class PipelineStubLLMProvider(StubLLMProvider):
 
     def complete(self, system_prompt: str, user_prompt: str) -> str:
         self.complete_calls.append((system_prompt, user_prompt))
+        if "intro turns" in system_prompt:
+            return INTRO_JSON
+        if "outro turns" in system_prompt:
+            return OUTRO_JSON
         if "planning interview chapters" in system_prompt:
             return VALID_CHAPTERS_JSON
         return "A smooth bridge into the next chapter."
@@ -181,6 +185,16 @@ def test_generate_builds_vector_store_when_cache_missing():
 # ---------------------------------------------------------------------------
 # Phase A parser tests
 # ---------------------------------------------------------------------------
+
+INTRO_JSON = json.dumps([
+    {"speaker": "Host", "text": "Welcome to the podcast! Today we explore a fascinating paper."},
+    {"speaker": "Host", "text": "Let me introduce our guest expert who will walk us through the key ideas."},
+])
+
+OUTRO_JSON = json.dumps([
+    {"speaker": "Host", "text": "That wraps up our discussion. Thanks for joining us today."},
+    {"speaker": "Host", "text": "Join us next time for more cutting-edge research."},
+])
 
 VALID_CHAPTERS_JSON = json.dumps({
     "chapters": [
@@ -487,6 +501,202 @@ def test_language_instruction_en_in_phase_a_prompt():
     script, stub, _, _ = _generate_with_mocks()
 
     assert isinstance(script, DialogueScript)
-    # First complete call is Phase A — (system_prompt, user_prompt)
-    phase_a_user_prompt = stub.complete_calls[0][1]
+    # First complete call is intro; Phase A is the second complete call
+    phase_a_user_prompt = stub.complete_calls[1][1]
     assert "Respond in English" in phase_a_user_prompt
+
+
+# ---------------------------------------------------------------------------
+# Intro / Outro generation tests
+# ---------------------------------------------------------------------------
+
+
+def test_generate_includes_intro_turns():
+    script, _, _, _ = _generate_with_mocks()
+
+    assert isinstance(script.intro_turns, list)
+    assert len(script.intro_turns) == 2
+    assert all(isinstance(t, DialogueTurn) for t in script.intro_turns)
+    assert script.intro_turns[0].speaker == "Host"
+    assert "welcome" in script.intro_turns[0].text.lower()
+
+
+def test_generate_includes_outro_turns():
+    script, _, _, _ = _generate_with_mocks()
+
+    assert isinstance(script.outro_turns, list)
+    assert len(script.outro_turns) == 2
+    assert all(isinstance(t, DialogueTurn) for t in script.outro_turns)
+    assert script.outro_turns[0].speaker == "Host"
+    assert "thanks" in script.outro_turns[0].text.lower()
+
+
+def test_intro_turns_appear_before_chapters():
+    script, _, _, _ = _generate_with_mocks()
+
+    assert len(script.intro_turns) > 0
+    assert len(script.chapters) > 0
+    assert script.chapters[0].turns[0].text not in {t.text for t in script.intro_turns}
+
+
+def test_outro_turns_appear_after_chapters():
+    script, _, _, _ = _generate_with_mocks()
+
+    assert len(script.outro_turns) > 0
+    last_chapter_turns = {t.text for c in script.chapters for t in c.turns}
+    for outro_turn in script.outro_turns:
+        assert outro_turn.text not in last_chapter_turns
+
+
+def test_intro_llm_call_has_correct_system_prompt():
+    _, stub, _, _ = _generate_with_mocks()
+
+    intro_system, intro_user = stub.complete_calls[0]
+    assert "intro turns" in intro_system
+    assert "Untitled Paper" in intro_user
+    assert "unknown" in intro_user
+
+
+def test_outro_llm_call_has_correct_system_prompt():
+    _, stub, _, _ = _generate_with_mocks()
+
+    outro_system, outro_user = stub.complete_calls[-1]
+    assert "outro turns" in outro_system
+    assert "Untitled Paper" in outro_user
+
+
+# ---------------------------------------------------------------------------
+# _parse_turns_json tests
+# ---------------------------------------------------------------------------
+
+
+def test_parse_turns_json_valid():
+    from peripatos_core.dialogue import DialogueGenerator
+
+    raw = json.dumps([
+        {"speaker": "Host", "text": "Hello and welcome!"},
+        {"speaker": "Host", "text": "Today we discuss transformers."},
+    ])
+    result = DialogueGenerator._parse_turns_json(raw, ArchetypeId.PEER)
+
+    assert len(result) == 2
+    assert result[0].speaker == "Host"
+    assert result[0].text == "Hello and welcome!"
+    assert result[0].archetype == ArchetypeId.PEER
+    assert result[1].speaker == "Host"
+    assert result[1].text == "Today we discuss transformers."
+
+
+def test_parse_turns_json_invalid_json():
+    from peripatos_core.dialogue import DialogueGenerator
+
+    result = DialogueGenerator._parse_turns_json("not json", ArchetypeId.PEER)
+    assert result == []
+
+
+def test_parse_turns_json_non_list():
+    from peripatos_core.dialogue import DialogueGenerator
+
+    result = DialogueGenerator._parse_turns_json('{"key": "value"}', ArchetypeId.PEER)
+    assert result == []
+
+
+def test_parse_turns_json_skips_invalid_items():
+    from peripatos_core.dialogue import DialogueGenerator
+
+    raw = json.dumps([
+        {"speaker": "Host", "text": "Valid turn."},
+        "not a dict",
+        {"speaker": "Host", "text": ""},
+        {"no_text_here": True},
+    ])
+    result = DialogueGenerator._parse_turns_json(raw, ArchetypeId.TUTOR)
+
+    assert len(result) == 1
+    assert result[0].text == "Valid turn."
+    assert result[0].archetype == ArchetypeId.TUTOR
+
+
+def test_parse_turns_json_default_speaker():
+    from peripatos_core.dialogue import DialogueGenerator
+
+    raw = json.dumps([
+        {"text": "Turn with no explicit speaker."},
+    ])
+    result = DialogueGenerator._parse_turns_json(raw, ArchetypeId.PEER)
+    assert len(result) == 1
+    assert result[0].speaker == "Host"
+
+
+# ---------------------------------------------------------------------------
+# target_turns pacing tests
+# ---------------------------------------------------------------------------
+
+
+def test_target_turns_passed_to_react_system():
+    """Verify that _calculate_target_turns output is passed to load_react_system."""
+    from peripatos_core.prompts import load_react_system as _real_load
+
+    captured_kwargs: dict = {}
+
+    def _capture_load(*args, **kwargs):
+        captured_kwargs.clear()
+        captured_kwargs.update(kwargs)
+        return _real_load(*args, **kwargs)
+
+    stub = PipelineStubLLMProvider()
+    embedder = Mock()
+    embedder.embed.return_value = np.zeros((1, 4), dtype=np.float32)
+    store = Mock()
+    store.has_cache.return_value = True
+    store.load.return_value = None
+    store.list_sections.return_value = []
+    store.search.return_value = []
+
+    with (
+        patch("peripatos_core.dialogue.Embedder", return_value=embedder),
+        patch("peripatos_core.dialogue.VectorStore", return_value=store),
+        patch("peripatos_core.dialogue.load_react_system", side_effect=_capture_load),
+    ):
+        DialogueGenerator(llm=stub, settings=Settings()).generate(
+            "# Title\n\nThis is a short paper.\n"
+        )
+
+    assert "target_turns" in captured_kwargs
+    target = captured_kwargs["target_turns"]
+    # 7 words / 300 * 2 = 0.04 → floor → 0, clamped to min 10
+    assert target == "10"
+
+
+def test_target_turns_scales_with_paper_length():
+    """Longer paper → higher target_turns."""
+    from peripatos_core.prompts import load_react_system as _real_load
+
+    captured_kwargs: dict = {}
+
+    def _capture_load(*args, **kwargs):
+        captured_kwargs.clear()
+        captured_kwargs.update(kwargs)
+        return _real_load(*args, **kwargs)
+
+    stub = PipelineStubLLMProvider()
+    embedder = Mock()
+    embedder.embed.return_value = np.zeros((1, 4), dtype=np.float32)
+    store = Mock()
+    store.has_cache.return_value = True
+    store.load.return_value = None
+    store.list_sections.return_value = []
+    store.search.return_value = []
+
+    long_content = " ".join(["word"] * 6000)
+
+    with (
+        patch("peripatos_core.dialogue.Embedder", return_value=embedder),
+        patch("peripatos_core.dialogue.VectorStore", return_value=store),
+        patch("peripatos_core.dialogue.load_react_system", side_effect=_capture_load),
+    ):
+        DialogueGenerator(llm=stub, settings=Settings()).generate(long_content)
+
+    assert "target_turns" in captured_kwargs
+    # 6000 words / 300 * 2 = 40 → max 40
+    assert captured_kwargs["target_turns"] == "40"

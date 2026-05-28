@@ -14,7 +14,10 @@ from peripatos_core.providers.llm import LLMProvider
 from peripatos_core.rag.chunker import chunk_text
 from peripatos_core.rag.embedder import Embedder
 from peripatos_core.rag.vector_store import VectorStore
-from peripatos_core.types import ArchetypeId, Chapter, DialogueScript, DialogueTurn, PaperMetadata
+from peripatos_core.types import (
+    ArchetypeId, Chapter, DialogueScript, DialogueTurn, PaperMetadata,
+    _calculate_target_turns,
+)
 
 _logger = logging.getLogger(__name__)
 
@@ -112,6 +115,31 @@ class DialogueGenerator:
         self._llm = llm
         self._settings = settings or Settings()
         self._loader = ArchetypeLoader()
+
+    @staticmethod
+    def _parse_turns_json(raw: str, archetype: ArchetypeId) -> list[DialogueTurn]:
+        """Parse LLM JSON response into list[DialogueTurn].
+
+        Returns empty list on parse failure.
+        """
+        try:
+            data = json.loads(raw)
+            if not isinstance(data, list):
+                _logger.warning("_parse_turns_json: expected JSON array, got %s", type(data).__name__)
+                return []
+            turns = []
+            for item in data:
+                if not isinstance(item, dict):
+                    continue
+                speaker = str(item.get("speaker", "Host"))
+                text = item.get("text", "")
+                if not text or not isinstance(text, str):
+                    continue
+                turns.append(DialogueTurn(speaker=speaker, text=text, archetype=archetype))
+            return turns
+        except (json.JSONDecodeError, TypeError, AttributeError) as exc:
+            _logger.warning("_parse_turns_json: parse failed: %s", exc)
+            return []
 
     def _run_phase_a(
         self,
@@ -238,6 +266,26 @@ class DialogueGenerator:
         effective_title = (metadata.title if metadata else None) or title
         effective_origin = (metadata.source_url if metadata else None) or "unknown"
 
+        # Calculate pacing target based on paper length
+        target_turns = _calculate_target_turns(paper_content)
+        language_instruction = get_language_instruction(self._settings.defaults.language)
+
+        # Phase 0: Generate intro turns
+        intro_path = Path(__file__).parent / "prompts" / "intro.txt"
+        intro_template = intro_path.read_text(encoding="utf-8")
+        intro_prompt = (
+            intro_template
+            .replace("{paper_title}", effective_title)
+            .replace("{paper_origin}", effective_origin)
+            .replace("{archetype_system_prompt}", prompt_data.system_prompt)
+            .replace("{language_instruction}", language_instruction)
+        )
+        intro_response = self._llm.complete(
+            system_prompt="Generate podcast intro turns as JSON array.",
+            user_prompt=intro_prompt,
+        )
+        intro_turns = self._parse_turns_json(intro_response, archetype_id)
+
         chapters_plan = self._run_phase_a(
             archetype_system_prompt=prompt_data.system_prompt,
             title=effective_title,
@@ -250,7 +298,8 @@ class DialogueGenerator:
             title=effective_title,
             origin=effective_origin,
             sections=section_overview,
-            language_instruction=get_language_instruction(self._settings.defaults.language),
+            language_instruction=language_instruction,
+            target_turns=str(target_turns),
         )
 
         all_chapters: list[Chapter] = []
@@ -276,4 +325,23 @@ class DialogueGenerator:
 
         all_chapters = self._run_phase_c(all_chapters)
 
-        return DialogueScript(title=effective_title, chapters=all_chapters)
+        # Phase 4: Generate outro turns
+        outro_path = Path(__file__).parent / "prompts" / "outro.txt"
+        outro_template = outro_path.read_text(encoding="utf-8")
+        outro_prompt = (
+            outro_template
+            .replace("{paper_title}", effective_title)
+            .replace("{language_instruction}", language_instruction)
+        )
+        outro_response = self._llm.complete(
+            system_prompt="Generate podcast outro turns as JSON array.",
+            user_prompt=outro_prompt,
+        )
+        outro_turns = self._parse_turns_json(outro_response, archetype_id)
+
+        return DialogueScript(
+            title=effective_title,
+            chapters=all_chapters,
+            intro_turns=intro_turns,
+            outro_turns=outro_turns,
+        )
