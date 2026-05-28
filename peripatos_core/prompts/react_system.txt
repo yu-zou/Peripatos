@@ -41,4 +41,9 @@ Answer the following question using the paper's actual content. Use `search` and
 - Focus: Answer only the specific question above. Do not broaden into a full-paper summary.
 - Efficiency: Do 1–3 targeted searches, then start drafting immediately. Do not search exhaustively.
 
+# Conversational Style
+Be conversational, not academic. Use shorter turns. Ask follow-up questions. Explain concepts step by step. Avoid long monologues.
+Aim for {target_turns} total turns across all chapters. Each turn should be concise and easy to follow while commuting.
+Also, keep speaker names (Host/Interviewee) in English regardless of dialogue language.
+
 Begin the exploration now.

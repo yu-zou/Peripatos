@@ -30,5 +30,10 @@ Output strictly as valid JSON:
 - Questions must be answerable from the paper content — do not ask speculative or impossible questions.
 - The output must be valid JSON with no additional text before or after.
 
+# Pacing
+Generate {question_count} questions spread across {chapter_count} chapters.
+Aim for conversational pacing — questions should lead to natural back-and-forth dialogue, not dense technical monologues.
+Each chapter should have enough questions to fill ~4-6 dialogue turns total (Host question + Interviewee answer + follow-ups).
+
 # Language
 {language_instruction}
