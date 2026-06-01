@@ -121,27 +121,6 @@ class AudioRenderer:
         self._write_with_chapters(final_path, output_path, script.title, all_chapter_marks)
         return all_chapter_marks
 
-    def _synthesize_turns(self, script: DialogueScript) -> list[AudioSegment]:
-        """Synthesize each turn and return AudioSegment list."""
-        segments = []
-        for i, turn in enumerate(script.turns):
-            voice = self._voice_map.get(turn.speaker)
-            logger.debug("Synthesizing turn %d/%d: %s", i + 1, len(script.turns), turn.speaker)
-            try:
-                audio_path = self._tts.synthesize(turn.text, speaker_voice=voice)
-            except Exception as exc:
-                from peripatos_core.exceptions import TTSError
-                raise TTSError(f"TTS failed for turn {i} ({turn.speaker}): {exc}") from exc
-
-            duration_s = self._get_duration(audio_path)
-            segments.append(AudioSegment(
-                speaker=turn.speaker,
-                text=turn.text,
-                audio_path=audio_path,
-                duration_s=duration_s,
-            ))
-        return segments
-
     def _get_duration(self, audio_path: Path) -> float:
         """Get audio duration in seconds using pydub."""
         try:
@@ -204,32 +183,6 @@ class AudioRenderer:
         except Exception as exc:
             raise AudioError(f"Failed to concatenate audio segments: {exc}") from exc
         return combined
-
-    def _compute_chapters(
-        self,
-        chapter_segments: list[list[AudioSegment]],
-        chapters: list[Chapter],
-    ) -> list[ChapterMark]:
-        """Compute chapter marks from per-chapter segment groups.
-
-        Returns one ChapterMark per chapter. The mark title comes from
-        chapter.title (content-based), not from speaker names.
-        """
-        marks: list[ChapterMark] = []
-        cumulative_ms = 0
-
-        for chapter, segments in zip(chapters, chapter_segments):
-            chapter_start_ms = cumulative_ms
-            for seg in segments:
-                cumulative_ms += int(seg.duration_s * 1000)
-
-            marks.append(ChapterMark(
-                title=chapter.title,
-                start_ms=chapter_start_ms,
-                end_ms=cumulative_ms,
-            ))
-
-        return marks
 
     def _write_with_chapters(
         self,
@@ -323,10 +276,10 @@ class AudioRenderer:
 
         # Intro: fade-out music, placed before dialogue
         intro_music = intro_music.fade_out(duration=500)
-        combined = intro_music.append(dialogue)
+        combined = intro_music.append(dialogue, crossfade=0)
 
         # Outro: fade-in + fade-out, appended after dialogue
         outro_music = outro_music.fade_in(duration=300).fade_out(duration=1000)
-        combined = combined.append(outro_music)
+        combined = combined.append(outro_music, crossfade=0)
 
         return combined, intro_duration_ms

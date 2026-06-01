@@ -117,35 +117,7 @@ def test_render_voice_map_passed_to_tts(tmp_path):
     assert "en-US-GuyNeural" in voices_used
 
 
-# --- New TDD tests ---
-
-def test_compute_chapters_per_chapter():
-    """_compute_chapters returns one ChapterMark per chapter, not per segment."""
-    segments_per_chapter = [
-        [
-            AudioSegment(speaker="Host", text="A", audio_path=Path("/tmp/a.mp3"), duration_s=1.0),
-            AudioSegment(speaker="Guest", text="B", audio_path=Path("/tmp/b.mp3"), duration_s=2.0),
-        ],
-        [
-            AudioSegment(speaker="Host", text="C", audio_path=Path("/tmp/c.mp3"), duration_s=1.5),
-            AudioSegment(speaker="Guest", text="D", audio_path=Path("/tmp/d.mp3"), duration_s=0.5),
-        ],
-    ]
-    chapters = [
-        Chapter(title="Methodology"),
-        Chapter(title="Results"),
-    ]
-    renderer = AudioRenderer(tts=StubTTSProvider())
-    marks = renderer._compute_chapters(segments_per_chapter, chapters)
-
-    assert len(marks) == 2
-    assert marks[0].title == "Methodology"
-    assert marks[1].title == "Results"
-    assert marks[0].start_ms == 0
-    assert marks[0].end_ms == 3000  # (1.0 + 2.0) * 1000
-    assert marks[1].start_ms == 3000
-    assert marks[1].end_ms == 5000  # 3000 + (1.5 + 0.5) * 1000
-
+# --- Chapter rendering tests ---
 
 def test_chapter_titles_not_speaker_names():
     """ChapterMark titles are content-based (chapter titles), not speaker names."""
