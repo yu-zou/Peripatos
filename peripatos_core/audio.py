@@ -4,6 +4,8 @@ import logging
 import tempfile
 import shutil
 from pathlib import Path
+from pydub import AudioSegment as PydubAudioSegment  # type: ignore[reportMissingImports]
+
 from peripatos_core.exceptions import AudioError, TTSError
 from peripatos_core.providers.tts import TTSProvider
 from peripatos_core.types import AudioSegment, Chapter, ChapterMark, DialogueScript, DialogueTurn
@@ -272,3 +274,18 @@ class AudioRenderer:
             raise
         except Exception as exc:
             raise AudioError(f"Failed to write ID3 tags to {output_path}: {exc}") from exc
+
+    _AUDIO_DIR = Path(__file__).parent / "audio"
+
+    def _load_music(self, filename: str) -> PydubAudioSegment:
+        """Load an MP3 from peripatos_core/audio/.
+
+        Raises AudioError if the file is not found.
+        """
+        music_path = self._AUDIO_DIR / filename
+        if not music_path.exists():
+            raise AudioError(f"Music file not found: {music_path}")
+        try:
+            return PydubAudioSegment.from_mp3(str(music_path))
+        except Exception as exc:
+            raise AudioError(f"Failed to load music file {music_path}: {exc}") from exc
