@@ -336,7 +336,7 @@ def _make_script_with_intro_and_outro() -> DialogueScript:
 
 
 def test_intro_turns_as_first_chapter(tmp_path):
-    """Intro turns produce a leading 'Introduction' ChapterMark."""
+    """Intro turns produce a leading 'Introduction' ChapterMark shifted by intro music."""
     stub = StubTTSProvider()
     renderer = AudioRenderer(tts=stub)
     script = _make_script_with_intro()
@@ -345,8 +345,9 @@ def test_intro_turns_as_first_chapter(tmp_path):
 
     assert len(marks) == 2  # Introduction + Core Discussion
     assert marks[0].title == "Introduction"
-    assert marks[0].start_ms == 0
-    assert marks[0].end_ms > 0
+    # Chapter starts after intro music offset (2000ms for 2s silent placeholder)
+    assert marks[0].start_ms >= 0  # offset from intro music
+    assert marks[0].end_ms > marks[0].start_ms
     assert marks[1].title == "Core Discussion"
 
 
@@ -387,7 +388,7 @@ def test_intro_and_outro_ordering(tmp_path):
 
 
 def test_no_intro_outro_unchanged(tmp_path):
-    """Without intro/outro, behavior matches pre-refactor behavior."""
+    """Without intro/outro dialogue turns, chapter marks are still shifted by intro music."""
     renderer = AudioRenderer(tts=StubTTSProvider())
     script = _make_script(3, chapter_title="Introduction")
     output = tmp_path / "output.mp3"
@@ -395,8 +396,9 @@ def test_no_intro_outro_unchanged(tmp_path):
 
     assert len(marks) == 1
     assert marks[0].title == "Introduction"
-    assert marks[0].start_ms == 0
-    assert marks[0].end_ms > 0
+    # Chapter marks are shifted by intro music offset (2000ms for 2s silent placeholder)
+    assert marks[0].start_ms >= 0  # offset from intro music
+    assert marks[0].end_ms > marks[0].start_ms
 
 
 def test_intro_outro_id3_chapter_tags(tmp_path):

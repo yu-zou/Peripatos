@@ -2,7 +2,6 @@
 from __future__ import annotations
 import logging
 import tempfile
-import shutil
 from pathlib import Path
 from pydub import AudioSegment as PydubAudioSegment  # type: ignore[reportMissingImports]
 
@@ -103,8 +102,23 @@ class AudioRenderer:
             chapter_segments.append(outro_segments)
 
         all_segments = [seg for group in chapter_segments for seg in group]
-        combined_path = self._concatenate_segments(all_segments)
-        self._write_with_chapters(combined_path, output_path, script.title, all_chapter_marks)
+        dialogue_audio = self._concatenate_segments(all_segments)
+
+        # Mix intro and outro music
+        final_audio, intro_offset_ms = self._mix_music(dialogue_audio)
+
+        # Shift all chapter marks by intro offset
+        for mark in all_chapter_marks:
+            mark.start_ms += intro_offset_ms
+            mark.end_ms += intro_offset_ms
+
+        # Export final audio to temp file, then write with ID3 chapters
+        tmp = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
+        tmp.close()
+        final_path = Path(tmp.name)
+        final_audio.export(str(final_path), format="mp3")
+
+        self._write_with_chapters(final_path, output_path, script.title, all_chapter_marks)
         return all_chapter_marks
 
     def _synthesize_turns(self, script: DialogueScript) -> list[AudioSegment]:
@@ -171,25 +185,25 @@ class AudioRenderer:
             audio_path=audio_path, duration_s=duration_s,
         )
 
-    def _concatenate_segments(self, segments: list[AudioSegment]) -> Path:
-        """Concatenate all audio segments into a single MP3 file."""
+    def _concatenate_segments(self, segments: list[AudioSegment]) -> PydubAudioSegment:
+        """Concatenate all audio segments into a single pydub AudioSegment.
+
+        Uses pydub for proper audio concatenation instead of raw byte merging.
+        """
         if not segments:
             raise AudioError("No audio segments to concatenate")
 
         try:
-            tmp = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
-            tmp.close()
-            combined_path = Path(tmp.name)
-            with combined_path.open("wb") as out:
-                for seg in segments:
-                    try:
-                        with seg.audio_path.open("rb") as inp:
-                            shutil.copyfileobj(inp, out)
-                    except OSError as exc:
-                        logger.warning("Could not read %s, using empty segment: %s", seg.audio_path, exc)
+            combined = PydubAudioSegment.from_mp3(str(segments[0].audio_path))
+            for seg in segments[1:]:
+                try:
+                    chunk = PydubAudioSegment.from_mp3(str(seg.audio_path))
+                    combined = combined.append(chunk)
+                except Exception as exc:
+                    logger.warning("Could not load %s, skipping: %s", seg.audio_path, exc)
         except Exception as exc:
-            raise AudioError(f"Failed to create/export concatenated audio: {exc}") from exc
-        return combined_path
+            raise AudioError(f"Failed to concatenate audio segments: {exc}") from exc
+        return combined
 
     def _compute_chapters(
         self,
@@ -292,3 +306,27 @@ class AudioRenderer:
             return PydubAudioSegment.from_mp3(str(music_path))
         except Exception as exc:
             raise AudioError(f"Failed to load music file {music_path}: {exc}") from exc
+
+    def _mix_music(self, dialogue: PydubAudioSegment) -> tuple[PydubAudioSegment, int]:
+        """Prepend intro music and append outro music with fade effects.
+
+        Args:
+            dialogue: The dialogue audio as a pydub AudioSegment.
+
+        Returns:
+            Tuple of (mixed audio as pydub AudioSegment, intro_duration_ms offset).
+        """
+        intro_music = self._load_music("intro.mp3")
+        outro_music = self._load_music("outro.mp3")
+
+        intro_duration_ms = len(intro_music)
+
+        # Intro: fade-out music, placed before dialogue
+        intro_music = intro_music.fade_out(duration=500)
+        combined = intro_music.append(dialogue)
+
+        # Outro: fade-in + fade-out, appended after dialogue
+        outro_music = outro_music.fade_in(duration=300).fade_out(duration=1000)
+        combined = combined.append(outro_music)
+
+        return combined, intro_duration_ms
