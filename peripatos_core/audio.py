@@ -12,6 +12,8 @@ from peripatos_core.types import AudioSegment, Chapter, ChapterMark, DialogueScr
 
 logger = logging.getLogger(__name__)
 
+_AUDIO_DIR = Path(__file__).parent / "audio"
+
 
 class AudioRenderer:
     """Renders a DialogueScript to an MP3 file with ID3v2.4 chapter markers."""
@@ -275,16 +277,17 @@ class AudioRenderer:
         except Exception as exc:
             raise AudioError(f"Failed to write ID3 tags to {output_path}: {exc}") from exc
 
-    _AUDIO_DIR = Path(__file__).parent / "audio"
-
     def _load_music(self, filename: str) -> PydubAudioSegment:
         """Load an MP3 from peripatos_core/audio/.
 
         Raises AudioError if the file is not found.
         """
-        music_path = self._AUDIO_DIR / filename
-        if not music_path.exists():
-            raise AudioError(f"Music file not found: {music_path}")
+        music_path = _AUDIO_DIR / filename
+        resolved = music_path.resolve()
+        if not resolved.is_relative_to(_AUDIO_DIR.resolve()):
+            raise AudioError(f"Music file must be inside {_AUDIO_DIR}")
+        if not resolved.exists():
+            raise AudioError(f"Music file not found: {resolved}")
         try:
             return PydubAudioSegment.from_mp3(str(music_path))
         except Exception as exc:
