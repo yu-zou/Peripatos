@@ -40,6 +40,7 @@ include = ["peripatos_core*"]
 peripatos_core = [
     "prompts/archetypes/*.yaml",
     "prompts/*.txt",
+    "audio/*.mp3",
 ]
 
 [tool.pytest.ini_options]

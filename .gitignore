@@ -11,6 +11,7 @@ build/
 .ruff_cache/
 tests/output/
 *.mp3
+!peripatos_core/audio/*.mp3
 !tests/fixtures/*.mp3
 models/
 # Local user config (may contain real API keys)
