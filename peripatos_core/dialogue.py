@@ -242,6 +242,7 @@ class DialogueGenerator:
             base_url=self._settings.llm.base_url,
             api_key=self._settings.llm.api_key,
             model=rag.embedding_model,
+            provider=rag.provider,
         )
         store = VectorStore(cache_dir=cache_dir, content_hash=content_hash)
         if not store.has_cache():
