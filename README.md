@@ -100,7 +100,8 @@ The `llm.base_url` accepts any OpenAI-compatible endpoint: [Requesty](https://re
 
 | Key | Default | Description |
 |---|---|---|
-| `rag.embedding_model` | `"openai/text-embedding-3-small"` | OpenAI-compatible embedding model for the vector store. |
+| `rag.provider` | `"openai_compatible"` | Embedding backend: `"openai_compatible"` for API-based, `"local"` for `sentence-transformers` models. |
+| `rag.embedding_model` | `"openai/text-embedding-3-small"` | Model name. For local: HuggingFace path (e.g., `"BAAI/bge-m3"`). For remote: API model identifier. |
 | `rag.chunk_size` | `1000` | Size of text chunks for indexing (characters). |
 | `rag.chunk_overlap` | `200` | Overlap between adjacent chunks (characters). |
 | `rag.top_k` | `5` | Number of chunks to retrieve for each search query. |

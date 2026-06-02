@@ -214,3 +214,25 @@ def test_unknown_language_warns_and_falls_back():
         assert len(w) == 1
         assert "Unsupported language" in str(w[0].message)
         assert instr == get_language_instruction("en")
+
+
+# ── Task 6: RAG provider config ──────────────────────────────────────────────
+
+
+def test_rag_provider_defaults_to_openai_compatible():
+    from peripatos_core.config import RAGConfig
+    cfg = RAGConfig()
+    assert cfg.provider == "openai_compatible"
+
+
+def test_rag_provider_can_be_set_from_config(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "peripatos_core.config.USER_GLOBAL_CONFIG_PATH", tmp_path / "nonexistent.json"
+    )
+    cfg = tmp_path / "config.json"
+    cfg.write_text(json.dumps({
+        "rag": {"provider": "local", "embedding_model": "BAAI/bge-m3"}
+    }))
+    settings = load_settings(config_path=cfg)
+    assert settings.rag.provider == "local"
+    assert settings.rag.embedding_model == "BAAI/bge-m3"
