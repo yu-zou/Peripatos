@@ -24,3 +24,4 @@ tests/fixtures/integration_config.json
 .env
 .env.*
 .sisyphus/
+docs/superpowers/
