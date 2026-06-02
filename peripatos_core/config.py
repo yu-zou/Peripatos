@@ -20,7 +20,7 @@ USER_GLOBAL_CONFIG_PATH = Path.home() / ".config" / "peripatos" / "config.json"
 
 KNOWN_KEYS = {"llm", "tts", "defaults", "rag"}
 KNOWN_LLM_KEYS = {"base_url", "api_key", "model"}
-KNOWN_RAG_KEYS = {"embedding_model", "chunk_size", "chunk_overlap", "top_k", "cache_dir"}
+KNOWN_RAG_KEYS = {"provider", "embedding_model", "chunk_size", "chunk_overlap", "top_k", "cache_dir"}
 KNOWN_TTS_KEYS = {"provider", "base_url", "api_key", "voice", "model", "voices"}
 KNOWN_TTS_VOICES_KEYS = {"host", "interviewee"}
 KNOWN_DEFAULTS_KEYS = {"archetype", "output_dir", "language"}
@@ -35,6 +35,7 @@ class LLMConfig:
 
 @dataclass
 class RAGConfig:
+    provider: str = "openai_compatible"
     embedding_model: str = "openai/text-embedding-3-small"
     chunk_size: int = 1000
     chunk_overlap: int = 200
