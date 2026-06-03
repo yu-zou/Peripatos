@@ -38,7 +38,7 @@ def test_save_script_json_writes_file(tmp_path):
     assert len(data["chapters"][0]["turns"]) == 2
 
 
-def test_save_script_json_warns_on_failure(tmp_path, monkeypatch, caplog):
+def test_save_script_json_warns_on_failure(tmp_path, caplog):
     """_save_script_json logs a warning on write failure but does not raise."""
     from peripatos_core.cli import _save_script_json
     from peripatos_core.types import DialogueScript, DialogueTurn, Chapter, ArchetypeId

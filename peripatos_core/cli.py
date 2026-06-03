@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 
-def _save_script_json(script, output_path: Path) -> None:
+def _save_script_json(script: "DialogueScript", output_path: Path) -> None:
     """Save a DialogueScript as JSON next to the output MP3.
 
     Writes to the same directory with .json extension.
