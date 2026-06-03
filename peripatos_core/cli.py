@@ -49,7 +49,7 @@ def cmd_generate(args):
 
     print(f"Processing source: {fetched_path.name}")
     if fetched_path.suffix.lower() == ".pdf":
-        parser = PDFParser()
+        parser = PDFParser(mineru_token=settings.parser.mineru_token or None)
         parsed = parser.parse(fetched_path)
         paper_content = parsed.markdown
     elif fetched_path.suffix.lower() == ".html":
