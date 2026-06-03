@@ -93,7 +93,7 @@ class MinerUClient:
         )
         resp.raise_for_status()
         data = resp.json()
-        return data["task_id"]
+        return data.get("task_id") or data.get("id") or data.get("data", {}).get("task_id")
 
     def _poll_task(self, task_id: str, headers: dict[str, str],
                    timeout: int, poll_interval: int) -> dict:
