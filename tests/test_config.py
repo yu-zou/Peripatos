@@ -236,3 +236,33 @@ def test_rag_provider_can_be_set_from_config(tmp_path, monkeypatch):
     settings = load_settings(config_path=cfg)
     assert settings.rag.provider == "local"
     assert settings.rag.embedding_model == "BAAI/bge-m3"
+
+
+# ── Parser config ──────────────────────────────────────────────
+
+def test_parser_config_defaults():
+    from peripatos_core.config import ParserConfig
+    cfg = ParserConfig()
+    assert cfg.mineru_token == ""
+
+
+def test_parser_token_loaded_from_config(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "peripatos_core.config.USER_GLOBAL_CONFIG_PATH", tmp_path / "nonexistent.json"
+    )
+    cfg = tmp_path / "config.json"
+    cfg.write_text(json.dumps({"parser": {"mineru_token": "test-token-123"}}))
+    settings = load_settings(config_path=cfg)
+    assert settings.parser.mineru_token == "test-token-123"
+
+
+def test_parser_unknown_key_warns(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "peripatos_core.config.USER_GLOBAL_CONFIG_PATH", tmp_path / "nonexistent.json"
+    )
+    cfg = tmp_path / "config.json"
+    cfg.write_text(json.dumps({"parser": {"unknown_field": "value"}}))
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        load_settings(config_path=cfg)
+    assert any("unknown_field" in str(warning.message) for warning in w)

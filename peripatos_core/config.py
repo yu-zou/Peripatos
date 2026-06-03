@@ -18,12 +18,13 @@ logger = logging.getLogger(__name__)
 
 USER_GLOBAL_CONFIG_PATH = Path.home() / ".config" / "peripatos" / "config.json"
 
-KNOWN_KEYS = {"$schema", "llm", "tts", "defaults", "rag"}
+KNOWN_KEYS = {"$schema", "llm", "tts", "defaults", "rag", "parser"}
 KNOWN_LLM_KEYS = {"base_url", "api_key", "model"}
 KNOWN_RAG_KEYS = {"provider", "embedding_model", "chunk_size", "chunk_overlap", "top_k", "cache_dir"}
 KNOWN_TTS_KEYS = {"provider", "base_url", "api_key", "voice", "model", "voices"}
 KNOWN_TTS_VOICES_KEYS = {"host", "interviewee"}
 KNOWN_DEFAULTS_KEYS = {"archetype", "output_dir", "language"}
+KNOWN_PARSER_KEYS = {"mineru_token"}
 
 
 @dataclass
@@ -80,6 +81,11 @@ class Defaults:
     language: str = "en"
 
 
+@dataclass
+class ParserConfig:
+    mineru_token: str = ""
+
+
 SUPPORTED_LANGUAGES = {"en", "zh-CN"}
 
 LANGUAGE_INSTRUCTIONS = {
@@ -117,6 +123,7 @@ class Settings:
     tts: TTSConfig = field(default_factory=TTSConfig)
     defaults: Defaults = field(default_factory=Defaults)
     rag: RAGConfig = field(default_factory=RAGConfig)
+    parser: ParserConfig = field(default_factory=ParserConfig)
 
 
 def _warn_unknown(section: str, data: dict[str, Any], known: set[str]) -> None:
@@ -174,6 +181,13 @@ def _apply_overrides(settings: Settings, data: dict[str, Any]) -> None:
         for k in KNOWN_DEFAULTS_KEYS:
             if k in def_data:
                 setattr(settings.defaults, k, def_data[k])
+
+    if "parser" in data:
+        parser_data = data["parser"]
+        _warn_unknown("parser", parser_data, KNOWN_PARSER_KEYS)
+        for k in KNOWN_PARSER_KEYS:
+            if k in parser_data:
+                setattr(settings.parser, k, parser_data[k])
 
 
 def load_settings(config_path: Path | None = None) -> Settings:
