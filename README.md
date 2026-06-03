@@ -10,7 +10,9 @@
 
 ---
 
-Peripatos fetches an ArXiv paper (or any PDF), generates a natural back-and-forth dialogue between two speakers using an LLM, and synthesises the script into an MP3 with ID3v2.4 chapter markers — one chapter per dialogue turn.
+Peripatos fetches an ArXiv paper (or any PDF/HTML/Markdown), generates a natural back-and-forth dialogue between two speakers using an LLM, and synthesises the script into an MP3 with ID3v2.4 chapter markers — one chapter per dialogue turn.
+
+PDF parsing uses [MinerU](https://mineru.net)'s cloud API for high-quality extraction (tables, formulas, headings) with a built-in PyMuPDF fallback — no heavy ML dependencies required.
 
 ## Installation
 
@@ -58,6 +60,9 @@ Configuration is resolved in this order:
     "chunk_overlap": 200,
     "top_k": 5,
     "cache_dir": null
+  },
+  "parser": {
+    "mineru_token": ""
   }
 }
 ```
@@ -82,6 +87,9 @@ Configuration is resolved in this order:
   },
   "defaults": {
     "archetype": "peer"
+  },
+  "parser": {
+    "mineru_token": "YOUR_MINERU_TOKEN"
   }
 }
 ```
@@ -90,6 +98,16 @@ The `tts.provider` defaults to `"edge"` (Microsoft Edge TTS — no API key requi
 
 The `llm.base_url` accepts any OpenAI-compatible endpoint: [Requesty](https://requesty.ai), [OpenRouter](https://openrouter.ai), or vanilla OpenAI.
 
+### Parser Configuration
+
+Peripatos parses PDFs using [MinerU](https://mineru.net)'s cloud API for high-quality extraction (tables, formulas, headings). If the API is unavailable, it falls back to [PyMuPDF](https://pymupdf.readthedocs.io/) for text-only extraction — no heavy ML dependencies required.
+
+| Key | Default | Description |
+|---|---|---|
+| `parser.mineru_token` | `""` | MinerU API token from [mineru.net/apiManage/token](https://mineru.net/apiManage/token). Leave empty for Flash extract (≤20 pages, ≤10MB, no auth). Set a token for Precision extract (≤600 pages, ≤200MB). |
+
+Without a token, Peripatos uses MinerU's free Flash mode. For longer papers, get a free token at <https://mineru.net/apiManage/token> and add it to your config.
+
 ### Reference
 
 | Key | Default | Description |
@@ -97,6 +115,7 @@ The `llm.base_url` accepts any OpenAI-compatible endpoint: [Requesty](https://re
 | `tts.voice` | `"en-US-AriaNeural"` (edge) / `"nova"` (openai_compatible) | Single voice for both speakers. (deprecated) |
 | `tts.voices.host` | `"en-US-GuyNeural"` (edge) / `"onyx"` (openai_compatible) | Voice for the host speaker. |
 | `tts.voices.interviewee` | `"en-US-AriaNeural"` (edge) / `"nova"` (openai_compatible) | Voice for the interviewee speaker. |
+| `parser.mineru_token` | `""` | MinerU API token. Empty = Flash mode (free, ≤20 pages). Set token for Precision mode (≤600 pages). |
 
 ### RAG Configuration
 
