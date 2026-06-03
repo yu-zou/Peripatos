@@ -2,6 +2,10 @@
 
 Requires ``RUN_INTEGRATION=1`` and ``Peripatos/config.test.json`` present.
 NOT mocked — performs live arxiv fetch, real LLM call, real TTS, real MP3 generation.
+
+The config.test.json should include a ``parser.mineru_token`` field for
+MinerU Precision extract (≤600 pages). Without it, the parser uses Flash
+mode (≤20 pages) or falls back to PyMuPDF.
 """
 # pyright: reportMissingImports=false
 from __future__ import annotations

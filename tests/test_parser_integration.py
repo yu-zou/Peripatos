@@ -1,7 +1,15 @@
-"""Integration test for MinerU cloud API (Flash mode, no token required).
+"""Integration test for PDFParser with MinerU cloud API.
+
+Tests the full parser path (MinerU Flash + PyMuPDF fallback) against real
+APIs — NOT the full peripatos pipeline (fetch+parse+dialogue+audio).
+
+For full end-to-end pipeline tests, see test_e2e.py.
 
 Set RUN_INTEGRATION=1 to run. Requires network access to mineru.net.
-Uses a small sample PDF fixture.
+Uses a minimal valid PDF fixture.
+
+Note: To test MinerU Precision extract with a token, add
+`parser.mineru_token` to your config.test.json.
 """
 import os
 from pathlib import Path
@@ -35,12 +43,10 @@ def sample_pdf(tmp_path_factory):
 
 
 def test_mineru_flash_extract_no_token(sample_pdf):
-    """Test MinerU Flash extract (no token) on a small PDF.
+    """Test PDFParser.parse() with MinerU Flash (no token).
 
-    This test calls the real MinerU Cloud API. It will fall back to
-    PyMuPDF if the API is unavailable (network error, rate limit, etc.)
-    which is acceptable for an integration test — the fallback path
-    is well-tested in unit tests.
+    Exercises: MinerU cloud API call → fallback to PyMuPDF if unavailable.
+    This does NOT test the full peripatos CLI pipeline.
     """
     from peripatos_core.parser import PDFParser
 
