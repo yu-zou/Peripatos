@@ -47,9 +47,9 @@ def _is_arxiv(source_input: str) -> bool:
     return "arxiv.org" in source_input
 
 
-def _load_arxiv_or_pdf(source_input: str, kind: SourceKind) -> Source:
+def _load_arxiv_or_pdf(source_input: str, kind: SourceKind, mineru_token: str | None = None) -> Source:
     fetcher = PaperFetcher()
-    parser = PDFParser()
+    parser = PDFParser(mineru_token=mineru_token)
     pdf_path, _ = fetcher.fetch(source_input)
     raw_bytes = Path(pdf_path).read_bytes()
     parsed = parser.parse(Path(pdf_path))
@@ -89,24 +89,24 @@ def _load_local_file(path: Path, kind: SourceKind) -> Source:
     )
 
 
-def load_source(source_input: str) -> Source:
+def load_source(source_input: str, mineru_token: str | None = None) -> Source:
     """Load and normalize a source from a path, URL, or arxiv identifier."""
     try:
         source_input = source_input.strip()
 
         if _is_arxiv(source_input):
-            return _load_arxiv_or_pdf(source_input, "arxiv")
+            return _load_arxiv_or_pdf(source_input, "arxiv", mineru_token=mineru_token)
 
         if source_input.startswith(("http://", "https://")):
             if source_input.lower().split("?", 1)[0].endswith(".pdf"):
-                return _load_arxiv_or_pdf(source_input, "pdf")
+                return _load_arxiv_or_pdf(source_input, "pdf", mineru_token=mineru_token)
             return _load_html(source_input)
 
         path = Path(source_input)
         if path.exists() and path.is_file():
             suffix = path.suffix.lower()
             if suffix == ".pdf":
-                return _load_arxiv_or_pdf(source_input, "pdf")
+                return _load_arxiv_or_pdf(source_input, "pdf", mineru_token=mineru_token)
             if suffix == ".md":
                 return _load_local_file(path, "markdown")
             if suffix == ".txt":
