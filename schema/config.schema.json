@@ -1,0 +1,146 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/yu-zou/Peripatos/main/schema/config.schema.json",
+  "title": "Peripatos Configuration",
+  "description": "Configuration schema for Peripatos — convert academic papers to Socratic-dialogue podcasts.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "llm": {
+      "type": "object",
+      "description": "LLM provider configuration (OpenAI-compatible API).",
+      "additionalProperties": false,
+      "properties": {
+        "base_url": {
+          "type": "string",
+          "default": "https://router.requesty.ai/v1",
+          "description": "OpenAI-compatible API endpoint (Requesty, OpenRouter, or vanilla OpenAI)."
+        },
+        "api_key": {
+          "type": "string",
+          "default": "",
+          "description": "API key for the LLM provider.",
+          "format": "password"
+        },
+        "model": {
+          "type": "string",
+          "default": "openai/gpt-4o-mini",
+          "description": "Model identifier (e.g., 'openai/gpt-4o-mini', 'anthropic/claude-3-5-sonnet')."
+        }
+      }
+    },
+    "tts": {
+      "type": "object",
+      "description": "Text-to-speech provider configuration.",
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "type": "string",
+          "enum": ["edge", "openai_compatible"],
+          "default": "edge",
+          "description": "TTS backend. 'edge' uses Microsoft Edge TTS (free, no API key). 'openai_compatible' uses any OpenAI-compatible TTS endpoint."
+        },
+        "base_url": {
+          "type": "string",
+          "default": "",
+          "description": "Base URL for openai_compatible TTS provider. Required when provider is 'openai_compatible'."
+        },
+        "api_key": {
+          "type": "string",
+          "default": "",
+          "description": "API key for openai_compatible TTS provider.",
+          "format": "password"
+        },
+        "voice": {
+          "type": "string",
+          "default": "en-US-AriaNeural",
+          "description": "Deprecated: single voice for both speakers. Use 'voices.host' and 'voices.interviewee' instead."
+        },
+        "model": {
+          "type": "string",
+          "default": "tts-1",
+          "description": "Model identifier for openai_compatible TTS provider."
+        },
+        "voices": {
+          "type": "object",
+          "description": "Per-speaker voice configuration.",
+          "additionalProperties": false,
+          "properties": {
+            "host": {
+              "type": "string",
+              "default": "en-US-GuyNeural",
+              "description": "Voice for the host/interviewer speaker."
+            },
+            "interviewee": {
+              "type": "string",
+              "default": "en-US-AriaNeural",
+              "description": "Voice for the interviewee/expert speaker."
+            }
+          }
+        }
+      }
+    },
+    "defaults": {
+      "type": "object",
+      "description": "Default values for CLI commands.",
+      "additionalProperties": false,
+      "properties": {
+        "archetype": {
+          "type": "string",
+          "enum": ["peer", "skeptic", "tutor", "enthusiast"],
+          "default": "peer",
+          "description": "Dialogue style archetype."
+        },
+        "output_dir": {
+          "type": "string",
+          "default": ".",
+          "description": "Default output directory for generated MP3 files."
+        },
+        "language": {
+          "type": "string",
+          "enum": ["en", "zh-CN"],
+          "default": "en",
+          "description": "Dialogue language. 'en' for English, 'zh-CN' for Mandarin Chinese with English technical terms."
+        }
+      }
+    },
+    "rag": {
+      "type": "object",
+      "description": "Retrieval-Augmented Generation configuration for the vector store.",
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "type": "string",
+          "enum": ["openai_compatible", "local"],
+          "default": "openai_compatible",
+          "description": "Embedding backend. 'openai_compatible' for API-based embeddings, 'local' for sentence-transformers models."
+        },
+        "embedding_model": {
+          "type": "string",
+          "default": "openai/text-embedding-3-small",
+          "description": "Model name. For local: HuggingFace path (e.g., 'BAAI/bge-m3'). For remote: API model identifier."
+        },
+        "chunk_size": {
+          "type": "integer",
+          "default": 1000,
+          "description": "Size of text chunks for indexing (characters)."
+        },
+        "chunk_overlap": {
+          "type": "integer",
+          "default": 200,
+          "description": "Overlap between adjacent chunks (characters)."
+        },
+        "top_k": {
+          "type": "integer",
+          "default": 5,
+          "description": "Number of chunks to retrieve for each search query."
+        },
+        "cache_dir": {
+          "type": ["string", "null"],
+          "default": null,
+          "description": "Directory to store FAISS indices. Defaults to '~/.cache/peripatos/rag/'."
+        }
+      }
+    }
+  }
+}
