@@ -145,6 +145,18 @@
           "description": "Directory to store FAISS indices. Defaults to '~/.cache/peripatos/rag/'."
         }
       }
+    },
+    "parser": {
+      "type": "object",
+      "description": "PDF parser configuration.",
+      "additionalProperties": false,
+      "properties": {
+        "mineru_token": {
+          "type": "string",
+          "default": "",
+          "description": "MinerU cloud API token from mineru.net/apiManage/token. Enables Precision extract mode (≤600 pages). Leave empty for Flash extract (≤20 pages)."
+        }
+      }
     }
   }
 }
