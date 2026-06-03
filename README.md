@@ -31,6 +31,7 @@ Configuration is resolved in this order:
 
 ```json
 {
+  "$schema": "https://raw.githubusercontent.com/yu-zou/Peripatos/main/schema/config.schema.json",
   "llm": {
     "base_url": "https://router.requesty.ai/v1",
     "api_key": "",
@@ -65,6 +66,7 @@ Configuration is resolved in this order:
 
 ```json
 {
+  "$schema": "https://raw.githubusercontent.com/yu-zou/Peripatos/main/schema/config.schema.json",
   "llm": {
     "base_url": "https://router.requesty.ai/v1",
     "api_key": "YOUR_API_KEY",
