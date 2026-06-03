@@ -5,6 +5,27 @@ import sys
 from pathlib import Path
 
 
+def _save_script_json(script, output_path: Path) -> None:
+    """Save a DialogueScript as JSON next to the output MP3.
+
+    Writes to the same directory with .json extension.
+    On failure, logs a warning but does not raise.
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    json_path = output_path.with_suffix(".json")
+    try:
+        from dataclasses import asdict
+        import json
+        json_path.write_text(
+            json.dumps(asdict(script), ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        logger.info("Script saved to %s", json_path)
+    except Exception as exc:
+        logger.warning("Could not save script JSON (%s): %s", json_path, exc)
+
+
 def _get_settings(config_path=None):
     from peripatos_core.config import load_settings
     return load_settings(config_path=config_path)
@@ -53,6 +74,9 @@ def cmd_generate(args):
         metadata=metadata,
     )
     print(f"  Generated {len(script.turns)} turns: {script.title}")
+
+    # Save dialogue script JSON
+    _save_script_json(script, args.output)
 
     print("Synthesizing audio")
     tts = build_tts_provider(settings.tts)

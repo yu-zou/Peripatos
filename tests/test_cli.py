@@ -7,6 +7,63 @@ from unittest.mock import patch
 from peripatos_core.cli import main
 
 
+def test_save_script_json_writes_file(tmp_path):
+    """_save_script_json writes valid JSON next to output path."""
+    from peripatos_core.cli import _save_script_json
+    from peripatos_core.types import DialogueScript, DialogueTurn, Chapter, ArchetypeId
+    import json
+
+    script = DialogueScript(
+        title="Test Paper",
+        chapters=[
+            Chapter(
+                title="Intro",
+                turns=[
+                    DialogueTurn(speaker="Host", text="Hello", archetype=ArchetypeId.PEER),
+                    DialogueTurn(speaker="Guest", text="Hi", archetype=ArchetypeId.PEER),
+                ],
+            )
+        ],
+        intro_turns=[],
+        outro_turns=[],
+    )
+    output_path = tmp_path / "podcast.mp3"
+    _save_script_json(script, output_path)
+
+    json_path = tmp_path / "podcast.json"
+    assert json_path.exists()
+    data = json.loads(json_path.read_text())
+    assert data["title"] == "Test Paper"
+    assert len(data["chapters"]) == 1
+    assert len(data["chapters"][0]["turns"]) == 2
+
+
+def test_save_script_json_warns_on_failure(tmp_path, monkeypatch, caplog):
+    """_save_script_json logs a warning on write failure but does not raise."""
+    from peripatos_core.cli import _save_script_json
+    from peripatos_core.types import DialogueScript, DialogueTurn, Chapter, ArchetypeId
+
+    script = DialogueScript(
+        title="Test",
+        chapters=[Chapter(title="C", turns=[DialogueTurn(speaker="H", text="T", archetype=ArchetypeId.PEER)])],
+        intro_turns=[],
+        outro_turns=[],
+    )
+    # Point output to a read-only directory
+    read_only = tmp_path / "readonly"
+    read_only.mkdir()
+    read_only.chmod(0o000)
+    output_path = read_only / "podcast.mp3"
+
+    import logging
+    with caplog.at_level(logging.WARNING):
+        _save_script_json(script, output_path)
+
+    assert "Could not save script JSON" in caplog.text
+    # Clean up for pytest
+    read_only.chmod(0o755)
+
+
 def _run_cli(*args):
     """Run CLI with given args and return (stdout, exit_code)."""
     f = StringIO()
