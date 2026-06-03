@@ -1,44 +1,34 @@
-"""PDF parser wrapping Docling for text and section extraction."""
+"""PDF parser wrapping MinerU cloud API with PyMuPDF fallback."""
 from __future__ import annotations
+
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
+
 from peripatos_core.exceptions import ParseError
+from peripatos_core.mineru_client import MinerUClient, MinerUResult
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
 class ParsedPaper:
     """Result of parsing a PDF."""
     markdown: str
-    sections: list[str] = field(default_factory=list)  # section headings found
-    full_text: str = ""  # plain text fallback
+    sections: list[str] = field(default_factory=list)
+    full_text: str = ""
 
 
 class PDFParser:
-    """Parses a PDF using Docling and returns structured text."""
+    """Parses a PDF using MinerU cloud API, falling back to PyMuPDF.
 
-    def __init__(self) -> None:
-        # Docling downloads model weights on first use; DOCLING_CACHE_DIR controls location
-        self._converter = None  # lazy init to avoid slow import at module load
+    MinerU requires network access and provides high-quality extraction
+    (tables, formulas, headings). On any failure, PyMuPDF is used as
+    a lightweight fallback (text-only, no ML).
+    """
 
-    def _get_converter(self):
-        if self._converter is None:
-            try:
-                from docling.datamodel.accelerator_options import AcceleratorDevice, AcceleratorOptions
-                from docling.datamodel.base_models import InputFormat
-                from docling.datamodel.pipeline_options import PdfPipelineOptions
-                from docling.document_converter import DocumentConverter, PdfFormatOption
-                pipeline_options = PdfPipelineOptions()
-                pipeline_options.accelerator_options = AcceleratorOptions(
-                    device=AcceleratorDevice.CPU
-                )
-                self._converter = DocumentConverter(
-                    format_options={
-                        InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options),
-                    }
-                )
-            except ImportError as exc:
-                raise ParseError("docling is not installed") from exc
-        return self._converter
+    def __init__(self, mineru_token: str | None = None) -> None:
+        self._mineru_token = mineru_token if mineru_token else None
 
     def parse(self, pdf_path: Path) -> ParsedPaper:
         """Parse a PDF and return structured content.
@@ -55,18 +45,48 @@ class PDFParser:
             raise ParseError(f"Expected .pdf file, got: {pdf_path.suffix}")
 
         try:
-            converter = self._get_converter()
-            result = converter.convert(str(pdf_path))
-            doc = result.document
-            markdown = doc.export_to_markdown()
-            sections = [
-                line.lstrip("#").strip()
-                for line in markdown.splitlines()
-                if line.startswith("#")
-            ]
-            full_text = doc.export_to_text() if hasattr(doc, "export_to_text") else markdown
-            return ParsedPaper(markdown=markdown, sections=sections, full_text=full_text)
-        except ParseError:
-            raise
+            client = MinerUClient(token=self._mineru_token)
+            result = client.extract(pdf_path)
+            return ParsedPaper(
+                markdown=result.markdown,
+                sections=result.sections,
+                full_text=result.markdown,
+            )
         except Exception as exc:
-            raise ParseError(f"Docling failed to parse {pdf_path}: {exc}") from exc
+            logger.warning(
+                "MinerU API unavailable (%s), falling back to PyMuPDF. "
+                "Tables and formulas will not be extracted.",
+                exc,
+            )
+
+        return self._parse_with_pymupdf(pdf_path)
+
+    @staticmethod
+    def _parse_with_pymupdf(pdf_path: Path) -> ParsedPaper:
+        """Parse PDF using PyMuPDF (lightweight, text-only)."""
+        try:
+            import pymupdf  # type: ignore[reportMissingImports]
+        except ImportError as exc:
+            raise ParseError("PyMuPDF is not installed") from exc
+
+        try:
+            doc = pymupdf.open(str(pdf_path))
+            markdown_parts = []
+            sections = []
+            for page in doc:
+                text = page.get_text()
+                markdown_parts.append(text)
+                for line in text.splitlines():
+                    stripped = line.strip()
+                    if stripped and (stripped.isupper() or stripped.startswith("#")):
+                        sections.append(stripped.lstrip("#").strip())
+            doc.close()
+
+            markdown = "\n\n".join(markdown_parts)
+            return ParsedPaper(
+                markdown=markdown,
+                sections=sections,
+                full_text=markdown,
+            )
+        except Exception as exc:
+            raise ParseError(f"PyMuPDF failed to parse {pdf_path}: {exc}") from exc
