@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 USER_GLOBAL_CONFIG_PATH = Path.home() / ".config" / "peripatos" / "config.json"
 
-KNOWN_KEYS = {"llm", "tts", "defaults", "rag"}
+KNOWN_KEYS = {"$schema", "llm", "tts", "defaults", "rag"}
 KNOWN_LLM_KEYS = {"base_url", "api_key", "model"}
 KNOWN_RAG_KEYS = {"provider", "embedding_model", "chunk_size", "chunk_overlap", "top_k", "cache_dir"}
 KNOWN_TTS_KEYS = {"provider", "base_url", "api_key", "voice", "model", "voices"}

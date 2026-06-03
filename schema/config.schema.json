@@ -6,6 +6,10 @@
   "type": "object",
   "additionalProperties": false,
   "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference for LSP linting and autocomplete."
+    },
     "llm": {
       "type": "object",
       "description": "LLM provider configuration (OpenAI-compatible API).",
