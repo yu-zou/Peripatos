@@ -44,7 +44,7 @@ PDFParser.parse()
 ```
 
 - No `provider` field — MinerU is the only external backend
-- Token lookup order: env var `MINERU_API_TOKEN` → config `parser.mineru_token` → `None`
+- Token lookup: config `parser.mineru_token` → `None`
 - Token not set → Flash extract mode (no auth required)
 - Token set → Precision extract (auth required, higher limits)
 
@@ -90,13 +90,13 @@ markdown = "\n\n".join(markdown_parts)
 ### Error Messages
 
 - MinerU failure + PyMuPDF fallback: `WARNING: MinerU API unavailable (rate limit / network error), falling back to PyMuPDF. Tables and formulas will not be extracted.`
-- Both fail: `ParseError: All PDF parsers failed. Try network connection or check MINERU_API_TOKEN.`
+- Both fail: `ParseError: All PDF parsers failed. Check network connection or set parser.mineru_token in config.`
 
 ## Tests
 
 - Unit test: MinerU success (mocked HTTP)
 - Unit test: MinerU failure → PyMuPDF fallback (mocked HTTP + real pymupdf)
-- Unit test: Config/env token resolution priority
+- Unit test: Config token resolution (present/absent)
 - Unit test: PyMuPDF fallback alone (mineru disabled)
 - Unit test: Both fail → ParseError
-- Existing integration test: update to skip if no `MINERU_API_TOKEN` set
+- Existing integration test: update to skip if no `mineru_token` set in config
