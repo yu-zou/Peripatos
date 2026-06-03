@@ -3,10 +3,11 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
+import requests
 from pathlib import Path
 
 from peripatos_core.exceptions import ParseError
-from peripatos_core.mineru_client import MinerUClient, MinerUResult
+from peripatos_core.mineru_client import MinerUClient
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,7 @@ class PDFParser:
     """
 
     def __init__(self, mineru_token: str | None = None) -> None:
-        self._mineru_token = mineru_token if mineru_token else None
+        self._mineru_token = mineru_token
 
     def parse(self, pdf_path: Path) -> ParsedPaper:
         """Parse a PDF and return structured content.
@@ -52,7 +53,7 @@ class PDFParser:
                 sections=result.sections,
                 full_text=result.markdown,
             )
-        except Exception as exc:
+        except (requests.RequestException, RuntimeError, TimeoutError, OSError) as exc:
             logger.warning(
                 "MinerU API unavailable (%s), falling back to PyMuPDF. "
                 "Tables and formulas will not be extracted.",

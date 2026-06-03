@@ -99,7 +99,6 @@ class MinerUClient:
                    timeout: int, poll_interval: int) -> dict:
         deadline = time.time() + timeout
         while time.time() < deadline:
-            time.sleep(poll_interval)
             resp = requests.get(
                 f"{_MINERU_API_BASE}/extract/task/{task_id}",
                 headers=headers,
@@ -114,6 +113,8 @@ class MinerUClient:
             elif status in ("failed", "error"):
                 error = data.get("error", data.get("message", "Unknown error"))
                 raise RuntimeError(f"MinerU task failed: {error}")
+
+            time.sleep(poll_interval)
 
         raise TimeoutError(f"MinerU task did not complete within {timeout}s")
 
