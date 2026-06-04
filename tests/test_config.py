@@ -9,7 +9,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from peripatos_core.config import Settings, load_settings  # pyright: ignore[reportMissingImports]
+from peripatos_core.config import ParserConfig, TTSVoices, Settings, load_settings  # pyright: ignore[reportMissingImports]
 from peripatos_core.exceptions import ConfigError  # pyright: ignore[reportMissingImports]
 
 
@@ -216,9 +216,8 @@ def test_top_level_fields_preferred_defaults_deprecated():
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
         _apply_overrides(s, {"language": "zh-CN", "defaults": {"language": "en"}})
-    # defaults section is applied after top-level fields, so it overrides
-    # (this ensures backward compatibility; the deprecation warning tells users to migrate)
-    assert s.language == "en"
+    # Top-level fields take precedence over the deprecated "defaults" section
+    assert s.language == "zh-CN"
     deprecation_warnings = [x for x in w if issubclass(x.category, DeprecationWarning)]
     assert len(deprecation_warnings) >= 1
 
@@ -301,3 +300,87 @@ def test_parser_unknown_key_warns(tmp_path, monkeypatch):
         warnings.simplefilter("always")
         load_settings(config_path=cfg)
     assert any("unknown_field" in str(warning.message) for warning in w)
+
+
+# ── TTSVoices class tests ─────────────────────────────────────────────
+
+
+def test_tts_voices_get_returns_value():
+    assert TTSVoices().get("host") == ""
+    assert TTSVoices().get("interviewee") == ""
+    assert TTSVoices(host="en-US-GuyNeural").get("host") == "en-US-GuyNeural"
+    assert TTSVoices(interviewee="en-US-AriaNeural").get("interviewee") == "en-US-AriaNeural"
+    assert TTSVoices().get("nonexistent", "fallback") == "fallback"
+
+
+def test_tts_voices_contains():
+    assert "host" in TTSVoices(host="en-US-GuyNeural")
+    assert "interviewee" in TTSVoices(interviewee="en-US-AriaNeural")
+    assert "host" not in TTSVoices()
+    assert "interviewee" not in TTSVoices()
+    assert "host" not in TTSVoices(host="")
+
+
+def test_tts_voices_eq_dict():
+    assert TTSVoices(host="A", interviewee="B") == {"host": "A", "interviewee": "B"}
+    assert TTSVoices(host="A") == {"host": "A"}
+    assert TTSVoices(interviewee="B") == {"interviewee": "B"}
+    assert TTSVoices() == {}
+
+
+def test_tts_voices_eq_other_ttsvoices():
+    voices1 = TTSVoices(host="A", interviewee="B")
+    voices2 = TTSVoices(host="A", interviewee="B")
+    assert voices1 == voices2
+    assert TTSVoices() == TTSVoices()
+    assert TTSVoices(host="X") != TTSVoices(host="Y")
+
+
+def test_tts_voices_eq_non_matching():
+    assert TTSVoices().__eq__("not a dict or TTSVoices") is NotImplemented
+    assert TTSVoices().__eq__(123) is NotImplemented
+
+
+# ── Config edge cases ─────────────────────────────────────────────────
+
+
+def test_unknown_top_level_key_warns(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "peripatos_core.config.USER_GLOBAL_CONFIG_PATH", tmp_path / "nonexistent.json"
+    )
+    cfg = tmp_path / "config.json"
+    cfg.write_text(json.dumps({"fantasy_key": "some_value"}))
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        load_settings(config_path=cfg)
+    assert any("fantasy_key" in str(warning.message) for warning in w)
+
+
+def test_empty_config_file_returns_defaults(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "peripatos_core.config.USER_GLOBAL_CONFIG_PATH", tmp_path / "nonexistent.json"
+    )
+    cfg = tmp_path / "config.json"
+    cfg.write_text(json.dumps({}))
+    settings = load_settings(config_path=cfg)
+    assert settings.llm.model == "openai/gpt-4o-mini"
+    assert settings.tts.provider == "edge"
+    assert settings.archetype == "peer"
+    assert settings.language == "en"
+    assert settings.output_dir == "."
+
+
+def test_load_settings_invalid_json_raises(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "peripatos_core.config.USER_GLOBAL_CONFIG_PATH", tmp_path / "nonexistent.json"
+    )
+    cfg = tmp_path / "config.json"
+    cfg.write_text("not valid json {{{")
+    with pytest.raises(json.JSONDecodeError):
+        load_settings(config_path=cfg)
+
+
+def test_parser_config_in_settings():
+    settings = Settings()
+    assert isinstance(settings.parser, ParserConfig)
+    assert settings.parser.mineru_token == ""

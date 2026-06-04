@@ -1,5 +1,6 @@
 """Tests for PDFParser with MinerU + PyMuPDF fallback."""
 import pytest
+import requests
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -116,3 +117,63 @@ def test_both_fail_raises_parse_error(tmp_path):
         with patch.dict("sys.modules", {"pymupdf": None}):
             with pytest.raises(ParseError, match="PyMuPDF is not installed|PyMuPDF failed"):
                 parser.parse(pdf)
+
+
+def test_mineru_request_exception_falls_back(tmp_path):
+    parser = PDFParser()
+    pdf = _make_sample_pdf(tmp_path)
+
+    with patch("peripatos_core.mineru_client.MinerUClient.extract") as mock_extract:
+        mock_extract.side_effect = requests.RequestException("connection error")
+        with patch.object(PDFParser, "_parse_with_pymupdf") as mock_pymupdf:
+            mock_pymupdf.return_value = ParsedPaper(
+                markdown="fallback text", sections=[], full_text="fallback text"
+            )
+            result = parser.parse(pdf)
+
+    assert isinstance(result, ParsedPaper)
+    assert result.markdown == "fallback text"
+    mock_pymupdf.assert_called_once()
+
+
+def test_mineru_os_error_falls_back(tmp_path):
+    parser = PDFParser()
+    pdf = _make_sample_pdf(tmp_path)
+
+    with patch("peripatos_core.mineru_client.MinerUClient.extract") as mock_extract:
+        mock_extract.side_effect = OSError("file error")
+        with patch.object(PDFParser, "_parse_with_pymupdf") as mock_pymupdf:
+            mock_pymupdf.return_value = ParsedPaper(
+                markdown="fallback text", sections=[], full_text="fallback text"
+            )
+            result = parser.parse(pdf)
+
+    assert isinstance(result, ParsedPaper)
+    assert result.markdown == "fallback text"
+    mock_pymupdf.assert_called_once()
+
+
+def test_mineru_keyboard_interrupt_not_caught(tmp_path):
+    parser = PDFParser()
+    pdf = _make_sample_pdf(tmp_path)
+
+    with patch("peripatos_core.mineru_client.MinerUClient.extract") as mock_extract:
+        mock_extract.side_effect = KeyboardInterrupt
+        with pytest.raises(KeyboardInterrupt):
+            parser.parse(pdf)
+
+
+def test_parser_token_passed_to_client(tmp_path):
+    pdf = _make_sample_pdf(tmp_path)
+
+    with patch("peripatos_core.parser.MinerUClient") as MockClient:
+        mock_client = MagicMock()
+        mock_client.extract.return_value = MagicMock(
+            markdown="# Test", sections=["Test"]
+        )
+        MockClient.return_value = mock_client
+
+        parser = PDFParser(mineru_token="test-token")
+        parser.parse(pdf)
+
+        MockClient.assert_called_once_with(token="test-token")

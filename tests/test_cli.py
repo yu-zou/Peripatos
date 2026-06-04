@@ -150,3 +150,99 @@ def test_doctor_shows_config_voices(tmp_path, monkeypatch):
     assert "en-US-GuyNeural" in stdout
     assert "en-US-JennyNeural" in stdout
     assert "from config" in stdout
+
+
+def test_save_script_json_changes_mp3_suffix_to_json(tmp_path):
+    from peripatos_core.cli import _save_script_json
+    from peripatos_core.types import DialogueScript, DialogueTurn, Chapter, ArchetypeId
+
+    script = DialogueScript(
+        title="Test Paper",
+        chapters=[
+            Chapter(
+                title="Intro",
+                turns=[DialogueTurn(speaker="Host", text="Hello", archetype=ArchetypeId.PEER)],
+            )
+        ],
+        intro_turns=[],
+        outro_turns=[],
+    )
+    output_path = tmp_path / "podcast.mp3"
+    _save_script_json(script, output_path)
+
+    json_path = tmp_path / "podcast.json"
+    assert json_path.exists()
+    assert not tmp_path.joinpath("podcast.mp3.json").exists()
+
+
+def test_save_script_json_preserves_structure_with_intro_outro(tmp_path):
+    from peripatos_core.cli import _save_script_json
+    from peripatos_core.types import DialogueScript, DialogueTurn, Chapter, ArchetypeId
+    import json
+
+    script = DialogueScript(
+        title="Test Paper",
+        chapters=[
+            Chapter(
+                title="Intro",
+                turns=[DialogueTurn(speaker="Host", text="Hello", archetype=ArchetypeId.PEER)],
+            )
+        ],
+        intro_turns=[
+            DialogueTurn(speaker="Host", text="Welcome!", archetype=ArchetypeId.PEER),
+            DialogueTurn(speaker="Guest", text="Thanks!", archetype=ArchetypeId.TUTOR),
+        ],
+        outro_turns=[
+            DialogueTurn(speaker="Host", text="Goodbye!", archetype=ArchetypeId.PEER),
+        ],
+    )
+    output_path = tmp_path / "podcast.mp3"
+    _save_script_json(script, output_path)
+
+    json_path = tmp_path / "podcast.json"
+    data = json.loads(json_path.read_text())
+    assert len(data["intro_turns"]) == 2
+    assert data["intro_turns"][0]["speaker"] == "Host"
+    assert data["intro_turns"][0]["text"] == "Welcome!"
+    assert data["intro_turns"][1]["speaker"] == "Guest"
+    assert data["intro_turns"][1]["text"] == "Thanks!"
+    assert len(data["outro_turns"]) == 1
+    assert data["outro_turns"][0]["speaker"] == "Host"
+    assert data["outro_turns"][0]["text"] == "Goodbye!"
+
+
+def test_save_script_json_handles_nested_dataclass(tmp_path):
+    from peripatos_core.cli import _save_script_json
+    from peripatos_core.types import DialogueScript, DialogueTurn, Chapter, ArchetypeId
+    import json
+
+    script = DialogueScript(
+        title="Test Paper",
+        chapters=[
+            Chapter(
+                title="Discussion",
+                turns=[
+                    DialogueTurn(speaker="Host", text="Q1", archetype=ArchetypeId.PEER),
+                    DialogueTurn(speaker="Guest", text="A1", archetype=ArchetypeId.SKEPTIC),
+                ],
+            ),
+            Chapter(
+                title="Summary",
+                turns=[
+                    DialogueTurn(speaker="Host", text="Wrap up", archetype=ArchetypeId.TUTOR),
+                ],
+            ),
+        ],
+        intro_turns=[],
+        outro_turns=[],
+    )
+    output_path = tmp_path / "podcast.mp3"
+    _save_script_json(script, output_path)
+
+    json_path = tmp_path / "podcast.json"
+    data = json.loads(json_path.read_text())
+    assert len(data["chapters"]) == 2
+    assert data["chapters"][0]["title"] == "Discussion"
+    assert data["chapters"][0]["turns"][0]["archetype"] == "peer"
+    assert data["chapters"][0]["turns"][1]["archetype"] == "skeptic"
+    assert data["chapters"][1]["turns"][0]["archetype"] == "tutor"

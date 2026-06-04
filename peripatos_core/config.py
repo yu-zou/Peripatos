@@ -170,15 +170,8 @@ def _apply_overrides(settings: Settings, data: dict[str, Any]) -> None:
             else:
                 warnings.warn("tts.voices must be a dict — ignored", stacklevel=3)
 
-    # Top-level fields (preferred over nested "defaults")
-    if "archetype" in data:
-        settings.archetype = data["archetype"]
-    if "output_dir" in data:
-        settings.output_dir = data["output_dir"]
-    if "language" in data:
-        settings.language = data["language"]
-
-    # Backward compatibility: "defaults" section (deprecated)
+    # Backward compatibility: "defaults" section (deprecated, applied FIRST so
+    # top-level fields take precedence when both are present)
     if "defaults" in data:
         warnings.warn(
             "Config section 'defaults' is deprecated — use top-level 'archetype', 'output_dir', 'language' instead.",
@@ -193,6 +186,14 @@ def _apply_overrides(settings: Settings, data: dict[str, Any]) -> None:
             settings.output_dir = def_data["output_dir"]
         if "language" in def_data:
             settings.language = def_data["language"]
+
+    # Top-level fields (preferred over nested "defaults")
+    if "archetype" in data:
+        settings.archetype = data["archetype"]
+    if "output_dir" in data:
+        settings.output_dir = data["output_dir"]
+    if "language" in data:
+        settings.language = data["language"]
 
     if "parser" in data:
         parser_data = data["parser"]
