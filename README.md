@@ -34,6 +34,9 @@ Configuration is resolved in this order:
 ```json
 {
   "$schema": "https://raw.githubusercontent.com/yu-zou/Peripatos/main/schema/config.schema.json",
+  "archetype": "peer",
+  "output_dir": ".",
+  "language": "en",
   "llm": {
     "base_url": "https://router.requesty.ai/v1",
     "api_key": "",
@@ -62,8 +65,6 @@ Configuration is resolved in this order:
   }
 }
 ```
-
-> **Note:** `archetype`, `output_dir`, and `language` are set implicitly and rarely need overriding. Set them only if you want different values from the built-in defaults (`"peer"`, `"."`, and `"en"` respectively).
 
 ### Example
 
@@ -107,6 +108,9 @@ Without a token, Peripatos uses MinerU's free Flash mode. For longer papers, get
 
 | Key | Default | Description |
 |---|---|---|
+| `archetype` | `"peer"` | Dialogue style: `peer`, `skeptic`, `tutor`, or `enthusiast`. |
+| `output_dir` | `"."` | Directory for output files. |
+| `language` | `"en"` | Dialogue language: `en` (English) or `zh-CN` (Mandarin Chinese). |
 | `tts.voice` | `"en-US-AriaNeural"` (edge) / `"nova"` (openai_compatible) | Single voice for both speakers. (deprecated) |
 | `tts.voices.host` | `"en-US-GuyNeural"` (edge) / `"onyx"` (openai_compatible) | Voice for the host speaker. |
 | `tts.voices.interviewee` | `"en-US-AriaNeural"` (edge) / `"nova"` (openai_compatible) | Voice for the interviewee speaker. |
