@@ -463,7 +463,6 @@ def test_run_phase_c_single_chapter_no_transition():
 
 def test_language_instruction_zh_CN_passed_to_react_system():
     """With language='zh-CN', load_react_system receives Mandarin instruction."""
-    from peripatos_core.config import Defaults
     from peripatos_core.prompts import load_react_system as _real_load
 
     captured_kwargs: dict = {}
@@ -487,7 +486,7 @@ def test_language_instruction_zh_CN_passed_to_react_system():
         patch("peripatos_core.dialogue.VectorStore", return_value=store),
         patch("peripatos_core.dialogue.load_react_system", side_effect=_capture_load),
     ):
-        settings = Settings(defaults=Defaults(language="zh-CN"))
+        settings = Settings(language="zh-CN")
         DialogueGenerator(llm=stub, settings=settings).generate("Some paper content")
 
     assert "language_instruction" in captured_kwargs, (

@@ -41,7 +41,7 @@ def cmd_generate(args):
 
     settings = _get_settings(args.config)
     if args.language is not None:
-        settings.defaults.language = args.language
+        settings.language = args.language
 
     print(f"Fetching paper: {args.source}")
     fetcher = PaperFetcher()
@@ -82,7 +82,7 @@ def cmd_generate(args):
     tts = build_tts_provider(settings.tts)
     from peripatos_core.archetypes import ArchetypeLoader
     archetype_prompt = ArchetypeLoader().load(args.archetype)
-    voice_map = build_voice_map(settings, archetype_prompt, language=settings.defaults.language)
+    voice_map = build_voice_map(settings, archetype_prompt, language=settings.language)
     renderer = AudioRenderer(tts=tts, voice_map=voice_map)
     chapters = renderer.render(script, args.output)
 
@@ -94,7 +94,7 @@ def cmd_doctor(args):
     settings = _get_settings(args.config)
     from peripatos_core.registry import _resolve_voice_slots
 
-    host_voice, interviewee_voice, source = _resolve_voice_slots(settings, language=settings.defaults.language)
+    host_voice, interviewee_voice, source = _resolve_voice_slots(settings, language=settings.language)
     source_label = {"config": "from config", "default": "from default", "legacy": "from legacy tts.voice"}.get(source, source)
 
     print("Peripatos Doctor")
@@ -106,9 +106,9 @@ def cmd_doctor(args):
     print(f"TTS provider:  {settings.tts.provider}")
     print(f"TTS host voice:        {host_voice}  ({source_label})")
     print(f"TTS interviewee voice: {interviewee_voice}  ({source_label})")
-    print(f"Default arch:  {settings.defaults.archetype}")
-    print(f"Default lang:  {settings.defaults.language}")
-    print(f"Output dir:    {settings.defaults.output_dir}")
+    print(f"Default arch:  {settings.archetype}")
+    print(f"Default lang:  {settings.language}")
+    print(f"Output dir:    {settings.output_dir}")
     print("=" * 40)
     if not settings.llm.api_key:
         print("WARNING: llm.api_key is not set. Set it in your config file.", file=sys.stderr)

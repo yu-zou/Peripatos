@@ -22,7 +22,7 @@ def test_defaults_when_no_file(tmp_path, monkeypatch):
     assert isinstance(settings, Settings)
     assert settings.llm.model == "openai/gpt-4o-mini"
     assert settings.tts.provider == "edge"
-    assert settings.defaults.archetype == "peer"
+    assert settings.archetype == "peer"
 
 
 def test_explicit_config_overrides(tmp_path, monkeypatch):
@@ -174,18 +174,53 @@ def test_react_system_has_language_placeholder():
 
 
 def test_defaults_language_is_english_by_default():
-    from peripatos_core.config import Defaults
-
-    d = Defaults()
-    assert d.language == "en"
+    s = Settings()
+    assert s.language == "en"
 
 
-def test_config_parses_language_zh_cn():
+def test_config_parses_language_zh_cn_top_level():
     from peripatos_core.config import Settings, _apply_overrides
 
     s = Settings()
-    _apply_overrides(s, {"defaults": {"language": "zh-CN"}})
-    assert s.defaults.language == "zh-CN"
+    _apply_overrides(s, {"language": "zh-CN"})
+    assert s.language == "zh-CN"
+
+
+def test_config_parses_archetype_and_output_dir_top_level():
+    from peripatos_core.config import Settings, _apply_overrides
+
+    s = Settings()
+    _apply_overrides(s, {"archetype": "tutor", "output_dir": "/tmp"})
+    assert s.archetype == "tutor"
+    assert s.output_dir == "/tmp"
+
+
+def test_defaults_section_still_works_with_deprecation_warning():
+    from peripatos_core.config import Settings, _apply_overrides
+
+    s = Settings()
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        _apply_overrides(s, {"defaults": {"language": "zh-CN", "archetype": "skeptic"}})
+    assert s.language == "zh-CN"
+    assert s.archetype == "skeptic"
+    deprecation_warnings = [x for x in w if issubclass(x.category, DeprecationWarning)]
+    assert len(deprecation_warnings) >= 1
+    assert any("deprecated" in str(x.message) for x in deprecation_warnings)
+
+
+def test_top_level_fields_preferred_defaults_deprecated():
+    from peripatos_core.config import Settings, _apply_overrides
+
+    s = Settings()
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        _apply_overrides(s, {"language": "zh-CN", "defaults": {"language": "en"}})
+    # defaults section is applied after top-level fields, so it overrides
+    # (this ensures backward compatibility; the deprecation warning tells users to migrate)
+    assert s.language == "en"
+    deprecation_warnings = [x for x in w if issubclass(x.category, DeprecationWarning)]
+    assert len(deprecation_warnings) >= 1
 
 
 def test_get_language_instruction_zh_cn():

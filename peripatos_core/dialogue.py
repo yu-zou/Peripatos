@@ -150,7 +150,7 @@ class DialogueGenerator:
     ) -> list[dict]:
         """Run Phase A: plan chapters and questions. Returns validated chapter list."""
         prompt_template = (Path(__file__).parent / "prompts" / "host_questions.txt").read_text()
-        language_instruction = get_language_instruction(self._settings.defaults.language)
+        language_instruction = get_language_instruction(self._settings.language)
         user_prompt = (
             prompt_template
             .replace("{archetype_system_prompt}", archetype_system_prompt)
@@ -269,7 +269,7 @@ class DialogueGenerator:
 
         # Calculate pacing target based on paper length
         target_turns = _calculate_target_turns(paper_content)
-        language_instruction = get_language_instruction(self._settings.defaults.language)
+        language_instruction = get_language_instruction(self._settings.language)
 
         # Phase 0: Generate intro turns
         intro_path = Path(__file__).parent / "prompts" / "intro.txt"

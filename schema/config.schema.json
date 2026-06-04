@@ -10,6 +10,23 @@
       "type": "string",
       "description": "JSON Schema reference for LSP linting and autocomplete."
     },
+    "archetype": {
+      "type": "string",
+      "enum": ["peer", "skeptic", "tutor", "enthusiast"],
+      "default": "peer",
+      "description": "Dialogue style archetype."
+    },
+    "output_dir": {
+      "type": "string",
+      "default": ".",
+      "description": "Default output directory for generated MP3 files."
+    },
+    "language": {
+      "type": "string",
+      "enum": ["en", "zh-CN"],
+      "default": "en",
+      "description": "Dialogue language. 'en' for English, 'zh-CN' for Mandarin Chinese with English technical terms."
+    },
     "llm": {
       "type": "object",
       "description": "LLM provider configuration (OpenAI-compatible API).",
@@ -81,30 +98,6 @@
               "description": "Voice for the interviewee/expert speaker."
             }
           }
-        }
-      }
-    },
-    "defaults": {
-      "type": "object",
-      "description": "Default values for CLI commands.",
-      "additionalProperties": false,
-      "properties": {
-        "archetype": {
-          "type": "string",
-          "enum": ["peer", "skeptic", "tutor", "enthusiast"],
-          "default": "peer",
-          "description": "Dialogue style archetype."
-        },
-        "output_dir": {
-          "type": "string",
-          "default": ".",
-          "description": "Default output directory for generated MP3 files."
-        },
-        "language": {
-          "type": "string",
-          "enum": ["en", "zh-CN"],
-          "default": "en",
-          "description": "Dialogue language. 'en' for English, 'zh-CN' for Mandarin Chinese with English technical terms."
         }
       }
     },
