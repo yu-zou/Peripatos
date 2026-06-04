@@ -47,7 +47,10 @@ class PDFParser:
 
         try:
             client = MinerUClient(token=self._mineru_token)
-            result = client.extract(pdf_path)
+            if self._mineru_token:
+                result = client.extract(pdf_path)
+            else:
+                result = client.flash_extract(pdf_path)
             return ParsedPaper(
                 markdown=result.markdown,
                 sections=result.sections,

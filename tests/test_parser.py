@@ -41,20 +41,20 @@ def test_mineru_failure_falls_back_to_pymupdf(tmp_path):
     parser = PDFParser()
     pdf = _make_sample_pdf(tmp_path)
 
-    with patch("peripatos_core.mineru_client.MinerUClient.extract") as mock_extract:
-        mock_extract.side_effect = RuntimeError("API error")
+    with patch("peripatos_core.mineru_client.MinerUClient.flash_extract") as mock_flash:
+        mock_flash.side_effect = RuntimeError("API error")
         result = parser.parse(pdf)
 
     assert isinstance(result, ParsedPaper)
-    assert mock_extract.called
+    assert mock_flash.called
 
 
 def test_mineru_timeout_falls_back_to_pymupdf(tmp_path):
     parser = PDFParser()
     pdf = _make_sample_pdf(tmp_path)
 
-    with patch("peripatos_core.mineru_client.MinerUClient.extract") as mock_extract:
-        mock_extract.side_effect = TimeoutError("timed out")
+    with patch("peripatos_core.mineru_client.MinerUClient.flash_extract") as mock_flash:
+        mock_flash.side_effect = TimeoutError("timed out")
         result = parser.parse(pdf)
 
     assert isinstance(result, ParsedPaper)
@@ -78,8 +78,8 @@ def test_mineru_extracts_sections_from_result(tmp_path):
     parser = PDFParser()
     pdf = _make_sample_pdf(tmp_path)
 
-    with patch("peripatos_core.mineru_client.MinerUClient.extract") as mock_extract:
-        mock_extract.return_value = MagicMock(
+    with patch("peripatos_core.mineru_client.MinerUClient.flash_extract") as mock_flash:
+        mock_flash.return_value = MagicMock(
             markdown="# Abstract\n\nText.\n## Introduction\n\nMore.",
             sections=["Abstract", "Introduction"],
         )
@@ -157,8 +157,8 @@ def test_mineru_keyboard_interrupt_not_caught(tmp_path):
     parser = PDFParser()
     pdf = _make_sample_pdf(tmp_path)
 
-    with patch("peripatos_core.mineru_client.MinerUClient.extract") as mock_extract:
-        mock_extract.side_effect = KeyboardInterrupt
+    with patch("peripatos_core.mineru_client.MinerUClient.flash_extract") as mock_flash:
+        mock_flash.side_effect = KeyboardInterrupt
         with pytest.raises(KeyboardInterrupt):
             parser.parse(pdf)
 
@@ -177,3 +177,54 @@ def test_parser_token_passed_to_client(tmp_path):
         parser.parse(pdf)
 
         MockClient.assert_called_once_with(token="test-token")
+
+
+def test_no_token_uses_flash_extract(tmp_path):
+    parser = PDFParser()
+    pdf = _make_sample_pdf(tmp_path)
+
+    with patch("peripatos_core.mineru_client.MinerUClient.flash_extract") as mock_flash, \
+         patch("peripatos_core.mineru_client.MinerUClient.extract") as mock_extract:
+        mock_flash.return_value = MagicMock(
+            markdown="# Flash Result", sections=["Flash Result"]
+        )
+        result = parser.parse(pdf)
+
+    assert isinstance(result, ParsedPaper)
+    assert "Flash Result" in result.markdown
+    mock_flash.assert_called_once()
+    mock_extract.assert_not_called()
+
+
+def test_with_token_uses_precision_extract(tmp_path):
+    parser = PDFParser(mineru_token="test-token")
+    pdf = _make_sample_pdf(tmp_path)
+
+    with patch("peripatos_core.mineru_client.MinerUClient.flash_extract") as mock_flash, \
+         patch("peripatos_core.mineru_client.MinerUClient.extract") as mock_extract:
+        mock_extract.return_value = MagicMock(
+            markdown="# Precision Result", sections=["Precision Result"]
+        )
+        result = parser.parse(pdf)
+
+    assert isinstance(result, ParsedPaper)
+    assert "Precision Result" in result.markdown
+    mock_extract.assert_called_once()
+    mock_flash.assert_not_called()
+
+
+def test_flash_extract_failure_falls_back_to_pymupdf(tmp_path):
+    parser = PDFParser()
+    pdf = _make_sample_pdf(tmp_path)
+
+    with patch("peripatos_core.mineru_client.MinerUClient.flash_extract") as mock_flash:
+        mock_flash.side_effect = RuntimeError("Flash failure")
+        with patch.object(PDFParser, "_parse_with_pymupdf") as mock_pymupdf:
+            mock_pymupdf.return_value = ParsedPaper(
+                markdown="fallback text", sections=[], full_text="fallback text"
+            )
+            result = parser.parse(pdf)
+
+    assert isinstance(result, ParsedPaper)
+    assert result.markdown == "fallback text"
+    mock_pymupdf.assert_called_once()

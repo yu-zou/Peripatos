@@ -100,9 +100,9 @@ Peripatos parses PDFs using [MinerU](https://mineru.net)'s cloud API for high-qu
 
 | Key | Default | Description |
 |---|---|---|
-| `parser.mineru_token` | `""` | MinerU API token from [mineru.net/apiManage/token](https://mineru.net/apiManage/token). Leave empty for Flash extract (≤20 pages, ≤10MB, no auth). Set a token for Precision extract (≤600 pages, ≤200MB). |
+| `parser.mineru_token` | `""` | MinerU API token from [mineru.net/apiManage/token](https://mineru.net/apiManage/token). Leave empty for Flash extract (free, no auth, ≤20 pages, ≤10MB). Set a token for Precision extract (≤600 pages, ≤200MB, tables/formulas). Falls back to PyMuPDF if MinerU is unavailable. |
 
-Without a token, Peripatos uses MinerU's free Flash mode. For longer papers, get a free token at <https://mineru.net/apiManage/token> and add it to your config.
+Without a token, Peripatos uses MinerU's free Flash mode for fast extraction. With a token, Precision mode provides full-featured extraction (tables, formulas, structured headings). For longer papers, get a free token at <https://mineru.net/apiManage/token> and add it to your config.
 
 ### Reference
 

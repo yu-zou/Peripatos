@@ -491,3 +491,230 @@ class TestExtractSections:
     def test_markdown_with_no_headings(self):
         result = MinerUClient._extract_sections("Just plain text.\nNo headings here.", [])
         assert result == []
+
+
+class TestFlashExtract:
+    def test_flash_extract_success_immediate_response(self, tmp_path):
+        pdf = _make_sample_pdf(tmp_path)
+        client = MinerUClient()
+
+        with patch("peripatos_core.mineru_client.requests.post") as mock_post:
+            mock_resp = MagicMock()
+            mock_resp.json.return_value = {
+                "results": {
+                    "md_content": "# Flash Result\n\nContent here.",
+                    "content_list": [
+                        {"text": "Flash Result", "text_level": 1},
+                        {"text": "Content here.", "text_level": 0},
+                    ],
+                },
+            }
+            mock_post.return_value = mock_resp
+
+            result = client.flash_extract(pdf)
+
+        assert isinstance(result, MinerUResult)
+        assert "Flash Result" in result.markdown
+        assert "Content here" in result.markdown
+        assert result.sections == ["Flash Result"]
+        mock_post.assert_called_once()
+        call_kwargs = mock_post.call_args.kwargs
+        assert "Authorization" not in call_kwargs.get("headers", {})
+
+    def test_flash_extract_success_async_polling(self, tmp_path):
+        pdf = _make_sample_pdf(tmp_path)
+        client = MinerUClient()
+
+        with patch("peripatos_core.mineru_client.requests.post") as mock_post:
+            mock_post_resp = MagicMock()
+            mock_post_resp.json.return_value = {"task_id": "flash-task-1"}
+            mock_post.return_value = mock_post_resp
+
+            with patch.object(client, "_poll_flash_task", return_value={
+                "md_content": "# Async Flash\n\nPolled result.",
+                "content_list": [
+                    {"text": "Async Flash", "text_level": 1},
+                    {"text": "Polled result.", "text_level": 0},
+                ],
+            }) as mock_poll:
+                result = client.flash_extract(pdf, timeout=60, poll_interval=2)
+
+        assert isinstance(result, MinerUResult)
+        assert "Async Flash" in result.markdown
+        assert result.sections == ["Async Flash"]
+        mock_poll.assert_called_once_with("flash-task-1", 60, 2)
+
+    def test_flash_extract_no_auth_header(self, tmp_path):
+        pdf = _make_sample_pdf(tmp_path)
+        client = MinerUClient()
+
+        with patch("peripatos_core.mineru_client.requests.post") as mock_post:
+            mock_resp = MagicMock()
+            mock_resp.json.return_value = {
+                "results": {"md_content": "# No Auth", "content_list": []},
+            }
+            mock_post.return_value = mock_resp
+
+            client.flash_extract(pdf)
+
+        call_kwargs = mock_post.call_args.kwargs
+        sent_headers = call_kwargs.get("headers", {})
+        assert "Authorization" not in sent_headers
+
+    def test_flash_extract_http_error(self, tmp_path):
+        import requests as req
+        pdf = _make_sample_pdf(tmp_path)
+        client = MinerUClient()
+
+        with patch("peripatos_core.mineru_client.requests.post") as mock_post:
+            mock_resp = MagicMock()
+            mock_resp.raise_for_status.side_effect = req.HTTPError("413 Payload Too Large")
+            mock_post.return_value = mock_resp
+
+            with pytest.raises(req.HTTPError):
+                client.flash_extract(pdf)
+
+    def test_flash_extract_fallback_to_markdown_field(self, tmp_path):
+        pdf = _make_sample_pdf(tmp_path)
+        client = MinerUClient()
+
+        with patch("peripatos_core.mineru_client.requests.post") as mock_post:
+            mock_resp = MagicMock()
+            mock_resp.json.return_value = {
+                "results": {
+                    "markdown": "# Alt Field\n\nUsed markdown field.",
+                    "content_list": [
+                        {"text": "Alt Field", "text_level": 1},
+                    ],
+                },
+            }
+            mock_post.return_value = mock_resp
+
+            result = client.flash_extract(pdf)
+
+        assert "Alt Field" in result.markdown
+        assert "Used markdown field" in result.markdown
+
+    def test_flash_extract_builds_markdown_from_content_list(self, tmp_path):
+        pdf = _make_sample_pdf(tmp_path)
+        client = MinerUClient()
+
+        with patch("peripatos_core.mineru_client.requests.post") as mock_post:
+            mock_resp = MagicMock()
+            mock_resp.json.return_value = {
+                "results": {
+                    "content_list": [
+                        {"text": "Title", "text_level": 1},
+                        {"text": "Body paragraph.", "text_level": 0},
+                    ],
+                },
+            }
+            mock_post.return_value = mock_resp
+
+            result = client.flash_extract(pdf)
+
+        assert result.markdown == "# Title\n\nBody paragraph."
+        assert result.sections == ["Title"]
+
+
+class TestPollFlashTask:
+    def test_completed_immediately(self):
+        client = MinerUClient()
+        with patch("peripatos_core.mineru_client.requests.get") as mock_get:
+            mock_resp = MagicMock()
+            mock_resp.json.return_value = {
+                "status": "completed",
+                "results": {"md_content": "# Flash Done", "content_list": []},
+            }
+            mock_get.return_value = mock_resp
+
+            result = client._poll_flash_task("task-1", timeout=30, poll_interval=1)
+
+        assert result == {"md_content": "# Flash Done", "content_list": []}
+        assert mock_get.call_count == 1
+
+    def test_completed_after_polling(self):
+        client = MinerUClient()
+        with patch("peripatos_core.mineru_client.requests.get") as mock_get:
+            mock_get.side_effect = [
+                MagicMock(json=MagicMock(return_value={"status": "processing"})),
+                MagicMock(json=MagicMock(return_value={
+                    "status": "completed",
+                    "results": {"md_content": "# After Poll"},
+                })),
+            ]
+
+            with patch("peripatos_core.mineru_client.time.sleep"):
+                result = client._poll_flash_task("task-1", timeout=30, poll_interval=1)
+
+        assert result == {"md_content": "# After Poll"}
+        assert mock_get.call_count == 2
+
+    def test_failed_status(self):
+        client = MinerUClient()
+        with patch("peripatos_core.mineru_client.requests.get") as mock_get:
+            mock_resp = MagicMock()
+            mock_resp.json.return_value = {
+                "status": "failed",
+                "error": "File too large",
+            }
+            mock_get.return_value = mock_resp
+
+            with pytest.raises(RuntimeError, match="MinerU Flash task failed: File too large"):
+                client._poll_flash_task("task-1", timeout=30, poll_interval=1)
+
+    def test_error_status(self):
+        client = MinerUClient()
+        with patch("peripatos_core.mineru_client.requests.get") as mock_get:
+            mock_resp = MagicMock()
+            mock_resp.json.return_value = {
+                "status": "error",
+                "message": "Timeout",
+            }
+            mock_get.return_value = mock_resp
+
+            with pytest.raises(RuntimeError, match="MinerU Flash task failed: Timeout"):
+                client._poll_flash_task("task-1", timeout=30, poll_interval=1)
+
+    def test_timeout(self):
+        client = MinerUClient()
+        with patch("peripatos_core.mineru_client.requests.get") as mock_get:
+            mock_resp = MagicMock()
+            mock_resp.json.return_value = {"status": "processing"}
+            mock_get.return_value = mock_resp
+
+            with patch("peripatos_core.mineru_client.time.sleep"):
+                with patch("peripatos_core.mineru_client.time.time") as mock_time:
+                    mock_time.side_effect = [100.0, 135.0]
+                    with pytest.raises(TimeoutError, match="Flash task did not complete"):
+                        client._poll_flash_task("task-1", timeout=30, poll_interval=1)
+
+    def test_no_auth_headers_in_poll(self):
+        client = MinerUClient()
+        with patch("peripatos_core.mineru_client.requests.get") as mock_get:
+            mock_resp = MagicMock()
+            mock_resp.json.return_value = {
+                "status": "completed",
+                "results": {"md_content": "# Done"},
+            }
+            mock_get.return_value = mock_resp
+
+            client._poll_flash_task("task-1", timeout=30, poll_interval=1)
+
+        call_kwargs = mock_get.call_args.kwargs
+        sent_headers = call_kwargs.get("headers", {})
+        assert "Authorization" not in sent_headers
+
+    def test_nested_data_results(self):
+        client = MinerUClient()
+        with patch("peripatos_core.mineru_client.requests.get") as mock_get:
+            mock_resp = MagicMock()
+            mock_resp.json.return_value = {
+                "status": "completed",
+                "data": {"results": {"md_content": "# Nested Flash", "content_list": []}},
+            }
+            mock_get.return_value = mock_resp
+
+            result = client._poll_flash_task("task-1", timeout=30, poll_interval=1)
+
+        assert result == {"md_content": "# Nested Flash", "content_list": []}
