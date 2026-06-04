@@ -50,10 +50,6 @@ Configuration is resolved in this order:
     },
     "model": "tts-1"
   },
-  "defaults": {
-    "archetype": "peer",
-    "output_dir": "."
-  },
   "rag": {
     "embedding_model": "openai/text-embedding-3-small",
     "chunk_size": 1000,
@@ -66,6 +62,8 @@ Configuration is resolved in this order:
   }
 }
 ```
+
+> **Note:** `defaults.archetype` and `defaults.output_dir` are set implicitly and rarely need overriding. Set them only if you want different values from the built-in defaults (`"peer"` and `"."` respectively).
 
 ### Example
 
@@ -84,9 +82,6 @@ Configuration is resolved in this order:
       "host": "en-US-GuyNeural",
       "interviewee": "en-US-AriaNeural"
     }
-  },
-  "defaults": {
-    "archetype": "peer"
   },
   "parser": {
     "mineru_token": "YOUR_MINERU_TOKEN"
