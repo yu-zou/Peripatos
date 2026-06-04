@@ -18,14 +18,12 @@ logger = logging.getLogger(__name__)
 
 USER_GLOBAL_CONFIG_PATH = Path.home() / ".config" / "peripatos" / "config.json"
 
-KNOWN_KEYS = {"$schema", "llm", "tts", "rag", "parser", "archetype", "output_dir", "language", "defaults"}
+KNOWN_KEYS = {"$schema", "llm", "tts", "rag", "parser", "archetype", "output_dir", "language"}
 KNOWN_LLM_KEYS = {"base_url", "api_key", "model"}
 KNOWN_RAG_KEYS = {"provider", "embedding_model", "chunk_size", "chunk_overlap", "top_k", "cache_dir"}
 KNOWN_TTS_KEYS = {"provider", "base_url", "api_key", "voice", "model", "voices"}
 KNOWN_TTS_VOICES_KEYS = {"host", "interviewee"}
 KNOWN_PARSER_KEYS = {"mineru_token"}
-_DEPRECATED_DEFAULTS_KEYS = {"archetype", "output_dir", "language"}
-
 
 @dataclass
 class LLMConfig:
@@ -170,24 +168,7 @@ def _apply_overrides(settings: Settings, data: dict[str, Any]) -> None:
             else:
                 warnings.warn("tts.voices must be a dict — ignored", stacklevel=3)
 
-    # Backward compatibility: "defaults" section (deprecated, applied FIRST so
-    # top-level fields take precedence when both are present)
-    if "defaults" in data:
-        warnings.warn(
-            "Config section 'defaults' is deprecated — use top-level 'archetype', 'output_dir', 'language' instead.",
-            DeprecationWarning,
-            stacklevel=3,
-        )
-        def_data = data["defaults"]
-        _warn_unknown("defaults", def_data, _DEPRECATED_DEFAULTS_KEYS)
-        if "archetype" in def_data:
-            settings.archetype = def_data["archetype"]
-        if "output_dir" in def_data:
-            settings.output_dir = def_data["output_dir"]
-        if "language" in def_data:
-            settings.language = def_data["language"]
-
-    # Top-level fields (preferred over nested "defaults")
+    # Top-level fields
     if "archetype" in data:
         settings.archetype = data["archetype"]
     if "output_dir" in data:

@@ -63,7 +63,7 @@ Configuration is resolved in this order:
 }
 ```
 
-> **Note:** `defaults.archetype` and `defaults.output_dir` are set implicitly and rarely need overriding. Set them only if you want different values from the built-in defaults (`"peer"` and `"."` respectively).
+> **Note:** `archetype`, `output_dir`, and `language` are set implicitly and rarely need overriding. Set them only if you want different values from the built-in defaults (`"peer"`, `"."`, and `"en"` respectively).
 
 ### Example
 

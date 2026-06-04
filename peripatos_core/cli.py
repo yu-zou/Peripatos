@@ -145,7 +145,7 @@ def main():
     gen.add_argument("--config", "-c", type=Path, default=None,
                      help="Path to JSON config file.")
     gen.add_argument("--language", default=None,
-                     help="Dialogue language (en, zh-CN, etc). Overrides config defaults.language.")
+                     help="Dialogue language (en, zh-CN, etc). Overrides config language setting.")
     gen.set_defaults(func=cmd_generate)
 
     # doctor

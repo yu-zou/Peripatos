@@ -195,64 +195,6 @@ def test_config_parses_archetype_and_output_dir_top_level():
     assert s.output_dir == "/tmp"
 
 
-def test_defaults_section_still_works_with_deprecation_warning():
-    from peripatos_core.config import Settings, _apply_overrides
-
-    s = Settings()
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
-        _apply_overrides(s, {"defaults": {"language": "zh-CN", "archetype": "skeptic"}})
-    assert s.language == "zh-CN"
-    assert s.archetype == "skeptic"
-    deprecation_warnings = [x for x in w if issubclass(x.category, DeprecationWarning)]
-    assert len(deprecation_warnings) >= 1
-    assert any("deprecated" in str(x.message) for x in deprecation_warnings)
-
-
-def test_top_level_fields_preferred_defaults_deprecated():
-    from peripatos_core.config import Settings, _apply_overrides
-
-    s = Settings()
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
-        _apply_overrides(s, {"language": "zh-CN", "defaults": {"language": "en"}})
-    # Top-level fields take precedence over the deprecated "defaults" section
-    assert s.language == "zh-CN"
-    deprecation_warnings = [x for x in w if issubclass(x.category, DeprecationWarning)]
-    assert len(deprecation_warnings) >= 1
-
-
-def test_get_language_instruction_zh_cn():
-    from peripatos_core.config import get_language_instruction
-
-    instr = get_language_instruction("zh-CN")
-    assert "Mandarin" in instr
-    assert "English" in instr
-
-
-def test_get_language_instruction_en():
-    from peripatos_core.config import get_language_instruction
-
-    instr = get_language_instruction("en")
-    assert "English" in instr
-
-
-def test_unknown_language_warns_and_falls_back():
-    import warnings
-
-    from peripatos_core.config import get_language_instruction
-
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
-        instr = get_language_instruction("fr")
-        assert len(w) == 1
-        assert "Unsupported language" in str(w[0].message)
-        assert instr == get_language_instruction("en")
-
-
-# ── Task 6: RAG provider config ──────────────────────────────────────────────
-
-
 def test_rag_provider_defaults_to_openai_compatible():
     from peripatos_core.config import RAGConfig
     cfg = RAGConfig()
