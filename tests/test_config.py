@@ -326,3 +326,20 @@ def test_parser_config_in_settings():
     settings = Settings()
     assert isinstance(settings.parser, ParserConfig)
     assert settings.parser.mineru_token == ""
+
+
+def test_defaults_section_ignored_with_deprecation_warning(tmp_path, monkeypatch):
+    """The 'defaults' section is no longer functional — emits DeprecationWarning and ignores its values."""
+    from peripatos_core.config import Settings, _apply_overrides
+
+    s = Settings()
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        _apply_overrides(s, {"defaults": {"language": "zh-CN", "archetype": "skeptic"}})
+    # Values from "defaults" are NOT applied (section is ignored)
+    assert s.language == "en"
+    assert s.archetype == "peer"
+    # A DeprecationWarning is emitted
+    deprecation_warnings = [x for x in w if issubclass(x.category, DeprecationWarning)]
+    assert len(deprecation_warnings) >= 1
+    assert any("defaults" in str(x.message) for x in deprecation_warnings)

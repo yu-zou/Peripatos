@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 USER_GLOBAL_CONFIG_PATH = Path.home() / ".config" / "peripatos" / "config.json"
 
-KNOWN_KEYS = {"$schema", "llm", "tts", "rag", "parser", "archetype", "output_dir", "language"}
+KNOWN_KEYS = {"$schema", "llm", "tts", "rag", "parser", "archetype", "output_dir", "language", "defaults"}
 KNOWN_LLM_KEYS = {"base_url", "api_key", "model"}
 KNOWN_RAG_KEYS = {"provider", "embedding_model", "chunk_size", "chunk_overlap", "top_k", "cache_dir"}
 KNOWN_TTS_KEYS = {"provider", "base_url", "api_key", "voice", "model", "voices"}
@@ -167,6 +167,15 @@ def _apply_overrides(settings: Settings, data: dict[str, Any]) -> None:
                         setattr(settings.tts.voices, vk, voices_data[vk])
             else:
                 warnings.warn("tts.voices must be a dict — ignored", stacklevel=3)
+
+    # Silently ignore "defaults" section (removed; top-level fields are used instead)
+    if "defaults" in data:
+        warnings.warn(
+            "Config section 'defaults' is no longer supported — "
+            "use top-level 'archetype', 'output_dir', 'language' instead.",
+            DeprecationWarning,
+            stacklevel=3,
+        )
 
     # Top-level fields
     if "archetype" in data:
