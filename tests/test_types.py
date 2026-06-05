@@ -1,5 +1,6 @@
 """Tests for core type definitions."""
 # pyright: reportMissingImports=false, reportUnknownVariableType=false, reportUnknownMemberType=false
+import warnings
 from pathlib import Path
 
 from peripatos_core.types import (
@@ -28,7 +29,9 @@ def test_dialogue_turn():
 
 def test_dialogue_script_default_empty():
     script = DialogueScript(title="Test Paper")
-    assert script.turns == []
+    with warnings.catch_warnings(record=True):
+        warnings.simplefilter("always")
+        assert script.turns == []
 
 
 def test_audio_segment():

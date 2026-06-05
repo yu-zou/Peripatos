@@ -290,7 +290,6 @@ def test_stream_true_passthrough():
         URL,
         body=b"chunk1chunk2",
         status=200,
-        stream=True,
     )
 
     resp = _call(stream=True)

@@ -17,5 +17,6 @@ class StubTTSProvider(TTSProvider):
         silence = PydubAudioSegment.silent(duration=100, frame_rate=44100)
         tmp = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
         tmp.close()
-        silence.export(tmp.name, format="mp3")
+        with silence.export(tmp.name, format="mp3"):
+            pass
         return Path(tmp.name)

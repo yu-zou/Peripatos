@@ -106,9 +106,9 @@ def test_react_agent_happy_path():
 
     assert isinstance(script, DialogueScript)
     assert script.title == "Test Paper"
-    assert len(script.turns) == 1
-    assert script.turns[0].speaker == "Host"
-    assert script.turns[0].text == "Hello"
+    assert len(script.chapters[0].turns) == 1
+    assert script.chapters[0].turns[0].speaker == "Host"
+    assert script.chapters[0].turns[0].text == "Hello"
     assert llm.tool_calls_seen == 2
 
 
@@ -134,7 +134,7 @@ def test_react_agent_iteration_cap_warns_and_returns_partial_script():
         script = agent.run("system", "user")
 
     assert script.title == "Untitled"
-    assert len(script.turns) == MAX_ITERATIONS
+    assert len(script.chapters[0].turns) == MAX_ITERATIONS
     assert llm.tool_calls_seen == MAX_ITERATIONS
 
 
@@ -265,7 +265,7 @@ def test_legacy_run_agent_strips_focused_placeholders():
 
     system_message = llm.messages_seen[0][0].content or ""
     assert isinstance(result, DialogueScript)
-    assert result.turns[0].text == "Legacy answer"
+    assert result.chapters[0].turns[0].text == "Legacy answer"
     assert "{chapter_title}" not in system_message
     assert "{question}" not in system_message
 

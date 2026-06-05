@@ -116,7 +116,8 @@ class AudioRenderer:
         tmp = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
         tmp.close()
         final_path = Path(tmp.name)
-        final_audio.export(str(final_path), format="mp3")
+        with final_audio.export(str(final_path), format="mp3"):
+            pass
 
         self._write_with_chapters(final_path, output_path, script.title, all_chapter_marks)
         return all_chapter_marks
