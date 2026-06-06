@@ -49,7 +49,9 @@ markers = [
 ]
 testpaths = ["tests"]
 filterwarnings = [
-    "ignore:builtin type.*has no __module__:DeprecationWarning",
+    "ignore:builtin type swigvarlink has no __module__:DeprecationWarning",
+    "ignore:builtin type SwigPyObject has no __module__:DeprecationWarning",
+    "ignore:builtin type SwigPyPacked has no __module__:DeprecationWarning",
     "ignore::DeprecationWarning:responses",
 ]
 

@@ -68,8 +68,12 @@ class PDFParser:
     @staticmethod
     def _parse_with_pymupdf(pdf_path: Path) -> ParsedPaper:
         """Parse PDF using PyMuPDF (lightweight, text-only)."""
+        import warnings
+
         try:
-            import pymupdf  # type: ignore[reportMissingImports]
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", message="builtin type.*has no __module__")
+                import pymupdf  # type: ignore[reportMissingImports]
         except ImportError as exc:
             raise ParseError("PyMuPDF is not installed") from exc
 
