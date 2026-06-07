@@ -72,7 +72,11 @@ class PDFParser:
 
         try:
             with warnings.catch_warnings():
-                warnings.filterwarnings("ignore", message="builtin type.*has no __module__")
+                warnings.filterwarnings(
+                    "ignore",
+                    message=r"builtin type \w+ has no __module__",
+                    category=DeprecationWarning,
+                )
                 import pymupdf  # type: ignore[reportMissingImports]
         except ImportError as exc:
             raise ParseError("PyMuPDF is not installed") from exc

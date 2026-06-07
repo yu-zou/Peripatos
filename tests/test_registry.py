@@ -192,7 +192,13 @@ class TestLanguageAwareDefaults:
     def test_partial_config_with_zh_CN_fills_gap_from_language_defaults(self):
         """Host set explicitly, interviewee falls back to zh-CN default."""
         s = make_settings(voices={"host": "en-US-GuyNeural"})
-        h, i, src = _resolve_voice_slots(s, language="zh-CN")
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            h, i, src = _resolve_voice_slots(s, language="zh-CN")
         assert h == "en-US-GuyNeural"
         assert i == "zh-CN-XiaoxiaoNeural"
         assert src == "config"
+        mismatch_warnings = [
+            x for x in caught if "zh-CN but TTS voice is English" in str(x.message)
+        ]
+        assert len(mismatch_warnings) == 1

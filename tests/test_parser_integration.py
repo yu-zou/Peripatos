@@ -11,15 +11,9 @@ Uses a minimal valid PDF fixture.
 Note: To test MinerU Precision extract with a token, add
 `parser.mineru_token` to your config.test.json.
 """
-import os
 from pathlib import Path
 
 import pytest
-
-pytestmark = pytest.mark.skipif(
-    os.environ.get("RUN_INTEGRATION") != "1",
-    reason="set RUN_INTEGRATION=1 to enable integration tests",
-)
 
 
 @pytest.fixture(scope="module")

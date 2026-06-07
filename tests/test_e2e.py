@@ -1,29 +1,17 @@
 """Real-LLM end-to-end test.
 
-Requires ``RUN_INTEGRATION=1`` and ``Peripatos/config.test.json`` present.
-NOT mocked — performs live arxiv fetch, real LLM call, real TTS, real MP3 generation.
-
-The config.test.json should include a ``parser.mineru_token`` field for
-MinerU Precision extract (≤600 pages). Without it, the parser uses Flash
-mode (≤20 pages) or falls back to PyMuPDF.
+NOT mocked — performs live LLM call, real TTS, real MP3 generation.
+Requires config.test.json with a valid LLM API key and TTS configuration.
+The parser uses MinerU Flash mode (no token) or falls back to PyMuPDF.
 """
 # pyright: reportMissingImports=false
 from __future__ import annotations
 
-import os
 import subprocess
 from pathlib import Path
 
 import pytest
 from mutagen.id3 import ID3
-
-pytestmark = [
-    pytest.mark.integration,
-    pytest.mark.skipif(
-        os.environ.get("RUN_INTEGRATION") != "1",
-        reason="set RUN_INTEGRATION=1 to enable integration tests",
-    ),
-]
 
 
 def test_e2e_arxiv_2303_08774_real_llm(tmp_path: Path, config_test_json_path: Path) -> None:
@@ -42,7 +30,7 @@ def test_e2e_arxiv_2303_08774_real_llm(tmp_path: Path, config_test_json_path: Pa
         ],
         capture_output=True,
         text=True,
-        timeout=600,
+        timeout=900,
         check=False,
     )
 
@@ -115,7 +103,7 @@ def test_e2e_html_url_real_llm(tmp_path: Path, config_test_json_path: Path) -> N
         ],
         capture_output=True,
         text=True,
-        timeout=300,
+        timeout=600,
         check=False,
     )
 
@@ -143,16 +131,15 @@ def test_e2e_markdown_file_real_llm(tmp_path: Path, config_test_json_path: Path)
     """Full pipeline: read Markdown file → LLM dialogue → TTS → MP3 with chapters."""
     md_path = tmp_path / "paper.md"
     md_path.write_text(
-        """# Attention Is All You Need
-
-## Abstract
-The dominant sequence transduction models are based on complex recurrent or convolutional neural networks.
-We propose a new simple network architecture, the Transformer, based solely on attention mechanisms.
-
-## Introduction
-Recurrent neural networks, long short-term memory and gated recurrent neural networks in particular,
-have been firmly established as state of the art approaches in sequence modeling and transduction problems.
-"""
+        "# Attention Is All You Need\n"
+        "\n"
+        "## Abstract\n"
+        "The dominant sequence transduction models are based on complex recurrent or "
+        "convolutional neural networks. We propose the Transformer.\n"
+        "\n"
+        "## Introduction\n"
+        "Recurrent neural networks have been the standard approach. The Transformer "
+        "dispenses with recurrence entirely and relies on self-attention.\n"
     )
 
     output_mp3 = tmp_path / "test_e2e_markdown.mp3"
@@ -169,7 +156,7 @@ have been firmly established as state of the art approaches in sequence modeling
         ],
         capture_output=True,
         text=True,
-        timeout=300,
+        timeout=600,
         check=False,
     )
 
