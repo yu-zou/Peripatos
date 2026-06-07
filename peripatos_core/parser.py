@@ -51,10 +51,16 @@ class PDFParser:
                 result = client.extract(pdf_path)
             else:
                 result = client.flash_extract(pdf_path)
-            return ParsedPaper(
-                markdown=result.markdown,
-                sections=result.sections,
-                full_text=result.markdown,
+            if result.markdown:
+                return ParsedPaper(
+                    markdown=result.markdown,
+                    sections=result.sections,
+                    full_text=result.markdown,
+                )
+            # MinerU returned empty content — fall back to PyMuPDF
+            logger.warning(
+                "MinerU returned empty result, falling back to PyMuPDF. "
+                "Tables and formulas will not be extracted."
             )
         except (requests.RequestException, RuntimeError, TimeoutError, OSError) as exc:
             logger.warning(
@@ -62,7 +68,6 @@ class PDFParser:
                 "Tables and formulas will not be extracted.",
                 exc,
             )
-
         return self._parse_with_pymupdf(pdf_path)
 
     @staticmethod

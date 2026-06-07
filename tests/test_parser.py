@@ -94,8 +94,8 @@ def test_pymupdf_fallback_extracts_text(tmp_path):
     parser = PDFParser()
     pdf = _make_sample_pdf(tmp_path)
 
-    with patch("peripatos_core.mineru_client.MinerUClient.extract") as mock_extract:
-        mock_extract.side_effect = RuntimeError("API down")
+    with patch("peripatos_core.mineru_client.MinerUClient.flash_extract") as mock_flash:
+        mock_flash.side_effect = RuntimeError("API down")
         with patch.object(PDFParser, "_parse_with_pymupdf") as mock_pymupdf:
             mock_pymupdf.return_value = ParsedPaper(
                 markdown="fallback text", sections=[], full_text="fallback text"
@@ -112,8 +112,8 @@ def test_both_fail_raises_parse_error(tmp_path):
     parser = PDFParser()
     pdf = _make_sample_pdf(tmp_path)
 
-    with patch("peripatos_core.mineru_client.MinerUClient.extract") as mock_mineru:
-        mock_mineru.side_effect = RuntimeError("API down")
+    with patch("peripatos_core.mineru_client.MinerUClient.flash_extract") as mock_flash:
+        mock_flash.side_effect = RuntimeError("API down")
         with patch.dict("sys.modules", {"pymupdf": None}):
             with pytest.raises(ParseError, match="PyMuPDF is not installed|PyMuPDF failed"):
                 parser.parse(pdf)
@@ -123,8 +123,8 @@ def test_mineru_request_exception_falls_back(tmp_path):
     parser = PDFParser()
     pdf = _make_sample_pdf(tmp_path)
 
-    with patch("peripatos_core.mineru_client.MinerUClient.extract") as mock_extract:
-        mock_extract.side_effect = requests.RequestException("connection error")
+    with patch("peripatos_core.mineru_client.MinerUClient.flash_extract") as mock_flash:
+        mock_flash.side_effect = requests.RequestException("connection error")
         with patch.object(PDFParser, "_parse_with_pymupdf") as mock_pymupdf:
             mock_pymupdf.return_value = ParsedPaper(
                 markdown="fallback text", sections=[], full_text="fallback text"
@@ -140,8 +140,8 @@ def test_mineru_os_error_falls_back(tmp_path):
     parser = PDFParser()
     pdf = _make_sample_pdf(tmp_path)
 
-    with patch("peripatos_core.mineru_client.MinerUClient.extract") as mock_extract:
-        mock_extract.side_effect = OSError("file error")
+    with patch("peripatos_core.mineru_client.MinerUClient.flash_extract") as mock_flash:
+        mock_flash.side_effect = OSError("file error")
         with patch.object(PDFParser, "_parse_with_pymupdf") as mock_pymupdf:
             mock_pymupdf.return_value = ParsedPaper(
                 markdown="fallback text", sections=[], full_text="fallback text"

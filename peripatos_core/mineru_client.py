@@ -1,8 +1,11 @@
 """MinerU cloud API client for PDF parsing."""
 from __future__ import annotations
 
+import io
+import json
 import logging
 import time
+import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -10,7 +13,8 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-_MINERU_API_BASE = "https://mineru.net/api/v4"
+_FLASH_API_BASE = "https://mineru.net/api/v1/agent"
+_PRECISION_API_BASE = "https://mineru.net/api/v4"
 
 
 @dataclass
@@ -22,15 +26,24 @@ class MinerUResult:
 class MinerUClient:
     """HTTP client for the MinerU cloud API (mineru.net).
 
-    Workflow:
-    1. Upload file -> get file_id
-    2. Submit extract task -> get task_id
-    3. Poll task status -> completed
-    4. Fetch results -> markdown + content_list
+    Two modes:
+    - Flash Extract: no auth, <=10MB/20 pages, uses /api/v1/agent/
+    - Precision Extract: auth required, <=200MB/200 pages, uses /api/v4/
     """
 
     def __init__(self, token: str | None = None) -> None:
         self._token = token
+
+    def _headers(self) -> dict[str, str]:
+        headers = {"Accept": "application/json"}
+        if self._token:
+            headers["Authorization"] = f"Bearer {self._token}"
+        return headers
+
+    @staticmethod
+    def _check_api_error(data: dict) -> None:
+        if data.get("code") != 0:
+            raise RuntimeError(f"MinerU API error: {data.get('msg', 'Unknown error')}")
 
     def extract(self, pdf_path: Path, timeout: int = 300, poll_interval: int = 5) -> MinerUResult:
         """Precision Extract — auth required, full features (tables, formulas).
@@ -46,30 +59,48 @@ class MinerUClient:
             MinerUResult with markdown and extracted sections.
 
         Raises:
-            requests.HTTPError, RuntimeError, TimeoutError on failure.
+            RuntimeError, TimeoutError on failure.
         """
+        if not self._token:
+            raise RuntimeError("Precision Extract requires an API token")
+
         headers = self._headers()
 
-        file_id = self._upload_file(pdf_path, headers)
+        resp = requests.post(
+            f"{_PRECISION_API_BASE}/file-urls/batch",
+            headers=headers,
+            json={"files": [{"name": pdf_path.name}], "model_version": "vlm"},
+            timeout=60,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        self._check_api_error(data)
 
-        task_id = self._submit_task(file_id, headers)
+        batch_data = data.get("data", {})
+        batch_id = batch_data.get("batch_id")
+        file_urls = batch_data.get("file_urls", [])
 
-        results = self._poll_task(task_id, headers, timeout, poll_interval)
+        if not file_urls:
+            raise RuntimeError("No upload URL returned from batch file-urls endpoint")
 
-        markdown = results.get("md_content", "")
-        content_list = results.get("content_list", [])
+        self._upload_file_to_url(file_urls[0], pdf_path)
 
-        if not markdown and content_list:
-            markdown = self._content_list_to_markdown(content_list)
+        result_data = self._poll_batch(batch_id, headers, timeout, poll_interval)
 
-        sections = self._extract_sections(markdown, content_list)
+        full_zip_url = result_data.get("full_zip_url")
+        if not full_zip_url:
+            raise RuntimeError("No full_zip_url in batch result")
+
+        markdown, content_list = self._download_and_extract_zip(full_zip_url, headers)
+
+        sections = self._extract_sections_from_markdown(markdown, content_list)
         return MinerUResult(markdown=markdown, sections=sections)
 
     def flash_extract(self, pdf_path: Path, timeout: int = 300,
                       poll_interval: int = 5) -> MinerUResult:
-        """Flash Extract — no auth needed, fast, ≤10MB/20 pages.
+        """Flash Extract — no auth needed, fast, <=10MB/20 pages.
 
-        Uploads the file directly to /extract/flash and polls for results.
+        Uploads the file via the agent parse flow (init -> upload -> poll -> download).
         No API token required.
 
         Args:
@@ -81,128 +112,123 @@ class MinerUClient:
             MinerUResult with markdown and extracted sections.
 
         Raises:
-            requests.HTTPError, RuntimeError, TimeoutError on failure.
+            RuntimeError, TimeoutError on failure.
         """
-        with open(pdf_path, "rb") as f:
-            resp = requests.post(
-                f"{_MINERU_API_BASE}/extract/flash",
-                files={"file": (pdf_path.name, f, "application/pdf")},
-                data={"language": "en"},
-                headers={"Accept": "application/json"},
-                timeout=60,
-            )
+        resp = requests.post(
+            f"{_FLASH_API_BASE}/parse/file",
+            json={"file_name": pdf_path.name},
+            headers={"Accept": "application/json"},
+            timeout=60,
+        )
         resp.raise_for_status()
         data = resp.json()
+        self._check_api_error(data)
 
-        task_id = data.get("task_id") or data.get("id") or data.get("data", {}).get("task_id")
+        task_data = data.get("data", {})
+        task_id = task_data.get("task_id")
+        file_url = task_data.get("file_url")
 
-        if task_id:
-            results = self._poll_flash_task(task_id, timeout, poll_interval)
-        else:
-            results = data.get("results") or data.get("data", {}).get("results", data)
+        if not file_url:
+            raise RuntimeError("No upload URL returned from parse/file endpoint")
 
-        markdown = results.get("md_content", "") or results.get("markdown", "") or ""
-        content_list = results.get("content_list", [])
+        self._upload_file_to_url(file_url, pdf_path)
 
-        if not markdown and content_list:
-            markdown = self._content_list_to_markdown(content_list)
+        markdown_url = self._poll_flash_task(task_id, timeout, poll_interval)
 
-        sections = self._extract_sections(markdown, content_list)
+        markdown = self._download_markdown(markdown_url)
+
+        sections = self._extract_sections_from_markdown(markdown, [])
         return MinerUResult(markdown=markdown, sections=sections)
 
-    def _poll_flash_task(self, task_id: str, timeout: int,
-                         poll_interval: int) -> dict:
-        """Poll a Flash extract task (no auth headers)."""
+    @staticmethod
+    def _upload_file_to_url(upload_url: str, pdf_path: Path) -> None:
+        with open(pdf_path, "rb") as f:
+            resp = requests.put(upload_url, data=f.read(), timeout=120)
+        resp.raise_for_status()
+
+    def _poll_batch(self, batch_id: str, headers: dict[str, str],
+                    timeout: int, poll_interval: int) -> dict:
         deadline = time.time() + timeout
         while time.time() < deadline:
             resp = requests.get(
-                f"{_MINERU_API_BASE}/extract/task/{task_id}",
+                f"{_PRECISION_API_BASE}/extract-results/batch/{batch_id}",
+                headers=headers,
+                timeout=30,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            self._check_api_error(data)
+
+            batch_data = data.get("data", {})
+            extract_results = batch_data.get("extract_result", [])
+
+            if extract_results:
+                result = extract_results[0]
+                state = result.get("state", "")
+
+                if state == "done":
+                    return result
+                elif state == "failed":
+                    error = result.get("err_msg", batch_data.get("err_msg", "Unknown error"))
+                    raise RuntimeError(f"MinerU Precision task failed: {error}")
+
+            time.sleep(poll_interval)
+
+        raise TimeoutError(f"MinerU Precision task did not complete within {timeout}s")
+
+    def _poll_flash_task(self, task_id: str, timeout: int,
+                         poll_interval: int) -> str:
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            resp = requests.get(
+                f"{_FLASH_API_BASE}/parse/{task_id}",
                 headers={"Accept": "application/json"},
                 timeout=30,
             )
             resp.raise_for_status()
             data = resp.json()
-            status = data.get("status", "")
+            self._check_api_error(data)
 
-            if status == "completed":
-                return data.get("results") or data.get("data", {}).get("results", {})
-            elif status in ("failed", "error"):
-                error = data.get("error", data.get("message", "Unknown error"))
+            task_data = data.get("data", {})
+            state = task_data.get("state", "")
+
+            if state == "done":
+                markdown_url = task_data.get("markdown_url")
+                if not markdown_url:
+                    raise RuntimeError("Task completed but no markdown_url returned")
+                return markdown_url
+            elif state == "failed":
+                error = task_data.get("err_msg", "Unknown error")
                 raise RuntimeError(f"MinerU Flash task failed: {error}")
 
             time.sleep(poll_interval)
 
         raise TimeoutError(f"MinerU Flash task did not complete within {timeout}s")
 
-    def _headers(self) -> dict[str, str]:
-        headers = {"Accept": "application/json"}
-        if self._token:
-            headers["Authorization"] = f"Bearer {self._token}"
-        return headers
-
-    def _upload_file(self, pdf_path: Path, headers: dict[str, str]) -> str:
-        with open(pdf_path, "rb") as f:
-            resp = requests.post(
-                f"{_MINERU_API_BASE}/file-urls",
-                headers=headers,
-                files={"file": (pdf_path.name, f, "application/pdf")},
-                timeout=60,
-            )
+    @staticmethod
+    def _download_markdown(url: str) -> str:
+        resp = requests.get(url, timeout=60)
         resp.raise_for_status()
-        data = resp.json()
-        return data.get("file_id") or data.get("id") or data.get("data", {}).get("file_id")
-
-    def _submit_task(self, file_id: str, headers: dict[str, str]) -> str:
-        resp = requests.post(
-            f"{_MINERU_API_BASE}/extract/task",
-            headers=headers,
-            json={
-                "file_id": file_id,
-                "model_version": "pipeline",
-            },
-            timeout=60,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        return data.get("task_id") or data.get("id") or data.get("data", {}).get("task_id")
-
-    def _poll_task(self, task_id: str, headers: dict[str, str],
-                   timeout: int, poll_interval: int) -> dict:
-        deadline = time.time() + timeout
-        while time.time() < deadline:
-            resp = requests.get(
-                f"{_MINERU_API_BASE}/extract/task/{task_id}",
-                headers=headers,
-                timeout=30,
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            status = data.get("status", "")
-
-            if status == "completed":
-                return data.get("results") or data.get("data", {}).get("results", {})
-            elif status in ("failed", "error"):
-                error = data.get("error", data.get("message", "Unknown error"))
-                raise RuntimeError(f"MinerU task failed: {error}")
-
-            time.sleep(poll_interval)
-
-        raise TimeoutError(f"MinerU task did not complete within {timeout}s")
+        return resp.text
 
     @staticmethod
-    def _content_list_to_markdown(content_list: list[dict]) -> str:
-        parts = []
-        for item in content_list:
-            text = item.get("text", "")
-            level = item.get("text_level", 0)
-            if level > 0:
-                parts.append(f"{'#' * level} {text}")
-            elif text:
-                parts.append(text)
-        return "\n\n".join(parts)
+    def _download_and_extract_zip(zip_url: str, headers: dict[str, str]) -> tuple[str, list]:
+        resp = requests.get(zip_url, headers=headers, timeout=120)
+        resp.raise_for_status()
+
+        markdown = ""
+        content_list = []
+
+        with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
+            if "full.md" in zf.namelist():
+                markdown = zf.read("full.md").decode("utf-8")
+            if "content_list.json" in zf.namelist():
+                content_list = json.loads(zf.read("content_list.json").decode("utf-8"))
+
+        return markdown, content_list
 
     @staticmethod
-    def _extract_sections(markdown: str, content_list: list[dict]) -> list[str]:
+    def _extract_sections_from_markdown(markdown: str, content_list: list) -> list[str]:
         if content_list:
             sections = [
                 item["text"] for item in content_list
