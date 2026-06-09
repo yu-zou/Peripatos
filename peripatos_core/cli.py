@@ -40,6 +40,11 @@ def cmd_generate(args):
     from peripatos_core.registry import build_llm_provider, build_tts_provider, build_voice_map
 
     settings = _get_settings(args.config)
+    effective_archetype = args.archetype or settings.archetype
+    if args.config:
+        print(f"Using config: {args.config}")
+    else:
+        print("Using default config")
     if args.language is not None:
         settings.language = args.language
 
@@ -64,12 +69,12 @@ def cmd_generate(args):
     else:
         paper_content = fetched_path.read_text(encoding="utf-8", errors="ignore")
 
-    print(f"Generating dialogue (archetype={args.archetype})")
+    print(f"Generating dialogue (archetype={effective_archetype})")
     llm = build_llm_provider(settings.llm)
     gen = DialogueGenerator(llm=llm, settings=settings)
     script = gen.generate(
         paper_content=paper_content,
-        archetype=args.archetype,
+        archetype=effective_archetype,
         title=metadata.title,
         metadata=metadata,
     )
@@ -81,7 +86,7 @@ def cmd_generate(args):
     print("Synthesizing audio")
     tts = build_tts_provider(settings.tts)
     from peripatos_core.archetypes import ArchetypeLoader
-    archetype_prompt = ArchetypeLoader().load(args.archetype)
+    archetype_prompt = ArchetypeLoader().load(effective_archetype)
     voice_map = build_voice_map(settings, archetype_prompt, language=settings.language)
     renderer = AudioRenderer(tts=tts, voice_map=voice_map)
     chapters = renderer.render(script, args.output)
@@ -140,8 +145,8 @@ def main():
                      help="ArXiv ID, ArXiv URL, PDF URL, local PDF path, HTML URL, or local .md/.txt file.")
     gen.add_argument("--output", "-o", type=Path, default=Path("output.mp3"),
                      help="Output MP3 file path.")
-    gen.add_argument("--archetype", "-a", default="peer",
-                     help="Dialogue archetype: peer, skeptic, tutor, enthusiast.")
+    gen.add_argument("--archetype", "-a", default=None,
+                     help="Dialogue archetype: peer, skeptic, tutor, enthusiast. Defaults to config value.")
     gen.add_argument("--config", "-c", type=Path, default=None,
                      help="Path to JSON config file.")
     gen.add_argument("--language", default=None,
