@@ -74,17 +74,35 @@ def _run_single_question_state(
         messages.append(response)
 
         if not response.tool_calls:
-            break
+            if state.finalized:
+                break
+            messages.append(AgentMessage(
+                role="user",
+                content="Please use the available tools (search, draft_turn, finalize) to complete the task. Do not reply with plain text.",
+            ))
+            continue
 
         for tool_call in response.tool_calls:
             if (
-                tool_call.name == "draft_turn"
+                tool_call.name in ("draft_turn", "default_draft_turn")
                 and max_turns is not None
                 and len(state.drafted_turns) >= max_turns
             ):
                 result_str = f"max turns reached ({max_turns})"
             else:
-                result_str = dispatcher[tool_call.name](**tool_call.arguments)
+                tool_name = tool_call.name
+                if tool_name.startswith("default_") and tool_name not in dispatcher:
+                    tool_name = tool_name[len("default_"):]
+                if tool_name not in dispatcher:
+                    result_str = (
+                        f"Error: unknown tool '{tool_name}'. "
+                        f"Available tools: {', '.join(sorted(dispatcher.keys()))}."
+                    )
+                else:
+                    try:
+                        result_str = dispatcher[tool_name](**tool_call.arguments)
+                    except TypeError as e:
+                        result_str = f"Error: {e}. Please provide all required parameters."
             messages.append(
                 AgentMessage(
                     role="tool",

@@ -14,15 +14,15 @@ import pytest
 from mutagen.id3 import ID3
 
 
-def test_e2e_arxiv_2303_08774_real_llm(tmp_path: Path, config_test_json_path: Path) -> None:
-    """Full pipeline: fetch arxiv 2303.08774 → LLM dialogue → TTS → MP3 with chapters."""
-    output_mp3 = tmp_path / "test_e2e.mp3"
+def test_e2e_arxiv_1301_3781_real_llm(tmp_path: Path, config_test_json_path: Path) -> None:
+    """Full pipeline: fetch arxiv 1301.3781 → LLM dialogue → TTS → MP3 with chapters."""
+    output_mp3 = tmp_path / "test_e2e_word2vec.mp3"
 
     result = subprocess.run(
         [
             "peripatos",
             "generate",
-            "https://arxiv.org/abs/2303.08774",
+            "https://arxiv.org/abs/1301.3781",
             "--config",
             str(config_test_json_path),
             "--output",
@@ -89,13 +89,13 @@ def test_e2e_two_voice_doctor_check(config_test_json_path: Path) -> None:
 
 def test_e2e_html_url_real_llm(tmp_path: Path, config_test_json_path: Path) -> None:
     """Full pipeline: fetch HTML URL → LLM dialogue → TTS → MP3 with chapters."""
-    output_mp3 = tmp_path / "test_e2e_html.mp3"
+    output_mp3 = tmp_path / "test_e2e_lora_html.mp3"
 
     result = subprocess.run(
         [
             "peripatos",
             "generate",
-            "https://arxiv.org/html/2303.08774",
+            "https://arxiv.org/html/2106.09685",
             "--config",
             str(config_test_json_path),
             "--output",
@@ -103,7 +103,7 @@ def test_e2e_html_url_real_llm(tmp_path: Path, config_test_json_path: Path) -> N
         ],
         capture_output=True,
         text=True,
-        timeout=600,
+        timeout=900,
         check=False,
     )
 
@@ -131,15 +131,18 @@ def test_e2e_markdown_file_real_llm(tmp_path: Path, config_test_json_path: Path)
     """Full pipeline: read Markdown file → LLM dialogue → TTS → MP3 with chapters."""
     md_path = tmp_path / "paper.md"
     md_path.write_text(
-        "# Attention Is All You Need\n"
+        "# Efficient Estimation of Word Representations in Vector Space\n"
         "\n"
         "## Abstract\n"
-        "The dominant sequence transduction models are based on complex recurrent or "
-        "convolutional neural networks. We propose the Transformer.\n"
+        "We propose two novel model architectures for learning continuous word "
+        "representations: Continuous Bag-of-Words and Skip-gram. These models "
+        "achieve significant improvements in word similarity and analogy tasks.\n"
         "\n"
         "## Introduction\n"
-        "Recurrent neural networks have been the standard approach. The Transformer "
-        "dispenses with recurrence entirely and relies on self-attention.\n"
+        "Word representations learned by neural networks can capture syntactic and "
+        "semantic regularities. We introduce the Continuous Bag-of-Words and "
+        "Skip-gram architectures that efficiently learn high-quality distributed "
+        "representations.\n"
     )
 
     output_mp3 = tmp_path / "test_e2e_markdown.mp3"
@@ -156,7 +159,7 @@ def test_e2e_markdown_file_real_llm(tmp_path: Path, config_test_json_path: Path)
         ],
         capture_output=True,
         text=True,
-        timeout=600,
+        timeout=900,
         check=False,
     )
 

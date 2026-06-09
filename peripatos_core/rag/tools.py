@@ -56,13 +56,19 @@ def build_tools(
         return f"ok, {len(state.drafted_turns)} turns drafted so far"
 
     def finalize(title: str) -> str:
+        if len(state.drafted_turns) == 0:
+            return "Error: You must draft at least one turn with draft_turn before finalizing."
         state.title = title
         state.finalized = True
         return "finalized"
 
     def _wrap(fn):
         def handler(**kwargs):
-            return fn(**kwargs)
+            try:
+                return fn(**kwargs)
+            except TypeError as e:
+                # LLM omitted a required parameter — inform it rather than crash
+                return f"Error: {e}. Please provide all required parameters."
         return handler
 
     specs: list[ToolSpec] = [

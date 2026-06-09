@@ -139,6 +139,7 @@ def test_react_agent_iteration_cap_warns_and_returns_partial_script():
 
 
 def test_react_agent_empty_turns_raises_agent_error():
+    """Calling finalize with zero drafted turns should fail, not silently produce empty output."""
     llm = CyclingStubLLMProvider(
         [
             AgentMessage(
@@ -156,8 +157,54 @@ def test_react_agent_empty_turns_raises_agent_error():
     )
     agent = make_agent(llm)
 
-    with pytest.raises(AgentError, match="agent produced no turns"):
-        agent.run("system", "user")
+    import warnings
+    with warnings.catch_warnings(record=True):
+        with pytest.raises(AgentError, match="agent produced no turns"):
+            agent.run("system", "user")
+
+
+def test_finalize_rejects_empty_turns():
+    """finalize tool should return error message when no turns drafted."""
+    from peripatos_core.rag.tools import build_tools
+
+    specs, dispatcher, state = build_tools(
+        cast(Any, EmptyStore()), cast(Any, EmptyEmbedder()), top_k=4
+    )
+    result = dispatcher["finalize"](title="Empty Script")
+    assert result.startswith("Error:")
+    assert state.finalized is False
+    assert state.title is None
+
+
+def test_text_only_response_triggers_nudge():
+    """When LLM responds with text only (no tool calls), agent should nudge it to use tools."""
+    llm = CyclingStubLLMProvider(
+        [
+            AgentMessage(role="assistant", content="Let me think about this."),
+            AgentMessage(
+                role="assistant",
+                content=None,
+                tool_calls=[
+                    ToolCall(
+                        id="1",
+                        name="draft_turn",
+                        arguments={"speaker": "Host", "text": "Hello"},
+                    ),
+                    ToolCall(
+                        id="2",
+                        name="finalize",
+                        arguments={"title": "Test"},
+                    ),
+                ],
+            ),
+        ]
+    )
+    agent = make_agent(llm)
+
+    script = agent.run("system", "user")
+    assert len(script.chapters[0].turns) == 1
+    assert script.chapters[0].turns[0].speaker == "Host"
+    assert script.title == "Test"
 
 
 def test_per_question_two_questions():

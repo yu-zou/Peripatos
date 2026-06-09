@@ -133,11 +133,15 @@ class AudioRenderer:
 
     def _synthesize_segment(self, turn: DialogueTurn) -> AudioSegment:
         """Synthesize a single dialogue turn."""
+        import time
+
         voice = self._voice_map.get(turn.speaker)
         try:
             audio_path = self._tts.synthesize(turn.text, speaker_voice=voice)
         except Exception as exc:
             raise TTSError(f"TTS failed for turn ({turn.speaker}): {exc}") from exc
+        # Small delay between TTS calls to avoid edge-tts rate limiting
+        time.sleep(0.5)
         duration_s = self._get_duration(audio_path)
         return AudioSegment(
             speaker=turn.speaker, text=turn.text,
