@@ -85,6 +85,8 @@ def test_build_voice_map_default():
     vm = build_voice_map(s, FakeArchetype())
     assert vm["Alex"] == "en-US-GuyNeural"
     assert vm["Dr."] == "en-US-AriaNeural"
+    assert vm["Host"] == "en-US-GuyNeural"
+    assert vm["Host"] == vm["Alex"]
 
 
 def test_build_voice_map_config_override():

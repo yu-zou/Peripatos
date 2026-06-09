@@ -111,6 +111,7 @@ def build_voice_map(settings: "Settings", archetype_prompt: Any, language: str =
     """
     host_voice, interviewee_voice, _ = _resolve_voice_slots(settings, language=language)
     return {
+        "Host": host_voice,
         archetype_prompt.host_name: host_voice,
         archetype_prompt.guest_name: interviewee_voice,
     }
