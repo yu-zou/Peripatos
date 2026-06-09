@@ -17,7 +17,7 @@ from peripatos_core.registry import (  # pyright: ignore
 
 class FakeArchetype:
     host_name = "Alex"
-    guest_name = "Dr. Chen"
+    guest_name = "Dr."
 
 
 def make_settings(**tts_kwargs) -> Settings:
@@ -84,14 +84,14 @@ def test_build_voice_map_default():
     s = make_settings()
     vm = build_voice_map(s, FakeArchetype())
     assert vm["Alex"] == "en-US-GuyNeural"
-    assert vm["Dr. Chen"] == "en-US-AriaNeural"
+    assert vm["Dr."] == "en-US-AriaNeural"
 
 
 def test_build_voice_map_config_override():
     s = make_settings(voices={"host": "en-US-GuyNeural", "interviewee": "en-US-JennyNeural"})
     vm = build_voice_map(s, FakeArchetype())
     assert vm["Alex"] == "en-US-GuyNeural"
-    assert vm["Dr. Chen"] == "en-US-JennyNeural"
+    assert vm["Dr."] == "en-US-JennyNeural"
 
 
 # ── Language-aware voice defaults ──────────────────────────────
@@ -179,7 +179,7 @@ class TestLanguageAwareDefaults:
         s = make_settings()
         vm = build_voice_map(s, FakeArchetype(), language="zh-CN")
         assert vm["Alex"] == "zh-CN-YunxiNeural"
-        assert vm["Dr. Chen"] == "zh-CN-XiaoxiaoNeural"
+        assert vm["Dr."] == "zh-CN-XiaoxiaoNeural"
 
     def test_default_edge_en_explicit_language_same_as_before(self):
         """Backward compat: _resolve_voice_slots defaults (no language arg) → English."""
