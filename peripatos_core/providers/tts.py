@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 # Retry with backoff to handle this transient failure.
 _EDGE_TTS_MAX_RETRIES = 5
 _EDGE_TTS_RETRY_DELAY = 2.0  # seconds, doubles per attempt
+_EDGE_TTS_CIRCUIT_BREAKER_THRESHOLD = 3  # after N consecutive failures, fail fast
 
 
 class TTSProvider(ABC):
@@ -31,10 +32,20 @@ class EdgeTTSProvider(TTSProvider):
 
     def __init__(self, config: TTSConfig) -> None:
         self._voice = config.voice
+        self._consecutive_failures = 0
 
     def synthesize(self, text: str, speaker_voice: str | None = None) -> Path:
         from peripatos_core.exceptions import TTSError
         import edge_tts
+
+        # Circuit breaker: if we've had N consecutive failures across calls,
+        # the TTS service is likely down or rate-limiting — fail fast.
+        if self._consecutive_failures >= _EDGE_TTS_CIRCUIT_BREAKER_THRESHOLD:
+            raise TTSError(
+                f"edge-tts circuit breaker open — {_EDGE_TTS_CIRCUIT_BREAKER_THRESHOLD} "
+                f"consecutive synthesis failures. The TTS service is likely unavailable "
+                f"or rate-limiting. Wait before retrying."
+            )
 
         voice = speaker_voice or self._voice
         last_exc: Exception | None = None
@@ -59,6 +70,8 @@ class EdgeTTSProvider(TTSProvider):
                 # Verify we actually got audio content
                 if output_path.stat().st_size == 0:
                     raise TTSError("edge-tts returned empty audio file")
+                # Success — reset circuit breaker
+                self._consecutive_failures = 0
                 return output_path
             except Exception as exc:
                 last_exc = exc
@@ -76,6 +89,8 @@ class EdgeTTSProvider(TTSProvider):
                         _EDGE_TTS_MAX_RETRIES, exc,
                     )
 
+        # All retries failed — increment circuit breaker
+        self._consecutive_failures += 1
         raise TTSError(f"edge-tts synthesis failed after {_EDGE_TTS_MAX_RETRIES} retries: {last_exc}") from last_exc
 
 
