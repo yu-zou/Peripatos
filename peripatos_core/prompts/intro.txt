@@ -14,9 +14,10 @@ Source: {paper_origin}
 Generate exactly 2-3 turns of introductory dialogue:
 1. Welcome the listener to the podcast
 2. Briefly introduce the paper topic and why it matters
-3. Introduce the guest expert (the paper's authors/researchers)
+3. Introduce the guest expert — do NOT use or infer the real author's name. Refer to the guest only as "Dr." or "our expert guest"
+4. Never reveal, guess, or use real author names from the paper. The guest is always "Dr." or "our expert guest" — never any actual researcher name.
 
-Format: Each turn should be a DialogueTurn with speaker="Host" and text=the spoken content.
-Output as JSON array: [{"speaker": "Host", "text": "..."}, ...]
+Format: Each turn should be a DialogueTurn with speaker="{host_name}" and text=the spoken content.
+Output as JSON array: [{"speaker": "{host_name}", "text": "..."}, ...]
 
 Keep it conversational, warm, and engaging. Don't dive into technical details yet.

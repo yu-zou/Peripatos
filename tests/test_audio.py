@@ -2,6 +2,7 @@
 import pytest
 import importlib
 from pathlib import Path
+from pydub import AudioSegment as PydubAudioSegment
 from peripatos_core.audio import AudioRenderer
 from peripatos_core.providers.tts_stub import StubTTSProvider
 from peripatos_core.types import (
@@ -429,3 +430,31 @@ def test_intro_outro_with_multichapter(tmp_path):
     assert marks[1].title == "Methodology"
     assert marks[2].title == "Results"
     assert marks[3].title == "Outro"
+
+
+def test_concatenate_segments_no_crossfade(tmp_path):
+    """Verify _concatenate_segments does not lose duration from crossfade overlap."""
+    renderer = AudioRenderer(tts=StubTTSProvider())
+
+    # Create two audio segments of known duration
+    seg1 = PydubAudioSegment.silent(duration=200, frame_rate=44100)
+    seg2 = PydubAudioSegment.silent(duration=200, frame_rate=44100)
+    path1 = tmp_path / "seg1.mp3"
+    path2 = tmp_path / "seg2.mp3"
+    seg1.export(str(path1), format="mp3")
+    seg2.export(str(path2), format="mp3")
+
+    segments = [
+        AudioSegment(speaker="Host", text="turn 1", audio_path=path1, duration_s=0.2),
+        AudioSegment(speaker="Guest", text="turn 2", audio_path=path2, duration_s=0.2),
+    ]
+
+    combined = renderer._concatenate_segments(segments)
+    combined_duration_ms = len(combined)
+
+    # With crossfade=0, duration should be approximately 200+200=400ms
+    # Default crossfade=100 would give ~300ms (200+200-100)
+    # Use generous tolerance for MP3 encoding overhead
+    assert combined_duration_ms >= 390, (
+        f"Expected ~400ms, got {combined_duration_ms}ms — crossfade overlap suspected"
+    )

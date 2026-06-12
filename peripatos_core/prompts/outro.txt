@@ -11,7 +11,7 @@ Generate exactly 1-2 turns of concluding dialogue:
 1. Summarize the key takeaways from the discussion
 2. Thank the guest and sign off
 
-Format: Each turn should be a DialogueTurn with speaker="Host" and text=the spoken content.
-Output as JSON array: [{"speaker": "Host", "text": "..."}, ...]
+Format: Each turn should be a DialogueTurn with speaker="{host_name}" and text=the spoken content.
+Output as JSON array: [{"speaker": "{host_name}", "text": "..."}, ...]
 
 Keep it warm and conversational.

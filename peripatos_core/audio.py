@@ -182,7 +182,7 @@ class AudioRenderer:
             for seg in segments[1:]:
                 try:
                     chunk = PydubAudioSegment.from_mp3(str(seg.audio_path))
-                    combined = combined.append(chunk)
+                    combined = combined.append(chunk, crossfade=0)
                 except Exception as exc:
                     logger.warning("Could not load %s, skipping: %s", seg.audio_path, exc)
         except Exception as exc:

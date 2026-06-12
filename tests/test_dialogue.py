@@ -699,3 +699,67 @@ def test_target_turns_scales_with_paper_length():
     assert "target_turns" in captured_kwargs
     # 6000 words / 300 * 2 = 40 → max 40
     assert captured_kwargs["target_turns"] == "40"
+
+
+# ---------------------------------------------------------------------------
+# Task 2: JSON-wrapped transition / LaTeX parsing
+# ---------------------------------------------------------------------------
+
+
+def test_phase_c_parses_json_transition():
+    """Transition text wrapped in JSON object should be extracted."""
+    llm = Mock(spec=LLMProvider)
+    llm.complete.return_value = '{"transition": "Now let\'s move to the next topic."}'
+    gen = DialogueGenerator(llm=llm, settings=Settings())
+
+    chapters = [
+        Chapter(title="Ch1", turns=[DialogueTurn(speaker="Host", text="Hello", archetype=ArchetypeId.PEER)]),
+        Chapter(title="Ch2", turns=[DialogueTurn(speaker="Guest", text="Hi", archetype=ArchetypeId.PEER)]),
+    ]
+
+    result = gen._run_phase_c(chapters)
+    assert result[1].transition_in_text == "Now let's move to the next topic."
+    assert not result[1].transition_in_text.startswith("{")
+
+
+def test_phase_c_parses_json_latex():
+    """LaTeX conversion wrapped in JSON object should be extracted."""
+    llm = Mock(spec=LLMProvider)
+    llm.complete.side_effect = [
+        "A smooth transition.",
+        '{"text": "x squared equals the sum of squares"}',
+    ]
+    gen = DialogueGenerator(llm=llm, settings=Settings())
+
+    chapters = [
+        Chapter(title="Ch1", turns=[DialogueTurn(speaker="Host", text="Hello", archetype=ArchetypeId.PEER)]),
+        Chapter(
+            title="Ch2",
+            turns=[DialogueTurn(speaker="Host", text="Consider $x^2$ for this.", archetype=ArchetypeId.PEER)],
+        ),
+    ]
+
+    result = gen._run_phase_c(chapters)
+    assert result[1].turns[0].text == "x squared equals the sum of squares"
+    assert not result[1].turns[0].text.startswith("{")
+
+
+# ---------------------------------------------------------------------------
+# Task 3: Intro/outro host_name consistency tests
+# ---------------------------------------------------------------------------
+
+
+def test_intro_prompt_includes_host_name():
+    """Intro prompt template should include {host_name} and it should be replaced."""
+    _, stub, _, _ = _generate_with_mocks()
+    intro_system, intro_user = stub.complete_calls[0]
+    assert "{host_name}" not in intro_user, "Template placeholder {host_name} should be replaced"
+    assert "Alex" in intro_user
+
+
+def test_outro_prompt_includes_host_name():
+    """Outro prompt template should include {host_name} and it should be replaced."""
+    _, stub, _, _ = _generate_with_mocks()
+    outro_system, outro_user = stub.complete_calls[-1]
+    assert "{host_name}" not in outro_user, "Template placeholder {host_name} should be replaced"
+    assert "Alex" in outro_user

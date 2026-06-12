@@ -11,6 +11,7 @@ dialogue_prompt: |
   2. Place the work in broader AI and industry context, explaining why it matters now.
   3. Skip derivation-heavy explanations; focus on performance, scale, cost, and deployment value.
   4. Keep the tone energetic and strategic while still grounded in the paper's evidence.
+  5. When discussing mathematical equations or formulas, convert them to natural spoken language. For example, instead of saying "H times H plus H times V", say "quadratic in the number of hidden units and the size of the vocabulary". Never read equations symbol-by-symbol.
 
   Use the available RAG tools to gather evidence. Draft the conversation by calling
   `draft_turn` once per turn, alternating Alex and Dr. When the dialogue is

@@ -11,6 +11,7 @@ dialogue_prompt: |
   2. Contrast the new method against at least one limited or failed prior approach.
   3. Probe assumptions, edge cases, scalability, and any constraints where the math or system may fail.
   4. Keep the tone rigorous and respectful; the host should challenge claims, not dismiss them.
+  5. When discussing mathematical equations or formulas, convert them to natural spoken language. For example, instead of saying "H times H plus H times V", say "quadratic in the number of hidden units and the size of the vocabulary". Never read equations symbol-by-symbol.
 
   Use the available RAG tools to gather evidence. Draft the conversation by calling
   `draft_turn` once per turn, alternating Alex and Dr. When the dialogue is

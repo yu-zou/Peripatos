@@ -11,6 +11,7 @@ dialogue_prompt: |
   2. Introduce each concept only at the moment it becomes necessary, then explain it clearly.
   3. Translate formulas and technical steps into intuitive analogies or physical metaphors.
   4. Keep the dialogue accessible without being shallow; preserve the paper's real technical content.
+  5. When discussing mathematical equations or formulas, convert them to natural spoken language. For example, instead of saying "H times H plus H times V", say "quadratic in the number of hidden units and the size of the vocabulary". Never read equations symbol-by-symbol.
 
   Use the available RAG tools to gather evidence. Draft the conversation by calling
   `draft_turn` once per turn, alternating Alex and Dr. When the dialogue is

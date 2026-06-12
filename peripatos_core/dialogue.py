@@ -48,6 +48,25 @@ def _contains_latex(text: str) -> bool:
     return bool(_LATEX_PATTERNS.search(text))
 
 
+def _extract_text_from_json(raw: str) -> str:
+    """If the LLM wrapped its response in a JSON object, extract the string value.
+
+    The LLM provider forces response_format=json_object, so plain-text requests
+    may come back as {"transition": "..."} or {"text": "..."}.
+    """
+    raw = raw.strip()
+    if raw.startswith("{") and raw.endswith("}"):
+        try:
+            parsed = json.loads(raw)
+            if isinstance(parsed, dict):
+                for val in parsed.values():
+                    if isinstance(val, str):
+                        return val
+        except json.JSONDecodeError:
+            pass
+    return raw
+
+
 # Phase C prompt sections loaded once at module import.
 _SYNTHESIS_RAW = (Path(__file__).parent / "prompts" / "synthesis.txt").read_text()
 _sections = _SYNTHESIS_RAW.split("# --- LaTeX Conversion ---")
@@ -200,7 +219,7 @@ class DialogueGenerator:
                 system_prompt="You are a podcast host creating natural transitions between chapters.",
                 user_prompt=user_prompt,
             )
-            transition = raw.strip().strip('"').strip("'")
+            transition = _extract_text_from_json(raw).strip('"').strip("'")
             if len(transition) > 200:
                 transition = transition[:197] + "..."
             curr.transition_in_text = transition
@@ -213,7 +232,7 @@ class DialogueGenerator:
                         system_prompt="You are an expert at converting mathematical notation to spoken English. Output ONLY the converted text.",
                         user_prompt=user_prompt,
                     )
-                    turn.text = raw.strip().strip('"').strip("'")
+                    turn.text = _extract_text_from_json(raw).strip('"').strip("'")
 
         return chapters
 
@@ -280,6 +299,7 @@ class DialogueGenerator:
             .replace("{paper_origin}", effective_origin)
             .replace("{archetype_system_prompt}", prompt_data.system_prompt)
             .replace("{language_instruction}", language_instruction)
+            .replace("{host_name}", prompt_data.host_name)
         )
         intro_response = self._llm.complete(
             system_prompt="Generate podcast intro turns as JSON array.",
@@ -333,6 +353,7 @@ class DialogueGenerator:
             outro_template
             .replace("{paper_title}", effective_title)
             .replace("{language_instruction}", language_instruction)
+            .replace("{host_name}", prompt_data.host_name)
         )
         outro_response = self._llm.complete(
             system_prompt="Generate podcast outro turns as JSON array.",

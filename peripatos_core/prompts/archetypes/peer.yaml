@@ -12,6 +12,7 @@ dialogue_prompt: |
   2. Use formal mathematical terminology and precise technical wording; do not translate formulas into analogies.
   3. Focus on the paper's core derivation, algorithmic steps, and implementation details with exactness.
   4. Maintain a peer-to-peer tone that emphasizes technical nuance, not hype or broad framing.
+  5. When discussing mathematical equations or formulas, describe them in terms of what they represent and how they relate, rather than reading notation aloud. Say "the loss function scales quadratically with the number of hidden units" rather than "H squared plus HV".
 
   Use the available RAG tools to gather evidence. Draft the conversation by calling
   `draft_turn` once per turn, alternating Alex and Dr. When the dialogue is
