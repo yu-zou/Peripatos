@@ -8,6 +8,8 @@ def load_react_system(
     archetype_prompt: str, title: str, origin: str, sections: str,
     language_instruction: str = "",
     target_turns: str = "",
+    host_name: str = "Host",
+    guest_name: str = "Guest",
 ) -> str:
     """Load and format the ReAct system prompt template."""
     template_path = _PROMPTS_DIR / "react_system.txt"
@@ -21,4 +23,6 @@ def load_react_system(
         section_overview=sections,
         language_instruction=language_instruction,
         target_turns=target_turns,
+        host_name=host_name,
+        guest_name=guest_name,
     )

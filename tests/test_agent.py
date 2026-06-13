@@ -82,7 +82,7 @@ def test_react_agent_happy_path():
                     ToolCall(
                         id="1",
                         name="draft_turn",
-                        arguments={"speaker": "Host", "text": "Hello"},
+                        arguments={"speaker": "Guest", "text": "Hello"},
                     )
                 ],
             ),
@@ -107,7 +107,7 @@ def test_react_agent_happy_path():
     assert isinstance(script, DialogueScript)
     assert script.title == "Test Paper"
     assert len(script.chapters[0].turns) == 1
-    assert script.chapters[0].turns[0].speaker == "Host"
+    assert script.chapters[0].turns[0].speaker == "Guest"
     assert script.chapters[0].turns[0].text == "Hello"
     assert llm.tool_calls_seen == 2
 
@@ -188,7 +188,7 @@ def test_text_only_response_triggers_nudge():
                     ToolCall(
                         id="1",
                         name="draft_turn",
-                        arguments={"speaker": "Host", "text": "Hello"},
+                        arguments={"speaker": "Guest", "text": "Hello"},
                     ),
                     ToolCall(
                         id="2",
@@ -203,7 +203,7 @@ def test_text_only_response_triggers_nudge():
 
     script = agent.run("system", "user")
     assert len(script.chapters[0].turns) == 1
-    assert script.chapters[0].turns[0].speaker == "Host"
+    assert script.chapters[0].turns[0].speaker == "Guest"
     assert script.title == "Test"
 
 
@@ -385,3 +385,84 @@ def test_per_question_max_turns():
         "Turn 4",
         "Turn 5",
     ]
+
+
+def test_finalize_rejects_dialogue_ending_with_host():
+    """finalize() should reject if the last speaker is the host (question unanswered)."""
+    from peripatos_core.rag.tools import build_tools
+
+    specs, dispatcher, state = build_tools(
+        cast(Any, EmptyStore()), cast(Any, EmptyEmbedder()), top_k=4,
+        guest_name="Dr.",
+    )
+    dispatcher["draft_turn"](speaker="Alex", text="What is this?")
+    dispatcher["draft_turn"](speaker="Dr.", text="It's a thing.")
+    dispatcher["draft_turn"](speaker="Alex", text="And what about that?")
+
+    result = dispatcher["finalize"](title="Test")
+
+    assert "last turn" in result.lower() or "answer" in result.lower()
+    assert "Dr." in result
+    assert state.finalized is False
+
+
+def test_finalize_accepts_dialogue_ending_with_guest():
+    """finalize() should accept if the last speaker is the guest (answer present)."""
+    from peripatos_core.rag.tools import build_tools
+
+    specs, dispatcher, state = build_tools(
+        cast(Any, EmptyStore()), cast(Any, EmptyEmbedder()), top_k=4,
+        guest_name="Dr.",
+    )
+    dispatcher["draft_turn"](speaker="Alex", text="What is this?")
+    dispatcher["draft_turn"](speaker="Dr.", text="It's a thing.")
+
+    result = dispatcher["finalize"](title="Test")
+
+    assert result == "finalized"
+    assert state.finalized is True
+
+
+def test_run_single_question_extends_past_max_turns_for_guest_answer():
+    """When max_turns hits after a host question, include the guest's answer."""
+    from peripatos_core.rag.agent import _run_single_question
+
+    llm = CyclingStubLLMProvider(
+        [
+            AgentMessage(
+                role="assistant",
+                content=None,
+                tool_calls=[
+                    draft_call("1", "Alex", "Q1?"),
+                    draft_call("2", "Dr.", "A1."),
+                    draft_call("3", "Alex", "Q2?"),
+                    draft_call("4", "Dr.", "A2."),
+                    draft_call("5", "Alex", "Q3?"),
+                ],
+            ),
+            AgentMessage(
+                role="assistant",
+                content=None,
+                tool_calls=[
+                    draft_call("6", "Dr.", "A3."),
+                    finalize_call("final"),
+                ],
+            ),
+        ]
+    )
+
+    turns = _run_single_question(
+        llm=llm,
+        store=cast(Any, EmptyStore()),
+        embedder=cast(Any, EmptyEmbedder()),
+        system_prompt="test",
+        user_prompt="test",
+        top_k=4,
+        max_turns=5,
+        guest_name="Dr.",
+    )
+
+    # The last turn should be Dr. (guest), not Alex (host)
+    assert turns[-1].speaker == "Dr."
+    assert turns[-1].text == "A3."
+    assert len(turns) == 6  # 5 truncated + 1 guest answer

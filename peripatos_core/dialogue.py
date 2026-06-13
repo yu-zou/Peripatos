@@ -321,6 +321,8 @@ class DialogueGenerator:
             sections=section_overview,
             language_instruction=language_instruction,
             target_turns=str(target_turns),
+            host_name=prompt_data.host_name,
+            guest_name=prompt_data.guest_name,
         )
 
         all_chapters: list[Chapter] = []
@@ -336,6 +338,7 @@ class DialogueGenerator:
                 chapter_title=chapter_title,
                 top_k=rag.top_k,
                 archetype=archetype_id,
+                guest_name=prompt_data.guest_name,
             )
 
             chapter_turns: list[DialogueTurn] = []

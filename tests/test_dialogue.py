@@ -41,6 +41,7 @@ class PipelineStubLLMProvider(StubLLMProvider):
         self._tool_response_count += 1
         if self._tool_response_count % 2 == 1:
             turn_no = (self._tool_response_count + 1) // 2
+            # Use "Dr." (the PEER archetype's guest_name) so finalize validation passes
             return AgentMessage(
                 role="assistant",
                 content=None,
@@ -49,7 +50,7 @@ class PipelineStubLLMProvider(StubLLMProvider):
                         id=f"draft-{turn_no}",
                         name="draft_turn",
                         arguments={
-                            "speaker": "Host",
+                            "speaker": "Dr.",
                             "text": f"Content-based answer {turn_no}",
                         },
                     )

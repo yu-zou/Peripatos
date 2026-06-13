@@ -33,3 +33,24 @@ def test_host_questions_has_pacing():
     text = p.read_text()
     assert "{question_count}" in text
     assert "conversational" in text.lower() or "pacing" in text.lower()
+
+
+def test_react_system_includes_host_and_guest_names():
+    """load_react_system should replace {host_name} and {guest_name} in template."""
+    from peripatos_core.prompts import load_react_system
+    result = load_react_system(
+        archetype_prompt="test",
+        title="Test Paper",
+        origin="test",
+        sections="Sections",
+        language_instruction="Respond in English",
+        target_turns="10",
+        host_name="Alex",
+        guest_name="Dr.",
+    )
+    assert "Alex" in result
+    assert "Dr." in result
+    assert "{host_name}" not in result
+    assert "{guest_name}" not in result
+    # The old hardcoded names should not appear
+    assert "Host/Interviewee" not in result

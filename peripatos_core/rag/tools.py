@@ -25,6 +25,7 @@ def build_tools(
     embedder: "Embedder",
     top_k: int,
     archetype: ArchetypeId = ArchetypeId.PEER,
+    guest_name: str = "Guest",
 ) -> tuple[list[ToolSpec], dict[str, Callable], AgentState]:
     state = AgentState()
 
@@ -58,6 +59,13 @@ def build_tools(
     def finalize(title: str) -> str:
         if len(state.drafted_turns) == 0:
             return "Error: You must draft at least one turn with draft_turn before finalizing."
+        last_speaker = state.drafted_turns[-1].speaker
+        if last_speaker != guest_name:
+            return (
+                f"Error: The last turn must be an answer from {guest_name}. "
+                f"The last turn is from {last_speaker}. "
+                f"Please draft one more turn as {guest_name} answering the question."
+            )
         state.title = title
         state.finalized = True
         return "finalized"

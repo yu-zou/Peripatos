@@ -56,6 +56,7 @@ def _run_single_question_state(
     top_k: int,
     archetype: ArchetypeId | str = ArchetypeId.PEER,
     max_turns: int | None = None,
+    guest_name: str = "Guest",
 ) -> AgentState:
     archetype_id = _normalize_archetype(archetype)
     specs, dispatcher, state = build_tools(
@@ -63,6 +64,7 @@ def _run_single_question_state(
         embedder,
         top_k,
         archetype_id,
+        guest_name=guest_name,
     )
     messages = [
         AgentMessage(role="system", content=system_prompt),
@@ -83,10 +85,21 @@ def _run_single_question_state(
             continue
 
         for tool_call in response.tool_calls:
+            # Allow one extra turn past max_turns if the last turn was the host
+            # asking a question — the guest needs to answer.
+            extended_max = max_turns
+            if (
+                max_turns is not None
+                and len(state.drafted_turns) >= max_turns
+                and state.drafted_turns
+                and state.drafted_turns[-1].speaker != guest_name
+            ):
+                extended_max = max_turns + 1
+
             if (
                 tool_call.name in ("draft_turn", "default_draft_turn")
-                and max_turns is not None
-                and len(state.drafted_turns) >= max_turns
+                and extended_max is not None
+                and len(state.drafted_turns) >= extended_max
             ):
                 result_str = f"max turns reached ({max_turns})"
             else:
@@ -111,10 +124,16 @@ def _run_single_question_state(
                 )
             )
 
-        if state.finalized or (
-            max_turns is not None and len(state.drafted_turns) >= max_turns
-        ):
+        if state.finalized:
             break
+        if max_turns is not None and len(state.drafted_turns) >= max_turns:
+            # Don't stop mid-exchange: if the last turn is the host asking
+            # a question, allow one more turn so the guest can answer.
+            if (
+                state.drafted_turns
+                and state.drafted_turns[-1].speaker == guest_name
+            ) or not state.drafted_turns:
+                break
     else:
         warnings.warn(
             f"ReAct iteration cap reached ({MAX_ITERATIONS})",
@@ -137,6 +156,7 @@ def _run_single_question(
     top_k: int,
     archetype: ArchetypeId | str = ArchetypeId.PEER,
     max_turns: int = 5,
+    guest_name: str = "Guest",
 ) -> list[DialogueTurn]:
     state = _run_single_question_state(
         llm=llm,
@@ -147,8 +167,22 @@ def _run_single_question(
         top_k=top_k,
         archetype=archetype,
         max_turns=max_turns,
+        guest_name=guest_name,
     )
-    return state.drafted_turns[:max_turns]
+    turns = state.drafted_turns
+    # The agent loop may have extended past max_turns by one turn to ensure
+    # the dialogue ends on a guest answer. Trim accordingly:
+    # - If we have exactly max_turns turns and the last one is from the host,
+    #   check if there's a guest answer beyond max_turns and include it.
+    # - Otherwise, truncate to max_turns.
+    if len(turns) <= max_turns:
+        return turns
+    if turns[max_turns - 1].speaker != guest_name:
+        # Find the first guest turn beyond max_turns
+        for i in range(max_turns, len(turns)):
+            if turns[i].speaker == guest_name:
+                return turns[: i + 1]
+    return turns[:max_turns]
 
 
 class ReActAgent:
@@ -161,12 +195,14 @@ class ReActAgent:
         embedder: "Embedder",
         top_k: int,
         archetype: ArchetypeId = ArchetypeId.PEER,
+        guest_name: str = "Guest",
     ) -> None:
         self.llm = llm
         self.store = store
         self.embedder = embedder
         self.top_k = top_k
         self.archetype = archetype
+        self._guest_name = guest_name
 
     def run(self, system_prompt: str, user_prompt: str) -> DialogueScript:
         state = _run_single_question_state(
@@ -177,6 +213,7 @@ class ReActAgent:
             user_prompt=user_prompt,
             top_k=self.top_k,
             archetype=self.archetype,
+            guest_name=self._guest_name,
         )
         return DialogueScript(
             title=state.title or "Untitled",
@@ -194,6 +231,7 @@ def run_agent(
     chapter_title: str = "",
     top_k: int = 4,
     archetype: ArchetypeId | str = ArchetypeId.PEER,
+    guest_name: str = "Guest",
 ) -> list[list[DialogueTurn]]: ...
 
 
@@ -207,6 +245,7 @@ def run_agent(
     system_prompt: str,
     user_prompt: str,
     archetype: ArchetypeId | str = ArchetypeId.PEER,
+    guest_name: str = "Guest",
 ) -> DialogueScript: ...
 
 
@@ -219,6 +258,7 @@ def run_agent(
     chapter_title: str = "",
     top_k: int = 4,
     archetype: ArchetypeId | str = ArchetypeId.PEER,
+    guest_name: str = "Guest",
     **legacy_kwargs,
 ) -> list[list[DialogueTurn]] | DialogueScript:
     """Run per-question RAG agent sessions. Returns one turn-list per question."""
@@ -235,6 +275,7 @@ def run_agent(
             embedder=embedder,
             top_k=top_k,
             archetype=_normalize_archetype(archetype),
+            guest_name=guest_name,
         )
         return agent.run(_strip_focused_placeholders(system_prompt), legacy_user_prompt)
 
@@ -255,6 +296,7 @@ def run_agent(
             top_k=top_k,
             archetype=archetype,
             max_turns=5,
+            guest_name=guest_name,
         )
         all_turns.append(turns)
 

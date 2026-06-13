@@ -44,6 +44,6 @@ Answer the following question using the paper's actual content. Use `search` and
 # Conversational Style
 Be conversational, not academic. Use shorter turns. Ask follow-up questions. Explain concepts step by step. Avoid long monologues.
 Aim for {target_turns} total turns across all chapters. Each turn should be concise and easy to follow while commuting.
-Also, keep speaker names (Host/Interviewee) in English regardless of dialogue language.
+Also, keep speaker names ({host_name}/{guest_name}) in English regardless of dialogue language. Use exactly these speaker names when calling draft_turn.
 
 Begin the exploration now.
