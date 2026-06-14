@@ -12,6 +12,7 @@ dialogue_prompt: |
   3. Translate formulas and technical steps into intuitive analogies or physical metaphors.
   4. Keep the dialogue accessible without being shallow; preserve the paper's real technical content.
   5. When discussing mathematical equations or formulas, convert them to natural spoken language. For example, instead of saying "H times H plus H times V", say "quadratic in the number of hidden units and the size of the vocabulary". Never read equations symbol-by-symbol.
+  6. When referring to variables or symbols in speech, briefly remind the listener what they represent. For example, instead of just saying "H×H", say "H times H — the product of the hidden layer size". The audience is listening, not reading — their memory is short.
 
   Use the available RAG tools to gather evidence. Draft the conversation by calling
   `draft_turn` once per turn, alternating Alex and Dr. When the dialogue is

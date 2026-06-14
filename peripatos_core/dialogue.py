@@ -67,6 +67,17 @@ def _extract_text_from_json(raw: str) -> str:
     return raw
 
 
+def _extract_title_from_content(paper_content: str) -> str | None:
+    """Try to extract a real title from paper content when metadata title is an identifier."""
+    match = re.search(r"^#\s+(.+)$", paper_content, re.MULTILINE)
+    if match:
+        title = match.group(1).strip()
+        # Reject if it looks like an arxiv ID
+        if not re.match(r"^(arxiv|paper|http)", title.lower()):
+            return title
+    return None
+
+
 # Phase C prompt sections loaded once at module import.
 _SYNTHESIS_RAW = (Path(__file__).parent / "prompts" / "synthesis.txt").read_text()
 _sections = _SYNTHESIS_RAW.split("# --- LaTeX Conversion ---")
@@ -210,7 +221,8 @@ class DialogueGenerator:
         for i in range(1, len(chapters)):
             prev = chapters[i - 1]
             curr = chapters[i]
-            covered = prev.turns[0].text[:100] if prev.turns else "(unknown)"
+            # Use only the last turn for context — it best represents what was just discussed
+            covered = prev.turns[-1].text[:150] if prev.turns else "(unknown)"
             user_prompt = _TRANSITION_TEMPLATE.format(
                 covered_summary=covered,
                 next_chapter_title=curr.title,
@@ -286,6 +298,12 @@ class DialogueGenerator:
         effective_title = (metadata.title if metadata else None) or title
         effective_origin = (metadata.source_url if metadata else None) or "unknown"
 
+        # If title looks like an arxiv ID, try to extract real title from content
+        if effective_title and re.match(r"^(ArXiv|arXiv|arxiv)[:_\s]", effective_title):
+            extracted = _extract_title_from_content(paper_content)
+            if extracted:
+                effective_title = extracted
+
         # Calculate pacing target based on paper length
         target_turns = _calculate_target_turns(paper_content)
         language_instruction = get_language_instruction(self._settings.language)
@@ -300,6 +318,7 @@ class DialogueGenerator:
             .replace("{archetype_system_prompt}", prompt_data.system_prompt)
             .replace("{language_instruction}", language_instruction)
             .replace("{host_name}", prompt_data.host_name)
+            .replace("{guest_name}", prompt_data.guest_name)
         )
         intro_response = self._llm.complete(
             system_prompt="Generate podcast intro turns as JSON array.",
@@ -357,6 +376,7 @@ class DialogueGenerator:
             .replace("{paper_title}", effective_title)
             .replace("{language_instruction}", language_instruction)
             .replace("{host_name}", prompt_data.host_name)
+            .replace("{guest_name}", prompt_data.guest_name)
         )
         outro_response = self._llm.complete(
             system_prompt="Generate podcast outro turns as JSON array.",

@@ -51,6 +51,10 @@ def build_tools(
         )
 
     def draft_turn(speaker: str, text: str) -> str:
+        # Strip literal escape sequences that TTS would read aloud (e.g., "\n\n" → "backslash")
+        text = text.replace("\\n", " ").replace("\\t", " ")
+        # Collapse multiple spaces into one
+        text = " ".join(text.split())
         state.drafted_turns.append(
             DialogueTurn(speaker=speaker, text=text, archetype=archetype)
         )

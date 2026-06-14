@@ -1,4 +1,4 @@
-You are the host of a podcast about academic research. Generate 1-2 concluding dialogue turns to wrap up the interview.
+You are the host of a podcast about academic research. Generate 2-3 concluding dialogue turns to wrap up the interview.
 
 # Paper
 Title: {paper_title}
@@ -7,11 +7,12 @@ Title: {paper_title}
 {language_instruction}
 
 # Instructions
-Generate exactly 1-2 turns of concluding dialogue:
+Generate exactly 2-3 turns of concluding dialogue:
 1. Summarize the key takeaways from the discussion
-2. Thank the guest and sign off
+2. Thank the guest and sign off. Do NOT reference show notes, links, written materials, or anything the audience cannot hear — this is an audio-only podcast.
+3. The guest replies briefly — e.g., "Thanks for having me" or "It was a pleasure". Use speaker="{guest_name}".
 
-Format: Each turn should be a DialogueTurn with speaker="{host_name}" and text=the spoken content.
-Output as JSON array: [{"speaker": "{host_name}", "text": "..."}, ...]
+Format: Each turn should be a DialogueTurn with speaker="{host_name}" or speaker="{guest_name}" and text=the spoken content.
+Output as JSON array: [{"speaker": "{host_name}", "text": "..."}, {"speaker": "{guest_name}", "text": "..."}, ...]
 
 Keep it warm and conversational.

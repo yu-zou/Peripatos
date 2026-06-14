@@ -54,3 +54,28 @@ def test_react_system_includes_host_and_guest_names():
     assert "{guest_name}" not in result
     # The old hardcoded names should not appear
     assert "Host/Interviewee" not in result
+
+
+def test_intro_prompt_forbids_dr_and_arxiv_id():
+    """Intro prompt should not instruct to use 'Dr.' and should mention arxiv IDs."""
+    p = PROMPTS_DIR / "intro.txt"
+    text = p.read_text()
+    # Should mention not using arxiv IDs as title
+    assert "arxiv" in text.lower() or "identifier" in text.lower()
+    # Should mention guest reply
+    assert "guest" in text.lower()
+    # Should mention {guest_name} placeholder
+    assert "{guest_name}" in text
+
+
+def test_outro_prompt_no_show_notes():
+    """Outro prompt should instruct NOT to reference show notes."""
+    p = PROMPTS_DIR / "outro.txt"
+    text = p.read_text()
+    # Should explicitly say NOT to reference show notes
+    assert "not" in text.lower() and "show notes" in text.lower()
+    # Should mention audio-only
+    assert "audio-only" in text.lower() or "cannot hear" in text.lower()
+    # Should mention guest reply
+    assert "guest" in text.lower()
+    assert "{guest_name}" in text

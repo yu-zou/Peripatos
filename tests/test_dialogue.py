@@ -764,3 +764,60 @@ def test_outro_prompt_includes_host_name():
     outro_system, outro_user = stub.complete_calls[-1]
     assert "{host_name}" not in outro_user, "Template placeholder {host_name} should be replaced"
     assert "Alex" in outro_user
+
+
+def test_extract_title_from_content_finds_markdown_heading():
+    """When title is an arxiv ID, extract real title from paper content."""
+    from peripatos_core.dialogue import _extract_title_from_content
+    content = "# Efficient Estimation of Word Representations in Vector Space\n\nSome content..."
+    result = _extract_title_from_content(content)
+    assert result == "Efficient Estimation of Word Representations in Vector Space"
+
+
+def test_extract_title_from_content_rejects_arxiv_like_heading():
+    """Should not return a heading that looks like an arxiv ID."""
+    from peripatos_core.dialogue import _extract_title_from_content
+    content = "# ArXiv:1301.3781\n\nSome content..."
+    result = _extract_title_from_content(content)
+    assert result is None
+
+
+def test_extract_title_from_content_returns_none_on_no_heading():
+    """Should return None when content has no markdown heading."""
+    from peripatos_core.dialogue import _extract_title_from_content
+    content = "Some content without a heading..."
+    result = _extract_title_from_content(content)
+    assert result is None
+
+
+def test_phase_c_transition_uses_last_turns_for_context():
+    """Transition should be generated from the last turns of the previous chapter, not the first."""
+    llm = Mock(spec=LLMProvider)
+    captured_prompts = []
+
+    def capture_complete(system_prompt, user_prompt):
+        captured_prompts.append(user_prompt)
+        return "A smooth transition."
+
+    llm.complete = capture_complete
+    gen = DialogueGenerator(llm=llm, settings=Settings())
+
+    chapters = [
+        Chapter(title="Intro", turns=[
+            DialogueTurn(speaker="Alex", text="First turn about early concepts.", archetype=ArchetypeId.PEER),
+            DialogueTurn(speaker="Dr.", text="Middle turn about scaling.", archetype=ArchetypeId.PEER),
+            DialogueTurn(speaker="Alex", text="Last turn about the recurrent bottleneck in detail.", archetype=ArchetypeId.PEER),
+        ]),
+        Chapter(title="Methods", turns=[
+            DialogueTurn(speaker="Alex", text="Let's discuss methods.", archetype=ArchetypeId.PEER),
+        ]),
+    ]
+
+    gen._run_phase_c(chapters)
+
+    # The captured prompt should contain text from the LAST turns (recurrent bottleneck)
+    # and should NOT contain text from the FIRST turn (early concepts)
+    assert len(captured_prompts) == 1
+    prompt = captured_prompts[0]
+    assert "recurrent bottleneck" in prompt
+    assert "early concepts" not in prompt
