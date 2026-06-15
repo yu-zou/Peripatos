@@ -57,9 +57,9 @@
       "properties": {
         "provider": {
           "type": "string",
-          "enum": ["edge", "openai_compatible"],
+          "enum": ["edge", "openai_compatible", "elevenlabs"],
           "default": "edge",
-          "description": "TTS backend. 'edge' uses Microsoft Edge TTS (free, no API key). 'openai_compatible' uses any OpenAI-compatible TTS endpoint."
+          "description": "TTS backend. 'edge' uses Microsoft Edge TTS (free, no API key). 'openai_compatible' uses any OpenAI-compatible TTS endpoint. 'elevenlabs' uses ElevenLabs TTS API."
         },
         "base_url": {
           "type": "string",
@@ -69,7 +69,7 @@
         "api_key": {
           "type": "string",
           "default": "",
-          "description": "API key for openai_compatible TTS provider.",
+          "description": "API key for openai_compatible or elevenlabs TTS provider.",
           "format": "password"
         },
         "voice": {
@@ -148,6 +148,28 @@
           "type": "string",
           "default": "",
           "description": "MinerU cloud API token from mineru.net/apiManage/token. Enables Precision extract mode (≤600 pages). Leave empty for Flash extract (≤20 pages)."
+        }
+      }
+    },
+    "cache": {
+      "type": "object",
+      "description": "Caching configuration. Controls audio and dialogue result caching.",
+      "additionalProperties": false,
+      "properties": {
+        "audio": {
+          "type": "boolean",
+          "default": true,
+          "description": "Cache per-turn synthesized audio (keyed by text + voice + provider)."
+        },
+        "dialogue": {
+          "type": "boolean",
+          "default": true,
+          "description": "Cache generated dialogue scripts (keyed by model + archetype + language + paper content)."
+        },
+        "dir": {
+          "type": ["string", "null"],
+          "default": null,
+          "description": "Cache directory. Defaults to '~/.cache/peripatos/'."
         }
       }
     }

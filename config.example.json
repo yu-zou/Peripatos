@@ -21,5 +21,10 @@
   },
   "parser": {
     "mineru_token": ""
+  },
+  "cache": {
+    "audio": true,
+    "dialogue": true,
+    "dir": null
   }
 }
