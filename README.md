@@ -62,11 +62,16 @@ Configuration is resolved in this order:
   },
   "parser": {
     "mineru_token": ""
+  },
+  "cache": {
+    "audio": true,
+    "dialogue": true,
+    "dir": null
   }
 }
 ```
 
-### Example
+### Example (Edge TTS)
 
 ```json
 {
@@ -90,7 +95,27 @@ Configuration is resolved in this order:
 }
 ```
 
-The `tts.provider` defaults to `"edge"` (Microsoft Edge TTS — no API key required). Set it to `"openai"` to use any OpenAI-compatible TTS endpoint instead.
+### Example (ElevenLabs)
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/yu-zou/Peripatos/main/schema/config.schema.json",
+  "llm": {
+    "base_url": "https://router.requesty.ai/v1",
+    "api_key": "YOUR_API_KEY",
+    "model": "openai/gpt-4o-mini"
+  },
+  "tts": {
+    "provider": "elevenlabs",
+    "api_key": "YOUR_ELEVENLABS_API_KEY"
+  },
+  "parser": {
+    "mineru_token": "YOUR_MINERU_TOKEN"
+  }
+}
+```
+
+The `tts.provider` defaults to `"edge"` (Microsoft Edge TTS — no API key required). Set it to `"openai_compatible"` to use any OpenAI-compatible TTS endpoint, or `"elevenlabs"` for high-quality ElevenLabs voices.
 
 The `llm.base_url` accepts any OpenAI-compatible endpoint: [Requesty](https://requesty.ai), [OpenRouter](https://openrouter.ai), or vanilla OpenAI.
 
@@ -111,10 +136,15 @@ Without a token, Peripatos uses MinerU's free Flash mode for fast extraction. Wi
 | `archetype` | `"peer"` | Dialogue style: `peer`, `skeptic`, `tutor`, or `enthusiast`. |
 | `output_dir` | `"."` | Directory for output files. |
 | `language` | `"en"` | Dialogue language: `en` (English) or `zh-CN` (Mandarin Chinese). |
+| `tts.provider` | `"edge"` | TTS backend: `edge` (free, no API key), `openai_compatible`, or `elevenlabs`. |
+| `tts.api_key` | `""` | API key for `openai_compatible` or `elevenlabs` providers. Required for those. |
 | `tts.voice` | `"en-US-AriaNeural"` (edge) / `"nova"` (openai_compatible) | Single voice for both speakers. (deprecated) |
 | `tts.voices.host` | `"en-US-GuyNeural"` (edge) / `"onyx"` (openai_compatible) | Voice for the host speaker. |
 | `tts.voices.interviewee` | `"en-US-AriaNeural"` (edge) / `"nova"` (openai_compatible) | Voice for the interviewee speaker. |
 | `parser.mineru_token` | `""` | MinerU API token. Empty = Flash mode (free, ≤20 pages). Set token for Precision mode (≤600 pages). |
+| `cache.audio` | `true` | Cache per-turn synthesized audio (keyed by text + voice + provider). |
+| `cache.dialogue` | `true` | Cache generated dialogue scripts (keyed by model + archetype + language + paper content). |
+| `cache.dir` | `null` | Cache directory. Defaults to `~/.cache/peripatos/`. |
 
 ### RAG Configuration
 
@@ -128,6 +158,72 @@ Without a token, Peripatos uses MinerU's free Flash mode for fast extraction. Wi
 | `rag.cache_dir` | `null` | Directory to store FAISS indices. Defaults to `~/.cache/peripatos/rag/`. |
 
 **Deprecated**: `tts.voice` (single voice for both speakers) still works but emits a deprecation warning. Use `tts.voices.host` and `tts.voices.interviewee` instead.
+
+### ElevenLabs TTS Configuration
+
+When `tts.provider` is set to `"elevenlabs"`, Peripatos uses curated pre-made voices from the ElevenLabs library with automatic gender-balanced selection:
+
+- **Host voices**: Warm, conversational podcast voices (male and female options)
+- **Interviewee voices**: Articulate, authoritative expert voices (male and female options)
+- **Gender enforcement**: The host and interviewee voices are always opposite genders for clear speaker distinction
+- **Random selection**: Each run randomly selects from the voice pool, so you get variety across runs
+
+To use specific ElevenLabs voice IDs instead of random selection, explicitly set `tts.voices.host` and `tts.voices.interviewee` in your config — these take precedence over random selection.
+
+Requires `tts.api_key` set to your ElevenLabs API key from [elevenlabs.io](https://elevenlabs.io).
+
+### Caching Configuration
+
+Peripatos caches intermediate results to avoid redundant API calls and TTS synthesis on re-runs:
+
+| Feature | Cache Location | Cache Key |
+|---------|---------------|-----------|
+| Audio (per-turn) | `~/.cache/peripatos/audio/` | SHA-256 of `(provider + voice_id + text)` |
+| Dialogue (per-script) | `~/.cache/peripatos/dialogue/` | SHA-256 of `(llm_model + archetype + language + paper_content)` |
+
+Both caches are enabled by default. To disable, set `cache.audio` or `cache.dialogue` to `false` in your config. To clear the cache, delete the cache directory.
+
+### Logging
+
+Peripatos outputs structured logs to stderr at INFO level, showing:
+- Progress of each pipeline phase (fetching, parsing, dialogue generation, audio synthesis)
+- Timing measurements for each step (e.g., "PDF parsing completed in 3.2s")
+- Cache hit/miss status for audio and dialogue caching
+- Voice selection decisions
+
+Logging is always enabled — no configuration needed. Log output goes to stderr so it doesn't interfere with stdout data output.
+
+**Log format:**
+```
+HH:MM:SS [LEVEL] module: message
+```
+
+**Example output:**
+```
+14:23:01 [INFO] peripatos_core.cli: Loading settings completed in 0.02s
+14:23:01 [INFO] peripatos_core.cli: Fetching paper completed in 1.3s
+14:23:04 [INFO] peripatos_core.parser: PDF parsing completed in 2.8s
+14:23:04 [INFO] peripatos_core.dialogue: Dialogue cache check completed in 0.01s
+14:23:04 [INFO] peripatos_core.dialogue: Dialogue cache miss — generating new script
+14:23:04 [INFO] peripatos_core.registry: ElevenLabs voices (random): host=pNInz6obpgDQGcFmaJgB (male), interviewee=EXAVITQu4vr4xnSDxMaL (female)
+14:23:05 [INFO] peripatos_core.dialogue: Phase 0 (Intro) completed in 1.2s
+14:23:07 [INFO] peripatos_core.dialogue: Phase A (Chapters) completed in 2.1s
+14:23:07 [INFO] peripatos_core.dialogue: RAG setup completed in 0.8s
+14:23:25 [INFO] peripatos_core.dialogue: Phase B (Agent) completed in 17.4s
+14:23:26 [INFO] peripatos_core.dialogue: Phase C (Post-processing) completed in 1.5s
+14:23:27 [INFO] peripatos_core.dialogue: Phase 4 (Outro) completed in 0.9s
+14:23:27 [INFO] peripatos_core.dialogue: Dialogue generation completed in 23.9s
+14:23:27 [INFO] peripatos_core.cli: Building TTS provider completed in 0.01s
+14:23:28 [INFO] peripatos_core.cache: Audio cache hit: Host (142 chars)
+14:23:28 [INFO] peripatos_core.audio: Synthesized turn (Guest, 218 chars) in 1.6s
+14:23:30 [INFO] peripatos_core.audio: Synthesized turn (Host, 98 chars) in 1.1s
+...
+14:24:15 [INFO] peripatos_core.audio: Write MP3 completed in 1.9s
+14:24:15 [INFO] peripatos_core.audio: Audio rendering completed in 47.3s
+14:24:15 [INFO] peripatos_core.cli: Total pipeline completed in 73.5s
+```
+
+Each timing line shows the elapsed time for that phase. Cache hits show which turn was retrieved from cache. Voice selection shows which voices were randomly assigned for ElevenLabs.
 
 ## Quick Start
 
