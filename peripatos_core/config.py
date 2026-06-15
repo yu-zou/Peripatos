@@ -18,12 +18,13 @@ logger = logging.getLogger(__name__)
 
 USER_GLOBAL_CONFIG_PATH = Path.home() / ".config" / "peripatos" / "config.json"
 
-KNOWN_KEYS = {"$schema", "llm", "tts", "rag", "parser", "archetype", "output_dir", "language", "defaults"}
+KNOWN_KEYS = {"$schema", "llm", "tts", "rag", "parser", "archetype", "output_dir", "language", "defaults", "cache"}
 KNOWN_LLM_KEYS = {"base_url", "api_key", "model"}
 KNOWN_RAG_KEYS = {"provider", "embedding_model", "chunk_size", "chunk_overlap", "top_k", "cache_dir"}
 KNOWN_TTS_KEYS = {"provider", "base_url", "api_key", "voice", "model", "voices"}
 KNOWN_TTS_VOICES_KEYS = {"host", "interviewee"}
 KNOWN_PARSER_KEYS = {"mineru_token"}
+KNOWN_CACHE_KEYS = {"audio", "dialogue", "dir"}
 
 @dataclass
 class LLMConfig:
@@ -77,6 +78,13 @@ class ParserConfig:
     mineru_token: str = ""
 
 
+@dataclass
+class CacheConfig:
+    audio: bool = True
+    dialogue: bool = True
+    dir: str | None = None
+
+
 SUPPORTED_LANGUAGES = {"en", "zh-CN"}
 
 LANGUAGE_INSTRUCTIONS = {
@@ -117,6 +125,7 @@ class Settings:
     language: str = "en"
     rag: RAGConfig = field(default_factory=RAGConfig)
     parser: ParserConfig = field(default_factory=ParserConfig)
+    cache: CacheConfig = field(default_factory=CacheConfig)
 
 
 def _warn_unknown(section: str, data: dict[str, Any], known: set[str]) -> None:
@@ -191,6 +200,13 @@ def _apply_overrides(settings: Settings, data: dict[str, Any]) -> None:
         for k in KNOWN_PARSER_KEYS:
             if k in parser_data:
                 setattr(settings.parser, k, parser_data[k])
+
+    if "cache" in data:
+        cache_data = data["cache"]
+        _warn_unknown("cache", cache_data, KNOWN_CACHE_KEYS)
+        for k in KNOWN_CACHE_KEYS:
+            if k in cache_data:
+                setattr(settings.cache, k, cache_data[k])
 
 
 def load_settings(config_path: Path | None = None) -> Settings:
