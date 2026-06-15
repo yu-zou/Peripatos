@@ -6,6 +6,10 @@ import json
 import logging
 import re
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from peripatos_core.cache import CacheManager
 
 from peripatos_core.archetypes import ArchetypeLoader
 from peripatos_core.config import Settings, get_language_instruction
@@ -142,10 +146,11 @@ def _parse_phase_a_output(raw_output: str) -> list[dict]:
 class DialogueGenerator:
     """Generates a Socratic dialogue from paper text using the ReAct RAG agent."""
 
-    def __init__(self, llm: LLMProvider, settings: Settings | None = None) -> None:
+    def __init__(self, llm: LLMProvider, settings: Settings | None = None, cache_mgr: "CacheManager | None" = None) -> None:
         self._llm = llm
         self._settings = settings or Settings()
         self._loader = ArchetypeLoader()
+        self._cache_mgr = cache_mgr
 
     @staticmethod
     def _parse_turns_json(raw: str, archetype: ArchetypeId) -> list[DialogueTurn]:
@@ -263,6 +268,24 @@ class DialogueGenerator:
         from peripatos_core.rag.agent import run_agent
 
         archetype_id = ArchetypeId(archetype) if isinstance(archetype, str) else archetype
+
+        # --- Dialogue cache check ---
+        cache_key: str | None = None
+        if self._cache_mgr is not None:
+            with timed_block("Dialogue cache check"):
+                cache_key = self._cache_mgr.dialogue_key(
+                    llm_model=self._settings.llm.model,
+                    archetype=archetype_id.value,
+                    language=self._settings.language,
+                    paper_content=paper_content,
+                )
+                cached_script = self._cache_mgr.dialogue_get(cache_key)
+                if cached_script is not None:
+                    _logger.info("Dialogue cache hit — using cached script")
+                    return cached_script
+                _logger.info("Dialogue cache miss — generating new script")
+        # --- End cache check ---
+
         prompt_data = self._loader.load(archetype_id)
         rag = self._settings.rag
         cache_dir = (
@@ -392,9 +415,16 @@ class DialogueGenerator:
             )
             outro_turns = self._parse_turns_json(outro_response, archetype_id)
 
-        return DialogueScript(
+        script = DialogueScript(
             title=effective_title,
             chapters=all_chapters,
             intro_turns=intro_turns,
             outro_turns=outro_turns,
         )
+
+        # --- Save to dialogue cache ---
+        if self._cache_mgr is not None and cache_key is not None:
+            self._cache_mgr.dialogue_put(cache_key, script)
+        # --- End cache save ---
+
+        return script
