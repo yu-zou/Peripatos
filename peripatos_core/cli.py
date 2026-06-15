@@ -130,6 +130,9 @@ def cmd_list_archetypes(_args):
 
 
 def main():
+    from peripatos_core.logging_config import setup_logging
+    setup_logging()
+
     parser = argparse.ArgumentParser(
         prog="peripatos",
         description="Convert academic papers to Socratic-dialogue podcasts.",
