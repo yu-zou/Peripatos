@@ -8,6 +8,7 @@ from pathlib import Path
 
 from peripatos_core.exceptions import ParseError
 from peripatos_core.mineru_client import MinerUClient
+from peripatos_core.timing import timed
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,7 @@ class PDFParser:
     def __init__(self, mineru_token: str | None = None) -> None:
         self._mineru_token = mineru_token
 
+    @timed("PDF parsing")
     def parse(self, pdf_path: Path) -> ParsedPaper:
         """Parse a PDF and return structured content.
 

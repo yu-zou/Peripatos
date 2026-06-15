@@ -11,6 +11,7 @@ from peripatos_core.archetypes import ArchetypeLoader
 from peripatos_core.config import Settings, get_language_instruction
 from peripatos_core.prompts import load_react_system
 from peripatos_core.providers.llm import LLMProvider
+from peripatos_core.timing import timed, timed_block
 from peripatos_core.rag.chunker import chunk_text
 from peripatos_core.rag.embedder import Embedder
 from peripatos_core.rag.vector_store import VectorStore
@@ -171,6 +172,7 @@ class DialogueGenerator:
             _logger.warning("_parse_turns_json: parse failed: %s", exc)
             return []
 
+    @timed("Phase A (Chapters)")
     def _run_phase_a(
         self,
         archetype_system_prompt: str,
@@ -208,6 +210,7 @@ class DialogueGenerator:
         _logger.warning("Phase A exhausted %d attempts, using fallback", total_attempts)
         return _FALLBACK_CHAPTERS
 
+    @timed("Phase C (Post-processing)")
     def _run_phase_c(
         self,
         chapters: list[Chapter],
@@ -248,6 +251,7 @@ class DialogueGenerator:
 
         return chapters
 
+    @timed("Dialogue generation")
     def generate(
         self,
         paper_content: str,
@@ -267,22 +271,23 @@ class DialogueGenerator:
             else Path.home() / ".cache" / "peripatos" / "rag"
         )
 
-        content_hash = hashlib.sha256(paper_content.encode()).hexdigest()
+        with timed_block("RAG setup"):
+            content_hash = hashlib.sha256(paper_content.encode()).hexdigest()
 
-        embedder = Embedder(
-            base_url=self._settings.llm.base_url,
-            api_key=self._settings.llm.api_key,
-            model=rag.embedding_model,
-            provider=rag.provider,
-        )
-        store = VectorStore(cache_dir=cache_dir, content_hash=content_hash)
-        if not store.has_cache():
-            chunks = chunk_text(paper_content, chunk_size=rag.chunk_size, overlap=rag.chunk_overlap)
-            texts = [chunk.text for chunk in chunks]
-            embeddings = embedder.embed(texts)
-            store.build(chunks, embeddings)
-        else:
-            store.load()
+            embedder = Embedder(
+                base_url=self._settings.llm.base_url,
+                api_key=self._settings.llm.api_key,
+                model=rag.embedding_model,
+                provider=rag.provider,
+            )
+            store = VectorStore(cache_dir=cache_dir, content_hash=content_hash)
+            if not store.has_cache():
+                chunks = chunk_text(paper_content, chunk_size=rag.chunk_size, overlap=rag.chunk_overlap)
+                texts = [chunk.text for chunk in chunks]
+                embeddings = embedder.embed(texts)
+                store.build(chunks, embeddings)
+            else:
+                store.load()
 
         sections_list = store.list_sections()
         seen: dict[str, int] = {}
@@ -308,23 +313,24 @@ class DialogueGenerator:
         target_turns = _calculate_target_turns(paper_content)
         language_instruction = get_language_instruction(self._settings.language)
 
-        # Phase 0: Generate intro turns
-        intro_path = Path(__file__).parent / "prompts" / "intro.txt"
-        intro_template = intro_path.read_text(encoding="utf-8")
-        intro_prompt = (
-            intro_template
-            .replace("{paper_title}", effective_title)
-            .replace("{paper_origin}", effective_origin)
-            .replace("{archetype_system_prompt}", prompt_data.system_prompt)
-            .replace("{language_instruction}", language_instruction)
-            .replace("{host_name}", prompt_data.host_name)
-            .replace("{guest_name}", prompt_data.guest_name)
-        )
-        intro_response = self._llm.complete(
-            system_prompt="Generate podcast intro turns as JSON array.",
-            user_prompt=intro_prompt,
-        )
-        intro_turns = self._parse_turns_json(intro_response, archetype_id)
+        with timed_block("Phase 0 (Intro)"):
+            # Phase 0: Generate intro turns
+            intro_path = Path(__file__).parent / "prompts" / "intro.txt"
+            intro_template = intro_path.read_text(encoding="utf-8")
+            intro_prompt = (
+                intro_template
+                .replace("{paper_title}", effective_title)
+                .replace("{paper_origin}", effective_origin)
+                .replace("{archetype_system_prompt}", prompt_data.system_prompt)
+                .replace("{language_instruction}", language_instruction)
+                .replace("{host_name}", prompt_data.host_name)
+                .replace("{guest_name}", prompt_data.guest_name)
+            )
+            intro_response = self._llm.complete(
+                system_prompt="Generate podcast intro turns as JSON array.",
+                user_prompt=intro_prompt,
+            )
+            intro_turns = self._parse_turns_json(intro_response, archetype_id)
 
         chapters_plan = self._run_phase_a(
             archetype_system_prompt=prompt_data.system_prompt,
@@ -344,45 +350,47 @@ class DialogueGenerator:
             guest_name=prompt_data.guest_name,
         )
 
-        all_chapters: list[Chapter] = []
-        for plan in chapters_plan:
-            chapter_title = plan["title"]
-            questions = plan["questions"]
-            turn_lists = run_agent(
-                llm=self._llm,
-                store=store,
-                embedder=embedder,
-                questions=questions,
-                system_prompt=agent_system_prompt,
-                chapter_title=chapter_title,
-                top_k=rag.top_k,
-                archetype=archetype_id,
-                guest_name=prompt_data.guest_name,
-            )
+        with timed_block("Phase B (Agent)"):
+            all_chapters: list[Chapter] = []
+            for plan in chapters_plan:
+                chapter_title = plan["title"]
+                questions = plan["questions"]
+                turn_lists = run_agent(
+                    llm=self._llm,
+                    store=store,
+                    embedder=embedder,
+                    questions=questions,
+                    system_prompt=agent_system_prompt,
+                    chapter_title=chapter_title,
+                    top_k=rag.top_k,
+                    archetype=archetype_id,
+                    guest_name=prompt_data.guest_name,
+                )
 
-            chapter_turns: list[DialogueTurn] = []
-            for turns in turn_lists:
-                chapter_turns.extend(turns)
+                chapter_turns: list[DialogueTurn] = []
+                for turns in turn_lists:
+                    chapter_turns.extend(turns)
 
-            all_chapters.append(Chapter(title=chapter_title, turns=chapter_turns))
+                all_chapters.append(Chapter(title=chapter_title, turns=chapter_turns))
 
         all_chapters = self._run_phase_c(all_chapters)
 
-        # Phase 4: Generate outro turns
-        outro_path = Path(__file__).parent / "prompts" / "outro.txt"
-        outro_template = outro_path.read_text(encoding="utf-8")
-        outro_prompt = (
-            outro_template
-            .replace("{paper_title}", effective_title)
-            .replace("{language_instruction}", language_instruction)
-            .replace("{host_name}", prompt_data.host_name)
-            .replace("{guest_name}", prompt_data.guest_name)
-        )
-        outro_response = self._llm.complete(
-            system_prompt="Generate podcast outro turns as JSON array.",
-            user_prompt=outro_prompt,
-        )
-        outro_turns = self._parse_turns_json(outro_response, archetype_id)
+        with timed_block("Phase 4 (Outro)"):
+            # Phase 4: Generate outro turns
+            outro_path = Path(__file__).parent / "prompts" / "outro.txt"
+            outro_template = outro_path.read_text(encoding="utf-8")
+            outro_prompt = (
+                outro_template
+                .replace("{paper_title}", effective_title)
+                .replace("{language_instruction}", language_instruction)
+                .replace("{host_name}", prompt_data.host_name)
+                .replace("{guest_name}", prompt_data.guest_name)
+            )
+            outro_response = self._llm.complete(
+                system_prompt="Generate podcast outro turns as JSON array.",
+                user_prompt=outro_prompt,
+            )
+            outro_turns = self._parse_turns_json(outro_response, archetype_id)
 
         return DialogueScript(
             title=effective_title,

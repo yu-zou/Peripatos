@@ -7,6 +7,7 @@ from pydub import AudioSegment as PydubAudioSegment  # type: ignore[reportMissin
 
 from peripatos_core.exceptions import AudioError, TTSError
 from peripatos_core.providers.tts import TTSProvider
+from peripatos_core.timing import timed
 from peripatos_core.types import AudioSegment, Chapter, ChapterMark, DialogueScript, DialogueTurn
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,7 @@ class AudioRenderer:
         self._tts = tts
         self._voice_map = voice_map or {}
 
+    @timed("Audio rendering")
     def render(self, script: DialogueScript, output_path: Path) -> list[ChapterMark]:
         """Render a dialogue script to an MP3 file.
 
@@ -132,17 +134,23 @@ class AudioRenderer:
             return 0.1
 
     def _synthesize_segment(self, turn: DialogueTurn) -> AudioSegment:
-        """Synthesize a single dialogue turn."""
+        """Synthesize a single dialogue turn with timing log."""
         import time
 
         voice = self._voice_map.get(turn.speaker)
+        t_start = time.perf_counter()
         try:
             audio_path = self._tts.synthesize(turn.text, speaker_voice=voice)
+            elapsed = time.perf_counter() - t_start
         except Exception as exc:
             raise TTSError(f"TTS failed for turn ({turn.speaker}): {exc}") from exc
         # Small delay between TTS calls to avoid edge-tts rate limiting
         time.sleep(0.5)
         duration_s = self._get_duration(audio_path)
+        logger.info(
+            "Synthesized turn (%s, %d chars) in %.1fs",
+            turn.speaker, len(turn.text), elapsed,
+        )
         return AudioSegment(
             speaker=turn.speaker, text=turn.text,
             audio_path=audio_path, duration_s=duration_s,
@@ -189,6 +197,7 @@ class AudioRenderer:
             raise AudioError(f"Failed to concatenate audio segments: {exc}") from exc
         return combined
 
+    @timed("Write MP3")
     def _write_with_chapters(
         self,
         source_path: Path,
