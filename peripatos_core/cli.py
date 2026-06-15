@@ -1,8 +1,11 @@
 """Peripatos Core - convert academic papers to Socratic-dialogue podcasts."""
 from __future__ import annotations
 import argparse
+import logging
 import sys
 from pathlib import Path
+
+from peripatos_core.timing import timed_block
 
 
 def _save_script_json(script: "DialogueScript", output_path: Path) -> None:
@@ -34,25 +37,30 @@ def _get_settings(config_path=None):
 def cmd_generate(args):
     """Convert a paper to a Socratic-dialogue MP3."""
     from peripatos_core.audio import AudioRenderer
+    from peripatos_core.cache import CacheManager
     from peripatos_core.dialogue import DialogueGenerator
     from peripatos_core.fetcher import PaperFetcher
     from peripatos_core.parser import PDFParser
     from peripatos_core.registry import build_llm_provider, build_tts_provider, build_voice_map
 
-    settings = _get_settings(args.config)
+    logger = logging.getLogger(__name__)
+
+    with timed_block("Loading settings"):
+        settings = _get_settings(args.config)
+
     effective_archetype = args.archetype or settings.archetype
     if args.config:
-        print(f"Using config: {args.config}")
+        logger.info("Using config: %s", args.config)
     else:
-        print("Using default config")
+        logger.info("Using default config")
     if args.language is not None:
         settings.language = args.language
 
-    print(f"Fetching paper: {args.source}")
-    fetcher = PaperFetcher()
-    fetched_path, metadata = fetcher.fetch(args.source)
+    with timed_block("Fetching paper"):
+        fetcher = PaperFetcher()
+        fetched_path, metadata = fetcher.fetch(args.source)
 
-    print(f"Processing source: {fetched_path.name}")
+    logger.info("Processing source: %s", fetched_path.name)
     if fetched_path.suffix.lower() == ".pdf":
         parser = PDFParser(mineru_token=settings.parser.mineru_token or None)
         parsed = parser.parse(fetched_path)
@@ -69,29 +77,42 @@ def cmd_generate(args):
     else:
         paper_content = fetched_path.read_text(encoding="utf-8", errors="ignore")
 
-    print(f"Generating dialogue (archetype={effective_archetype})")
+    # Build cache manager
+    cache_base = (
+        Path(settings.cache.dir)
+        if settings.cache.dir
+        else Path.home() / ".cache" / "peripatos"
+    )
+    cache_mgr = CacheManager(
+        base_dir=cache_base,
+        audio_enabled=settings.cache.audio,
+        dialogue_enabled=settings.cache.dialogue,
+    )
+
+    logger.info("Generating dialogue (archetype=%s)", effective_archetype)
     llm = build_llm_provider(settings.llm)
-    gen = DialogueGenerator(llm=llm, settings=settings)
+    gen = DialogueGenerator(llm=llm, settings=settings, cache_mgr=cache_mgr)
     script = gen.generate(
         paper_content=paper_content,
         archetype=effective_archetype,
         title=metadata.title,
         metadata=metadata,
     )
-    print(f"  Generated {len(script.turns)} turns: {script.title}")
+    logger.info("Generated %d turns: %s", len(script.turns), script.title)
 
     # Save dialogue script JSON
     _save_script_json(script, args.output)
 
-    print("Synthesizing audio")
-    tts = build_tts_provider(settings.tts)
-    from peripatos_core.archetypes import ArchetypeLoader
-    archetype_prompt = ArchetypeLoader().load(effective_archetype)
-    voice_map = build_voice_map(settings, archetype_prompt, language=settings.language)
+    with timed_block("Building TTS provider"):
+        tts = build_tts_provider(settings.tts, cache_mgr=cache_mgr)
+        from peripatos_core.archetypes import ArchetypeLoader
+        archetype_prompt = ArchetypeLoader().load(effective_archetype)
+        voice_map = build_voice_map(settings, archetype_prompt, language=settings.language)
+
     renderer = AudioRenderer(tts=tts, voice_map=voice_map)
     chapters = renderer.render(script, args.output)
 
-    print(f"Done! Output: {args.output} ({len(chapters)} chapters)")
+    logger.info("Done! Output: %s (%d chapters)", args.output, len(chapters))
 
 
 def cmd_doctor(args):
@@ -168,7 +189,8 @@ def main():
 
     args = parser.parse_args()
     if hasattr(args, "func"):
-        args.func(args)
+        with timed_block("Total pipeline"):
+            args.func(args)
     else:
         parser.print_help()
         sys.exit(1)
