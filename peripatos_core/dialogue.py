@@ -65,9 +65,13 @@ _ACRONYM_MAP = {
 
 
 def _convert_acronyms(text: str) -> str:
-    """Convert common technical acronyms to spoken form (letter-by-letter)."""
-    for acronym, spoken in _ACRONYM_MAP.items():
-        if acronym in text and spoken not in text:
+    """Convert common technical acronyms to spoken form (letter-by-letter).
+
+    Longer acronyms are replaced first to avoid partial matches
+    (e.g., RNNLM before NNLM).
+    """
+    for acronym, spoken in sorted(_ACRONYM_MAP.items(), key=lambda x: len(x[0]), reverse=True):
+        if acronym in text:
             text = text.replace(acronym, spoken)
     return text
 
