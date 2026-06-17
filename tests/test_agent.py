@@ -382,8 +382,6 @@ def test_per_question_max_turns():
         "Turn 1",
         "Turn 2",
         "Turn 3",
-        "Turn 4",
-        "Turn 5",
     ]
 
 

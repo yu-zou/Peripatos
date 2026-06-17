@@ -248,7 +248,7 @@ def test_phase_a_invalid_json():
     """Non-JSON string → returns FALLBACK_CHAPTERS."""
     result = _parse_phase_a_output("not json")
     assert result is _FALLBACK_CHAPTERS
-    assert len(result) == 5
+    assert len(result) == 4
 
 
 def test_phase_a_too_few_chapters():
@@ -264,8 +264,15 @@ def test_phase_a_too_many_chapters():
 
 
 def test_phase_a_too_few_questions():
-    """Chapter with 1 question → returns FALLBACK_CHAPTERS."""
-    result = _parse_phase_a_output(ONE_QUESTION_JSON)
+    """Chapter with 0 questions → returns FALLBACK_CHAPTERS."""
+    zero_q = json.dumps({
+        "chapters": [
+            {"title": "A", "questions": []},
+            {"title": "B", "questions": ["q2"]},
+            {"title": "C", "questions": ["q3"]},
+        ]
+    })
+    result = _parse_phase_a_output(zero_q)
     assert result is _FALLBACK_CHAPTERS
 
 

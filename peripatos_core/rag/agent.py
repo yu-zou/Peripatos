@@ -155,7 +155,7 @@ def _run_single_question(
     user_prompt: str,
     top_k: int,
     archetype: ArchetypeId | str = ArchetypeId.PEER,
-    max_turns: int = 5,
+    max_turns: int = 3,
     guest_name: str = "Guest",
 ) -> list[DialogueTurn]:
     state = _run_single_question_state(
@@ -295,7 +295,7 @@ def run_agent(
             user_prompt=question_user,
             top_k=top_k,
             archetype=archetype,
-            max_turns=5,
+            max_turns=3,
             guest_name=guest_name,
         )
         all_turns.append(turns)

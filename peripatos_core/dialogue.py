@@ -28,14 +28,13 @@ _logger = logging.getLogger(__name__)
 
 _MAX_PARSE_RETRIES = 2
 _MIN_CHAPTERS = 3
-_MAX_CHAPTERS = 7
-_MIN_QUESTIONS = 2
-_MAX_QUESTIONS = 3
+_MAX_CHAPTERS = 4
+_MIN_QUESTIONS = 1
+_MAX_QUESTIONS = 2
 _MAX_TITLE_LEN = 80
 
 _FALLBACK_CHAPTERS: list[dict] = [
     {"title": "Introduction", "questions": ["What is the paper's main contribution?"]},
-    {"title": "Background", "questions": ["What prior work does this build on?"]},
     {"title": "Methodology", "questions": ["How does the proposed approach work?"]},
     {"title": "Results", "questions": ["What were the key findings?"]},
     {"title": "Outlook", "questions": ["What are the limitations and future work?"]},
