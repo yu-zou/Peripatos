@@ -60,16 +60,16 @@ def test_dialogue_script_has_intro_outro_fields():
 
 
 def test_calculate_target_turns_12_page_paper():
-    # 12 pages * 300 words = 3600 words, * 2 = 24 turns
+    # 12 pages * 300 words = 3600 words, * 1.5 = 18 turns
     paper = "word " * 3600
-    assert _calculate_target_turns(paper) == 24
+    assert _calculate_target_turns(paper) == 18
 
 
 def test_calculate_target_turns_short_paper_min():
-    paper = "word " * 100  # <5 pages → would be <10, clamped to 10
-    assert _calculate_target_turns(paper) == 10
+    paper = "word " * 100  # <8 pages → would be <12, clamped to 12
+    assert _calculate_target_turns(paper) == 12
 
 
 def test_calculate_target_turns_long_paper_max():
-    paper = "word " * 100000  # >>20 pages → clamped to 40
-    assert _calculate_target_turns(paper) == 40
+    paper = "word " * 100000  # >>20 pages → beyond 30, clamped to 30
+    assert _calculate_target_turns(paper) == 30

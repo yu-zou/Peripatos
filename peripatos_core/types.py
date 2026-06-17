@@ -73,10 +73,10 @@ class PaperMetadata:
 def _calculate_target_turns(paper_content: str) -> int:
     """Estimate target dialogue turns based on paper length.
 
-    ~300 words per double-column page. Aim for ~2 turns per page.
-    Min 10 turns, max 40 turns.
+    ~300 words per double-column page. Aim for ~1.5 turns per page,
+    targeting 10-15 minutes of audio. Min 12 turns, max 30 turns.
     """
     word_count = len(paper_content.split())
     pages = word_count / 300
-    target = int(pages * 2)
-    return max(10, min(40, target))
+    target = int(pages * 1.5)
+    return max(12, min(30, target))
