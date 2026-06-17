@@ -206,6 +206,8 @@ class DialogueGenerator:
         title: str,
         origin: str,
         section_overview: str,
+        question_count: int = _MAX_QUESTIONS,
+        chapter_count: int = _MAX_CHAPTERS,
     ) -> list[dict]:
         """Run Phase A: plan chapters and questions. Returns validated chapter list."""
         prompt_template = (Path(__file__).parent / "prompts" / "host_questions.txt").read_text()
@@ -217,6 +219,8 @@ class DialogueGenerator:
             .replace("{paper_origin}", origin)
             .replace("{section_overview}", section_overview)
             .replace("{language_instruction}", language_instruction)
+            .replace("{question_count}", str(question_count))
+            .replace("{chapter_count}", str(chapter_count))
         )
 
         total_attempts = 1 + _MAX_PARSE_RETRIES  # 1 initial + 2 retries = 3
@@ -388,6 +392,8 @@ class DialogueGenerator:
             title=effective_title,
             origin=effective_origin,
             section_overview=section_overview,
+            question_count=_MAX_QUESTIONS,
+            chapter_count=_MAX_CHAPTERS,
         )
 
         agent_system_prompt = load_react_system(
