@@ -90,12 +90,12 @@
             "host": {
               "type": "string",
               "default": "en-US-GuyNeural",
-              "description": "Voice for the host/interviewer speaker."
+              "description": "Voice for the host/interviewer speaker. For ElevenLabs, use an ElevenLabs voice ID (e.g. 'pNInz6obpgDQGcFmaJgB' for Adam)."
             },
             "interviewee": {
               "type": "string",
               "default": "en-US-AriaNeural",
-              "description": "Voice for the interviewee/expert speaker."
+              "description": "Voice for the interviewee/expert speaker. For ElevenLabs, use an ElevenLabs voice ID (e.g. 'EXAVITQu4vr4xnSDxMaL' for Bella)."
             }
           }
         }

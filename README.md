@@ -107,7 +107,11 @@ Configuration is resolved in this order:
   },
   "tts": {
     "provider": "elevenlabs",
-    "api_key": "YOUR_ELEVENLABS_API_KEY"
+    "api_key": "YOUR_ELEVENLABS_API_KEY",
+    "voices": {
+      "host": "pNInz6obpgDQGcFmaJgB",
+      "interviewee": "EXAVITQu4vr4xnSDxMaL"
+    }
   },
   "parser": {
     "mineru_token": "YOUR_MINERU_TOKEN"
@@ -139,8 +143,8 @@ Without a token, Peripatos uses MinerU's free Flash mode for fast extraction. Wi
 | `tts.provider` | `"edge"` | TTS backend: `edge` (free, no API key), `openai_compatible`, or `elevenlabs`. |
 | `tts.api_key` | `""` | API key for `openai_compatible` or `elevenlabs` providers. Required for those. |
 | `tts.voice` | `"en-US-AriaNeural"` (edge) / `"nova"` (openai_compatible) | Single voice for both speakers. (deprecated) |
-| `tts.voices.host` | `"en-US-GuyNeural"` (edge) / `"onyx"` (openai_compatible) | Voice for the host speaker. |
-| `tts.voices.interviewee` | `"en-US-AriaNeural"` (edge) / `"nova"` (openai_compatible) | Voice for the interviewee speaker. |
+| `tts.voices.host` | `"en-US-GuyNeural"` (edge) / `"onyx"` (openai_compatible) / `"pNInz6obpgDQGcFmaJgB"` (elevenlabs) | Voice for the host speaker. |
+| `tts.voices.interviewee` | `"en-US-AriaNeural"` (edge) / `"nova"` (openai_compatible) / `"EXAVITQu4vr4xnSDxMaL"` (elevenlabs) | Voice for the interviewee speaker. |
 | `parser.mineru_token` | `""` | MinerU API token. Empty = Flash mode (free, ≤20 pages). Set token for Precision mode (≤600 pages). |
 | `cache.audio` | `true` | Cache per-turn synthesized audio (keyed by text + voice + provider). |
 | `cache.dialogue` | `true` | Cache generated dialogue scripts (keyed by model + archetype + language + paper content). |
@@ -168,7 +172,7 @@ When `tts.provider` is set to `"elevenlabs"`, Peripatos uses curated pre-made vo
 - **Gender enforcement**: The host and interviewee voices are always opposite genders for clear speaker distinction
 - **Random selection**: Each run randomly selects from the voice pool, so you get variety across runs
 
-To use specific ElevenLabs voice IDs instead of random selection, explicitly set `tts.voices.host` and `tts.voices.interviewee` in your config — these take precedence over random selection.
+To use specific ElevenLabs voice IDs instead of random selection, explicitly set `tts.voices.host` and `tts.voices.interviewee` in your config. You can set both voices, or just one — the unspecified voice will be randomly selected from the opposite gender's pool. Valid ElevenLabs voice IDs can be found in your [ElevenLabs voice library](https://elevenlabs.io/app/voice-library).
 
 Requires `tts.api_key` set to your ElevenLabs API key from [elevenlabs.io](https://elevenlabs.io).
 

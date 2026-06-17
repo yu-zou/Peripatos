@@ -132,24 +132,23 @@ class TestResolveElevenLabsVoices:
         assert host in all_podcast
         assert interviewee in all_expert
 
-    def test_host_only_configured_triggers_random_path(self):
-        """When only host is configured but not interviewee, falls to random path."""
+    def test_host_only_configured_uses_explicit_host(self):
+        """When only host is configured, use it and randomly select interviewee."""
         s = make_settings(voices={"host": "pNInz6obpgDQGcFmaJgB"})
-        # interviewee is "" so `if voices.host and voices.interviewee` is False
-        # _resolve_elevenlabs_voices treats "" as falsy
         with patch("peripatos_core.registry.random.choice") as mock_choice:
             mock_choice.side_effect = [
                 "male",
-                PODCAST_VOICES["male"][0],
                 EXPERT_VOICES["female"][0],
             ]
             host, interviewee, host_gender, interviewee_gender = _resolve_elevenlabs_voices(s)
 
-        assert host == PODCAST_VOICES["male"][0]
+        assert host == "pNInz6obpgDQGcFmaJgB"
         assert interviewee == EXPERT_VOICES["female"][0]
+        assert host_gender == "male"
+        assert interviewee_gender == "female"
 
-    def test_interviewee_only_configured_triggers_random_path(self):
-        """When only interviewee is configured but not host, falls to random path."""
+    def test_interviewee_only_configured_uses_explicit_interviewee(self):
+        """When only interviewee is configured, use it and randomly select host."""
         s = make_settings()
         s.tts.voices.host = ""
         s.tts.voices.interviewee = "EXAVITQu4vr4xnSDxMaL"
@@ -158,12 +157,13 @@ class TestResolveElevenLabsVoices:
             mock_choice.side_effect = [
                 "female",
                 PODCAST_VOICES["female"][0],
-                EXPERT_VOICES["male"][0],
             ]
             host, interviewee, host_gender, interviewee_gender = _resolve_elevenlabs_voices(s)
 
         assert host == PODCAST_VOICES["female"][0]
-        assert interviewee == EXPERT_VOICES["male"][0]
+        assert interviewee == "EXAVITQu4vr4xnSDxMaL"
+        assert host_gender == "female"
+        assert interviewee_gender == "male"
 
 
 # ─────────────────────────────────────────────────────────────────

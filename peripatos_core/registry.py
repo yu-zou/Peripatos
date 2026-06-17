@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 DEFAULT_VOICES: dict[str, tuple[str, str]] = {
     "edge": ("en-US-GuyNeural", "en-US-AriaNeural"),
     "openai_compatible": ("onyx", "nova"),
-    "elevenlabs": ("host_podcast", "interviewee_expert"),  # placeholders; resolved dynamically
+    "elevenlabs": ("pNInz6obpgDQGcFmaJgB", "EXAVITQu4vr4xnSDxMaL"),  # Adam (male), Bella (female)
 }
 
 
@@ -36,8 +36,9 @@ def _resolve_elevenlabs_voices(settings: "Settings") -> tuple[str, str, str, str
     Host gets a podcast voice, interviewee gets an expert voice.
     Genders are always opposite.
 
-    If both tts.voices.host and tts.voices.interviewee are explicitly set,
-    they take precedence over random selection.
+    If explicit tts.voices.host and/or tts.voices.interviewee are set,
+    they take precedence over random selection. When only one is set,
+    the other is randomly selected from the opposite gender.
 
     Returns:
         (host_voice_id, interviewee_voice_id, host_gender, interviewee_gender)
@@ -45,25 +46,46 @@ def _resolve_elevenlabs_voices(settings: "Settings") -> tuple[str, str, str, str
     _logger = logging.getLogger(__name__)
     voices = settings.tts.voices
 
+    # Determine host gender: explicit voice takes precedence
     if voices.host and voices.interviewee:
+        # Both configured explicitly
         _logger.info(
             "ElevenLabs voices (from config): host=%s, interviewee=%s",
             voices.host, voices.interviewee,
         )
         return (voices.host, voices.interviewee, "config", "config")
-
+    
     # Random gender assignment
     host_gender = random.choice(["male", "female"])
     interviewee_gender = "female" if host_gender == "male" else "male"
 
+    if voices.host and not voices.interviewee:
+        # Only host configured - use it, randomly select interviewee
+        host_voice_id = voices.host
+        interviewee_voice_id = random.choice(EXPERT_VOICES[interviewee_gender])
+        _logger.info(
+            "ElevenLabs voices (host from config): host=%s, interviewee=%s (%s)",
+            host_voice_id, interviewee_voice_id, interviewee_gender,
+        )
+        return (host_voice_id, interviewee_voice_id, host_gender, interviewee_gender)
+
+    if voices.interviewee and not voices.host:
+        # Only interviewee configured - use it, randomly select host
+        interviewee_voice_id = voices.interviewee
+        host_voice_id = random.choice(PODCAST_VOICES[host_gender])
+        _logger.info(
+            "ElevenLabs voices (interviewee from config): host=%s (%s), interviewee=%s",
+            host_voice_id, host_gender, interviewee_voice_id,
+        )
+        return (host_voice_id, interviewee_voice_id, host_gender, interviewee_gender)
+
+    # Neither configured - full random selection
     host_voice_id = random.choice(PODCAST_VOICES[host_gender])
     interviewee_voice_id = random.choice(EXPERT_VOICES[interviewee_gender])
-
     _logger.info(
         "ElevenLabs voices (random): host=%s (%s), interviewee=%s (%s)",
         host_voice_id, host_gender, interviewee_voice_id, interviewee_gender,
     )
-
     return (host_voice_id, interviewee_voice_id, host_gender, interviewee_gender)
 
 
