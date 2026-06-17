@@ -665,8 +665,8 @@ def test_target_turns_passed_to_react_system():
 
     assert "target_turns" in captured_kwargs
     target = captured_kwargs["target_turns"]
-    # 7 words / 300 * 2 = 0.04 → floor → 0, clamped to min 10
-    assert target == "10"
+    # 7 words / 300 * 1.5 = 0.04 → floor → 0, clamped to min 12
+    assert target == "12"
 
 
 def test_target_turns_scales_with_paper_length():
@@ -699,8 +699,8 @@ def test_target_turns_scales_with_paper_length():
         DialogueGenerator(llm=stub, settings=Settings()).generate(long_content)
 
     assert "target_turns" in captured_kwargs
-    # 6000 words / 300 * 2 = 40 → max 40
-    assert captured_kwargs["target_turns"] == "40"
+    # 6000 words / 300 * 1.5 = 30 → max 30
+    assert captured_kwargs["target_turns"] == "30"
 
 
 # ---------------------------------------------------------------------------

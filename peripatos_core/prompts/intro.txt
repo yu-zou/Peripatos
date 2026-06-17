@@ -16,7 +16,7 @@ Generate exactly 3 turns of introductory dialogue:
 2. The host introduces the guest expert — do NOT use "Dr.", real author names, or "one of the authors". Describe the guest as "an expert on this topic" or "a specialist who will walk us through this research".
 3. The guest replies warmly — e.g., "Thanks for having me" or "Great to be here". Use speaker="{guest_name}".
 
-Do NOT add any questions or topic previews after the guest's reply. The first chapter will handle that. The intro must end after the guest's acknowledgment.
+Do NOT add any questions or topic previews after the guest's reply. The intro MUST end with the guest's acknowledgment only — no follow-up from the host. The first question belongs in the first chapter, not in the intro.
 
 Format: Each turn should be a DialogueTurn with the appropriate speaker and text=the spoken content.
 Output as JSON array: [{"speaker": "...", "text": "..."}, ...]

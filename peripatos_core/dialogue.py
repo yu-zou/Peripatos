@@ -30,7 +30,7 @@ _MAX_PARSE_RETRIES = 2
 _MIN_CHAPTERS = 3
 _MAX_CHAPTERS = 7
 _MIN_QUESTIONS = 2
-_MAX_QUESTIONS = 5
+_MAX_QUESTIONS = 3
 _MAX_TITLE_LEN = 80
 
 _FALLBACK_CHAPTERS: list[dict] = [
@@ -53,6 +53,23 @@ _LATEX_PATTERNS = re.compile(
 def _contains_latex(text: str) -> bool:
     """Return True if text contains LaTeX notation, plain-text equations, or acronyms."""
     return bool(_LATEX_PATTERNS.search(text))
+
+
+_ACRONYM_MAP = {
+    "CBOW": "C-B-O-W",
+    "NNLM": "N-N-L-M",
+    "RNNLM": "R-N-N-L-M",
+    "NLP": "N-L-P",
+    "SGD": "S-G-D",
+}
+
+
+def _convert_acronyms(text: str) -> str:
+    """Convert common technical acronyms to spoken form (letter-by-letter)."""
+    for acronym, spoken in _ACRONYM_MAP.items():
+        if acronym in text and spoken not in text:
+            text = text.replace(acronym, spoken)
+    return text
 
 
 def _extract_text_from_json(raw: str) -> str:
@@ -256,6 +273,10 @@ class DialogueGenerator:
                     )
                     turn.text = _extract_text_from_json(raw).strip('"').strip("'")
 
+        for chapter in chapters:
+            for turn in chapter.turns:
+                turn.text = _convert_acronyms(turn.text)
+
         return chapters
 
     @timed("Dialogue generation")
@@ -356,6 +377,8 @@ class DialogueGenerator:
                 user_prompt=intro_prompt,
             )
             intro_turns = self._parse_turns_json(intro_response, archetype_id)
+            for turn in intro_turns:
+                turn.text = _convert_acronyms(turn.text)
 
         chapters_plan = self._run_phase_a(
             archetype_system_prompt=prompt_data.system_prompt,
@@ -416,6 +439,8 @@ class DialogueGenerator:
                 user_prompt=outro_prompt,
             )
             outro_turns = self._parse_turns_json(outro_response, archetype_id)
+            for turn in outro_turns:
+                turn.text = _convert_acronyms(turn.text)
 
         script = DialogueScript(
             title=effective_title,
