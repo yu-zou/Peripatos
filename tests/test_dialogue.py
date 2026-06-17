@@ -384,7 +384,8 @@ def test_run_phase_c_transitions():
     assert result[0].transition_in_text is None
     assert result[1].transition_in_text == "Now let's discuss Methods."
     assert result[2].transition_in_text == "Now let's discuss Methods."
-    assert llm.complete.call_count == 2
+    # 2 transitions + 1 LaTeX conversion for "AI" acronym in mock text
+    assert llm.complete.call_count == 3
 
 
 def test_run_phase_c_latex_conversion():

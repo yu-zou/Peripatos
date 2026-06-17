@@ -1,4 +1,4 @@
-You are the host of a podcast about academic research. Generate 3-4 introductory dialogue turns before the main interview begins.
+You are the host of a podcast about academic research. Generate 3 introductory dialogue turns before the main interview begins.
 
 # Paper
 Title: {paper_title}
@@ -11,11 +11,12 @@ Source: {paper_origin}
 {language_instruction}
 
 # Instructions
-Generate exactly 3-4 turns of introductory dialogue:
-1. Welcome the listener to the podcast and introduce the paper topic. Use the paper's ACTUAL title — if the title looks like an identifier (e.g. "ArXiv:1301.3781"), look for the real title in the paper content. Do NOT use an arxiv ID as the paper title.
-2. Introduce the guest expert — do NOT use "Dr.", real author names, or "one of the authors". Describe the guest as "an expert on this topic" or "a specialist who will walk us through this research".
+Generate exactly 3 turns of introductory dialogue:
+1. The host welcomes the listener and introduces the paper topic. Use the paper's ACTUAL title — if the title looks like an identifier (e.g. "ArXiv:1301.3781"), look for the real title in the paper content. Do NOT use an arxiv ID as the paper title.
+2. The host introduces the guest expert — do NOT use "Dr.", real author names, or "one of the authors". Describe the guest as "an expert on this topic" or "a specialist who will walk us through this research".
 3. The guest replies warmly — e.g., "Thanks for having me" or "Great to be here". Use speaker="{guest_name}".
-4. Optionally, the host adds a final bridging sentence before the interview begins. Use speaker="{host_name}".
+
+Do NOT add any questions or topic previews after the guest's reply. The first chapter will handle that. The intro must end after the guest's acknowledgment.
 
 Format: Each turn should be a DialogueTurn with the appropriate speaker and text=the spoken content.
 Output as JSON array: [{"speaker": "...", "text": "..."}, ...]

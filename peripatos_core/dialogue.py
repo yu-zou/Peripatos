@@ -44,12 +44,14 @@ _FALLBACK_CHAPTERS: list[dict] = [
 _LATEX_PATTERNS = re.compile(
     r'\$[^$]+\$|\$\$[^$]+\$\$|'
     r'\\frac|\\sum|\\alpha|\\beta|\\gamma|\\delta|\\epsilon|\\lambda|\\mu|\\sigma|\\omega|'
-    r'\\int|\\prod|\\partial|\\nabla|\\sqrt|\\text'
+    r'\\int|\\prod|\\partial|\\nabla|\\sqrt|\\text|'
+    r'(?<=[A-Za-z])\s*[=×]\s*(?=[A-Za-z0-9])|'  # = or × between words/variables
+    r'[A-Z]{2,}(?![a-z])'  # acronyms: 2+ uppercase letters not followed by lowercase
 )
 
 
 def _contains_latex(text: str) -> bool:
-    """Return True if text contains LaTeX notation."""
+    """Return True if text contains LaTeX notation, plain-text equations, or acronyms."""
     return bool(_LATEX_PATTERNS.search(text))
 
 

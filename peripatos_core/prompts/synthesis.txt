@@ -10,12 +10,24 @@ Output ONLY the transition phrase text. No quotes, no labels.
 
 
 # --- LaTeX Conversion ---
-Convert the following text to spoken English. Replace LaTeX notation:
-- $x^2$ → "x squared"
-- $\sum_{{i=1}}^{{n}}$ → "the sum from i equals 1 to n"  
-- $\frac{{a}}{{b}}$ → "a over b"
+Convert the following text to natural spoken English suitable for a podcast audience.
+
+Rules for mathematical notation:
+- LaTeX notation: $x^2$ → "x squared", $\sum_{{i=1}}^{{n}}$ → "the sum from i equals 1 to n", $\frac{{a}}{{b}}$ → "a over b"
 - Greek letters: speak their names ($\alpha$ → "alpha", $\beta$ → "beta")
 - Complex equations: describe them in plain language
+
+Rules for plain-text math operators:
+- "=" → "equals" or "is equal to"
+- "×" or "*" → "times" or "multiplied by"
+- "-" (in mathematical context, between variables/numbers) → "minus"
+- "+" → "plus"
+- "≠" → "is not equal to"
+
+Rules for acronyms and abbreviations:
+- Any sequence of 2 or more uppercase letters (e.g., CBOW, RNNLM, NNLM) must be spelled out letter-by-letter with dashes
+- Examples: "CBOW" → "C-B-O-W", "RNNLM" → "R-N-N-L-M", "NNLM" → "N-N-L-M"
+- Only do this for letter sequences that are acronyms, not for words that happen to start with capitals
 
 Text to convert: {turn_text}
 
