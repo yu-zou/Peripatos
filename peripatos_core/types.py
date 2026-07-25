@@ -23,15 +23,15 @@ class DialogueTurn:
 @dataclass
 class Chapter:
     title: str
-    turns: list[DialogueTurn] = field(default_factory=list)
     transition_in_text: str | None = None
+    turns: list[DialogueTurn] = field(default_factory=list)
 
 
 @dataclass
 class DialogueScript:
     title: str
-    chapters: list[Chapter] = field(default_factory=list)
     intro_turns: list[DialogueTurn] = field(default_factory=list)
+    chapters: list[Chapter] = field(default_factory=list)
     outro_turns: list[DialogueTurn] = field(default_factory=list)
 
     @property
