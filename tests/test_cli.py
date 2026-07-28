@@ -1,7 +1,7 @@
 """Tests for CLI commands."""
 import sys
-from io import StringIO
 from contextlib import redirect_stdout
+from io import StringIO
 from unittest.mock import patch
 
 from peripatos_core.cli import main
@@ -9,9 +9,10 @@ from peripatos_core.cli import main
 
 def test_save_script_json_writes_file(tmp_path):
     """_save_script_json writes valid JSON next to output path."""
-    from peripatos_core.cli import _save_script_json
-    from peripatos_core.types import DialogueScript, DialogueTurn, Chapter, ArchetypeId
     import json
+
+    from peripatos_core.cli import _save_script_json
+    from peripatos_core.types import ArchetypeId, Chapter, DialogueScript, DialogueTurn
 
     script = DialogueScript(
         title="Test Paper",
@@ -41,7 +42,7 @@ def test_save_script_json_writes_file(tmp_path):
 def test_save_script_json_warns_on_failure(tmp_path, caplog):
     """_save_script_json logs a warning on write failure but does not raise."""
     from peripatos_core.cli import _save_script_json
-    from peripatos_core.types import DialogueScript, DialogueTurn, Chapter, ArchetypeId
+    from peripatos_core.types import ArchetypeId, Chapter, DialogueScript, DialogueTurn
 
     script = DialogueScript(
         title="Test",
@@ -154,7 +155,7 @@ def test_doctor_shows_config_voices(tmp_path, monkeypatch):
 
 def test_save_script_json_changes_mp3_suffix_to_json(tmp_path):
     from peripatos_core.cli import _save_script_json
-    from peripatos_core.types import DialogueScript, DialogueTurn, Chapter, ArchetypeId
+    from peripatos_core.types import ArchetypeId, Chapter, DialogueScript, DialogueTurn
 
     script = DialogueScript(
         title="Test Paper",
@@ -176,9 +177,10 @@ def test_save_script_json_changes_mp3_suffix_to_json(tmp_path):
 
 
 def test_save_script_json_preserves_structure_with_intro_outro(tmp_path):
-    from peripatos_core.cli import _save_script_json
-    from peripatos_core.types import DialogueScript, DialogueTurn, Chapter, ArchetypeId
     import json
+
+    from peripatos_core.cli import _save_script_json
+    from peripatos_core.types import ArchetypeId, Chapter, DialogueScript, DialogueTurn
 
     script = DialogueScript(
         title="Test Paper",
@@ -214,17 +216,17 @@ def test_save_script_json_preserves_structure_with_intro_outro(tmp_path):
 def test_generate_creates_log_file(tmp_path, monkeypatch):
     """cmd_generate writes a log file derived from --output."""
     import argparse
-    from pathlib import Path
     from unittest.mock import Mock, patch
+
     from peripatos_core.cli import cmd_generate
+    from peripatos_core.config import Settings
     from peripatos_core.types import (
+        ArchetypeId,
+        Chapter,
         DialogueScript,
         DialogueTurn,
-        Chapter,
-        ArchetypeId,
         PaperMetadata,
     )
-    from peripatos_core.config import Settings
 
     output = tmp_path / "podcast.mp3"
     src = tmp_path / "paper.md"
@@ -272,9 +274,10 @@ def test_generate_creates_log_file(tmp_path, monkeypatch):
 
 
 def test_save_script_json_handles_nested_dataclass(tmp_path):
-    from peripatos_core.cli import _save_script_json
-    from peripatos_core.types import DialogueScript, DialogueTurn, Chapter, ArchetypeId
     import json
+
+    from peripatos_core.cli import _save_script_json
+    from peripatos_core.types import ArchetypeId, Chapter, DialogueScript, DialogueTurn
 
     script = DialogueScript(
         title="Test Paper",

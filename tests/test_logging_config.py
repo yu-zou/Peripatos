@@ -3,7 +3,7 @@ import logging
 import sys
 from pathlib import Path
 
-from peripatos_core.logging_config import setup_logging, attach_run_log_file
+from peripatos_core.logging_config import attach_run_log_file, setup_logging
 
 
 def test_setup_logging_configures_root_handler():
