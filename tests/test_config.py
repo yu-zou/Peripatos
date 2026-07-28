@@ -343,3 +343,23 @@ def test_defaults_section_ignored_with_deprecation_warning(tmp_path, monkeypatch
     deprecation_warnings = [x for x in w if issubclass(x.category, DeprecationWarning)]
     assert len(deprecation_warnings) >= 1
     assert any("defaults" in str(x.message) for x in deprecation_warnings)
+
+
+# ── Task 1: Option-B language instruction ─────────────────────────────────
+
+
+def test_zh_cn_instruction_is_option_b():
+    from peripatos_core.config import LANGUAGE_INSTRUCTIONS
+    instr = LANGUAGE_INSTRUCTIONS["zh-CN"]
+    # Option-B: pure Chinese prose, no code-switching directive
+    assert "code-switching" not in instr.lower()
+    assert "简体中文" in instr
+    # Must forbid parenthetical glosses
+    assert "parenthetical" in instr.lower() or "gloss" in instr.lower()
+    # Preserve the substring the dialogue test relies on
+    assert "Mandarin" in instr
+
+
+def test_en_instruction_unchanged():
+    from peripatos_core.config import LANGUAGE_INSTRUCTIONS
+    assert LANGUAGE_INSTRUCTIONS["en"] == "Respond in English."

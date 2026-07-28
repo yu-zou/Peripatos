@@ -89,7 +89,22 @@ SUPPORTED_LANGUAGES = {"en", "zh-CN"}
 
 LANGUAGE_INSTRUCTIONS = {
     "en": "Respond in English.",
-    "zh-CN": "Respond in Mandarin Chinese (简体中文). Keep technical terms, acronyms, and proper nouns (e.g., 'Transformer', 'Attention Mechanism', 'RAG') in English. Use natural bilingual code-switching.",
+    "zh-CN": (
+        "Respond in Simplified Chinese (简体中文, Mandarin). Write ALL prose, "
+        "common words, and descriptive or explanatory phrases in Chinese — "
+        "including words like 'intuition' (直觉) and 'topic' (领域), and full "
+        "phrases such as 'there is no notion of similarity between words'. "
+        "Keep in English ONLY established proper nouns, model or algorithm "
+        "names, and initialisms that are conventionally written in English "
+        "(for example: Skip-gram, CBOW, NLP, Softmax, N-gram, Transformer). "
+        "NEVER add a parenthetical or inline translation gloss after a term: "
+        "use one language per concept, either the Chinese word OR the English "
+        "proper noun, never both. "
+        "Bad: 独立索引(index); 扩展数据规模(scaling up); 比如trillions of words. "
+        "Good: 独立索引; 扩大数据规模; 比如数万亿个词. "
+        "Every dialogue turn must be written in Chinese prose. Never output an "
+        "entire turn in English."
+    ),
 }
 
 
