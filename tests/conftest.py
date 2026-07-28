@@ -72,7 +72,7 @@ def config_test_json_path() -> Path:
     if not path.exists():
         pytest.fail(
             "config.test.json not found — create it with your LLM API key and TTS config.\n"
-            "See config.example.json for the format. Required for E2E integration tests."
+            "See examples/config.example.json for the format. Required for E2E integration tests."
         )
     return path
 
