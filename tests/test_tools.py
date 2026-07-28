@@ -49,6 +49,15 @@ def test_draft_turn_preserves_real_newlines():
     assert "World" in state.drafted_turns[0].text
 
 
+def test_draft_turn_description_mentions_language():
+    """draft_turn ToolSpec description should remind the LLM to write in the target language."""
+    specs, _dispatcher, _state = build_tools(
+        cast(Any, EmptyStore()), cast(Any, EmptyEmbedder()), top_k=4
+    )
+    draft_spec = next(s for s in specs if s.name == "draft_turn")
+    assert "language" in draft_spec.description.lower()
+
+
 def test_draft_turn_collapses_multiple_spaces():
     """After stripping, multiple spaces should collapse to single space."""
     specs, dispatcher, state = build_tools(

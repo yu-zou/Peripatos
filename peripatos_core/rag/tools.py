@@ -102,7 +102,12 @@ def build_tools(
         ),
         ToolSpec(
             name="draft_turn",
-            description="Draft one dialogue turn (speaker + text). Accumulates across calls.",
+            description=(
+                "Draft one dialogue turn (speaker + text). Accumulates across "
+                "calls. The text MUST be written in the target dialogue language "
+                "specified in the system prompt; do not copy English sentences "
+                "from the paper. Speaker names stay in English."
+            ),
             parameters={
                 "type": "object",
                 "properties": {
