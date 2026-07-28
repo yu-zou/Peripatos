@@ -27,3 +27,4 @@ docs/superpowers/
 *.swp
 /.codegraph/
 .ignore
+/real_tests/
