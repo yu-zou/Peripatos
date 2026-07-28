@@ -33,41 +33,41 @@ Configuration is resolved in this order:
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/yu-zou/Peripatos/main/schema/config.schema.json",
-  "archetype": "peer",
-  "output_dir": ".",
-  "language": "en",
-  "llm": {
-    "base_url": "https://router.requesty.ai/v1",
-    "api_key": "",
-    "model": "openai/gpt-4o-mini"
-  },
-  "tts": {
-    "provider": "edge",
-    "base_url": "",
-    "api_key": "",
-    "voice": "en-US-AriaNeural",
-    "voices": {
-      "host": "en-US-GuyNeural",
-      "interviewee": "en-US-AriaNeural"
+    "$schema": "https://raw.githubusercontent.com/yu-zou/Peripatos/main/schema/config.schema.json",
+    "archetype": "peer",
+    "output_dir": ".",
+    "language": "en",
+    "llm": {
+        "base_url": "https://router.requesty.ai/v1",
+        "api_key": "",
+        "model": "openai/gpt-4o-mini"
     },
-    "model": "tts-1"
-  },
-  "rag": {
-    "embedding_model": "openai/text-embedding-3-small",
-    "chunk_size": 1000,
-    "chunk_overlap": 200,
-    "top_k": 5,
-    "cache_dir": null
-  },
-  "parser": {
-    "mineru_token": ""
-  },
-  "cache": {
-    "audio": true,
-    "dialogue": true,
-    "dir": null
-  }
+    "tts": {
+        "provider": "edge",
+        "base_url": "",
+        "api_key": "",
+        "voice": "en-US-AriaNeural",
+        "voices": {
+            "host": "en-US-GuyNeural",
+            "interviewee": "en-US-AriaNeural"
+        },
+        "model": "tts-1"
+    },
+    "rag": {
+        "embedding_model": "openai/text-embedding-3-small",
+        "chunk_size": 1000,
+        "chunk_overlap": 200,
+        "top_k": 5,
+        "cache_dir": null
+    },
+    "parser": {
+        "mineru_token": ""
+    },
+    "cache": {
+        "audio": true,
+        "dialogue": true,
+        "dir": null
+    }
 }
 ```
 
@@ -75,23 +75,23 @@ Configuration is resolved in this order:
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/yu-zou/Peripatos/main/schema/config.schema.json",
-  "llm": {
-    "base_url": "https://router.requesty.ai/v1",
-    "api_key": "YOUR_API_KEY",
-    "model": "openai/gpt-4o-mini"
-  },
-  "tts": {
-    "provider": "edge",
-    "voice": "en-US-AriaNeural",
-    "voices": {
-      "host": "en-US-GuyNeural",
-      "interviewee": "en-US-AriaNeural"
+    "$schema": "https://raw.githubusercontent.com/yu-zou/Peripatos/main/schema/config.schema.json",
+    "llm": {
+        "base_url": "https://router.requesty.ai/v1",
+        "api_key": "YOUR_API_KEY",
+        "model": "openai/gpt-4o-mini"
+    },
+    "tts": {
+        "provider": "edge",
+        "voice": "en-US-AriaNeural",
+        "voices": {
+            "host": "en-US-GuyNeural",
+            "interviewee": "en-US-AriaNeural"
+        }
+    },
+    "parser": {
+        "mineru_token": "YOUR_MINERU_TOKEN"
     }
-  },
-  "parser": {
-    "mineru_token": "YOUR_MINERU_TOKEN"
-  }
 }
 ```
 
@@ -99,23 +99,23 @@ Configuration is resolved in this order:
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/yu-zou/Peripatos/main/schema/config.schema.json",
-  "llm": {
-    "base_url": "https://router.requesty.ai/v1",
-    "api_key": "YOUR_API_KEY",
-    "model": "openai/gpt-4o-mini"
-  },
-  "tts": {
-    "provider": "elevenlabs",
-    "api_key": "YOUR_ELEVENLABS_API_KEY",
-    "voices": {
-      "host": "pNInz6obpgDQGcFmaJgB",
-      "interviewee": "EXAVITQu4vr4xnSDxMaL"
+    "$schema": "https://raw.githubusercontent.com/yu-zou/Peripatos/main/schema/config.schema.json",
+    "llm": {
+        "base_url": "https://router.requesty.ai/v1",
+        "api_key": "YOUR_API_KEY",
+        "model": "openai/gpt-4o-mini"
+    },
+    "tts": {
+        "provider": "elevenlabs",
+        "api_key": "YOUR_ELEVENLABS_API_KEY",
+        "voices": {
+            "host": "pNInz6obpgDQGcFmaJgB",
+            "interviewee": "EXAVITQu4vr4xnSDxMaL"
+        }
+    },
+    "parser": {
+        "mineru_token": "YOUR_MINERU_TOKEN"
     }
-  },
-  "parser": {
-    "mineru_token": "YOUR_MINERU_TOKEN"
-  }
 }
 ```
 
