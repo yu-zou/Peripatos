@@ -422,6 +422,7 @@ class DialogueGenerator:
                     top_k=rag.top_k,
                     archetype=archetype_id,
                     guest_name=prompt_data.guest_name,
+                    language_instruction=language_instruction,
                 )
 
                 chapter_turns: list[DialogueTurn] = []

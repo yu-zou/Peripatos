@@ -829,3 +829,43 @@ def test_phase_c_transition_uses_last_turns_for_context():
     prompt = captured_prompts[0]
     assert "recurrent bottleneck" in prompt
     assert "early concepts" not in prompt
+
+
+# ---------------------------------------------------------------------------
+# Task 5: Phase B receives language_instruction
+# ---------------------------------------------------------------------------
+
+
+def test_phase_b_receives_language_instruction():
+    """Phase B run_agent call is passed the zh-CN language instruction."""
+    captured_kwargs: dict = {}
+
+    def _capture_run_agent(*args, **kwargs):
+        captured_kwargs.clear()
+        captured_kwargs.update(kwargs)
+        # Return one turn-list per question so the pipeline proceeds
+        from peripatos_core.types import DialogueTurn, ArchetypeId
+        return [
+            [DialogueTurn(speaker="Guest", text="答案", archetype=ArchetypeId.TUTOR)]
+            for _ in kwargs.get("questions", [1])
+        ]
+
+    stub = PipelineStubLLMProvider()
+    embedder = Mock()
+    embedder.embed.return_value = np.zeros((1, 4), dtype=np.float32)
+    store = Mock()
+    store.has_cache.return_value = True
+    store.load.return_value = None
+    store.list_sections.return_value = []
+    store.search.return_value = []
+
+    with (
+        patch("peripatos_core.dialogue.Embedder", return_value=embedder),
+        patch("peripatos_core.dialogue.VectorStore", return_value=store),
+        patch("peripatos_core.rag.agent.run_agent", side_effect=_capture_run_agent),
+    ):
+        settings = Settings(language="zh-CN")
+        DialogueGenerator(llm=stub, settings=settings).generate("Some paper content")
+
+    assert "language_instruction" in captured_kwargs
+    assert "简体中文" in captured_kwargs["language_instruction"]
