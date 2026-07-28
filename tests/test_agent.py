@@ -421,6 +421,63 @@ def test_finalize_accepts_dialogue_ending_with_guest():
     assert state.finalized is True
 
 
+def test_run_agent_injects_language_into_user_prompt():
+    llm = CyclingStubLLMProvider(
+        [
+            AgentMessage(
+                role="assistant",
+                content=None,
+                tool_calls=[
+                    draft_call("d1", "Host", "Q"),
+                    draft_call("d2", "Guest", "A"),
+                    finalize_call("f1"),
+                ],
+            )
+        ]
+    )
+    run_agent(
+        llm=llm,
+        store=cast(Any, EmptyStore()),
+        embedder=cast(Any, EmptyEmbedder()),
+        questions=["What is alpha?"],
+        system_prompt="system",
+        chapter_title="Chapter A",
+        top_k=3,
+        language_instruction="Respond in Simplified Chinese (简体中文, Mandarin).",
+    )
+    user_prompt = llm.messages_seen[0][1].content or ""
+    assert "简体中文" in user_prompt
+
+
+def test_run_agent_language_defaults_empty_backward_compatible():
+    llm = CyclingStubLLMProvider(
+        [
+            AgentMessage(
+                role="assistant",
+                content=None,
+                tool_calls=[
+                    draft_call("d1", "Host", "Q"),
+                    draft_call("d2", "Guest", "A"),
+                    finalize_call("f1"),
+                ],
+            )
+        ]
+    )
+    # No language_instruction passed → user prompt is the original English form
+    run_agent(
+        llm=llm,
+        store=cast(Any, EmptyStore()),
+        embedder=cast(Any, EmptyEmbedder()),
+        questions=["What is alpha?"],
+        system_prompt="system",
+        chapter_title="Chapter A",
+        top_k=3,
+    )
+    user_prompt = llm.messages_seen[0][1].content or ""
+    assert "Answer this question using the paper's content" in user_prompt
+    assert "What is alpha?" in user_prompt
+
+
 def test_run_single_question_extends_past_max_turns_for_guest_answer():
     """When max_turns hits after a host question, include the guest's answer."""
     from peripatos_core.rag.agent import _run_single_question

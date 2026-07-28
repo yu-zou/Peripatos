@@ -232,6 +232,7 @@ def run_agent(
     top_k: int = 4,
     archetype: ArchetypeId | str = ArchetypeId.PEER,
     guest_name: str = "Guest",
+    language_instruction: str = "",
 ) -> list[list[DialogueTurn]]: ...
 
 
@@ -259,6 +260,7 @@ def run_agent(
     top_k: int = 4,
     archetype: ArchetypeId | str = ArchetypeId.PEER,
     guest_name: str = "Guest",
+    language_instruction: str = "",
     **legacy_kwargs,
 ) -> list[list[DialogueTurn]] | DialogueScript:
     """Run per-question RAG agent sessions. Returns one turn-list per question."""
@@ -287,6 +289,11 @@ def run_agent(
             chapter_title,
         )
         question_user = f"Answer this question using the paper's content:\n\n{question}"
+        if language_instruction:
+            question_user += (
+                f"\n\nLanguage requirement (mandatory): {language_instruction}\n"
+                f"Write every turn's text in that language; do not answer in English."
+            )
         turns = _run_single_question(
             llm=llm,
             store=store,
