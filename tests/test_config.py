@@ -170,6 +170,18 @@ def test_react_system_has_language_placeholder():
     assert "{language_instruction}" in text
 
 
+def test_react_system_language_is_hard_constraint():
+    from pathlib import Path
+    text = Path("peripatos_core/prompts/react_system.txt").read_text()
+    # Placeholder still present
+    assert "{language_instruction}" in text
+    # Hard-constraint phrasing present
+    assert "MUST" in text
+    assert "draft_turn" in text
+    # Explicitly instructs translating English paper content
+    assert "translate" in text.lower()
+
+
 # ── Task 5: TDD — language field ─────────────────────────────────────────────
 
 
