@@ -26,3 +26,5 @@ tests/fixtures/integration_config.json
 .sisyphus/
 docs/superpowers/
 *.swp
+/.codegraph/
+.ignore
