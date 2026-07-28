@@ -1,0 +1,19 @@
+{
+    "$schema": "https://raw.githubusercontent.com/yu-zou/Peripatos/main/schema/config.schema.json",
+    "llm": {
+        "base_url": "https://router.requesty.ai/v1",
+        "api_key": "YOUR_API_KEY",
+        "model": "openai/gpt-4o-mini"
+    },
+    "tts": {
+        "provider": "edge",
+        "voice": "en-US-AriaNeural",
+        "voices": {
+            "host": "en-US-GuyNeural",
+            "interviewee": "en-US-AriaNeural"
+        }
+    },
+    "parser": {
+        "mineru_token": "YOUR_MINERU_TOKEN"
+    }
+}
