@@ -24,12 +24,6 @@ RUN_INTEGRATION=1 pytest -v -m integration
 RUN_INTEGRATION=1 pytest -v tests/test_e2e.py
 ```
 
-Install dev dependencies first:
-
-```bash
-pip install -e ".[dev]"
-```
-
 ## Code Quality
 
 - **Line length**: 100 characters max
