@@ -63,3 +63,7 @@ filterwarnings = [
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+
+[tool.pyright]
+include = ["peripatos_core", "tests"]
+typeCheckingMode = "basic"
