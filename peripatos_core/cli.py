@@ -5,6 +5,7 @@ import logging
 import sys
 from pathlib import Path
 
+from peripatos_core.logging_config import attach_run_log_file
 from peripatos_core.timing import timed_block
 
 
@@ -44,6 +45,7 @@ def cmd_generate(args):
     from peripatos_core.registry import build_llm_provider, build_tts_provider, build_voice_map
 
     logger = logging.getLogger(__name__)
+    attach_run_log_file(args.output)
 
     with timed_block("Loading settings"):
         settings = _get_settings(args.config)

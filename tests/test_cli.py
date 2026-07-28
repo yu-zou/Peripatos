@@ -211,6 +211,66 @@ def test_save_script_json_preserves_structure_with_intro_outro(tmp_path):
     assert data["outro_turns"][0]["text"] == "Goodbye!"
 
 
+def test_generate_creates_log_file(tmp_path, monkeypatch):
+    """cmd_generate writes a log file derived from --output."""
+    import argparse
+    from pathlib import Path
+    from unittest.mock import Mock, patch
+    from peripatos_core.cli import cmd_generate
+    from peripatos_core.types import (
+        DialogueScript,
+        DialogueTurn,
+        Chapter,
+        ArchetypeId,
+        PaperMetadata,
+    )
+    from peripatos_core.config import Settings
+
+    output = tmp_path / "podcast.mp3"
+    src = tmp_path / "paper.md"
+    src.write_text("# Title\n\nBody text.", encoding="utf-8")
+
+    args = argparse.Namespace(
+        source=str(src),
+        output=output,
+        archetype=None,
+        config=None,
+        language=None,
+    )
+
+    script = DialogueScript(
+        title="T",
+        chapters=[Chapter(title="C", turns=[
+            DialogueTurn(speaker="Host", text="Hi", archetype=ArchetypeId.TUTOR),
+        ])],
+        intro_turns=[],
+        outro_turns=[],
+    )
+
+    fake_fetcher = Mock()
+    fake_fetcher.fetch.return_value = (src, PaperMetadata(title="T", source_url=str(src)))
+    fake_gen = Mock()
+    fake_gen.generate.return_value = script
+    fake_renderer = Mock()
+    fake_renderer.render.return_value = [Mock()]
+
+    with (
+        patch("peripatos_core.cli._get_settings", return_value=Settings()),
+        patch("peripatos_core.fetcher.PaperFetcher", return_value=fake_fetcher),
+        patch("peripatos_core.dialogue.DialogueGenerator", return_value=fake_gen),
+        patch("peripatos_core.registry.build_llm_provider", return_value=Mock()),
+        patch("peripatos_core.registry.build_tts_provider", return_value=Mock()),
+        patch("peripatos_core.registry.build_voice_map", return_value={}),
+        patch("peripatos_core.audio.AudioRenderer", return_value=fake_renderer),
+        patch("peripatos_core.cache.CacheManager", return_value=Mock()),
+    ):
+        cmd_generate(args)
+
+    assert (tmp_path / "podcast.log").exists()
+    log_text = (tmp_path / "podcast.log").read_text(encoding="utf-8")
+    assert "Generating dialogue" in log_text
+
+
 def test_save_script_json_handles_nested_dataclass(tmp_path):
     from peripatos_core.cli import _save_script_json
     from peripatos_core.types import DialogueScript, DialogueTurn, Chapter, ArchetypeId

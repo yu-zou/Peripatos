@@ -39,5 +39,6 @@ def attach_run_log_file(output_path: Path) -> logging.FileHandler:
     handler = logging.FileHandler(log_path, mode="w", encoding="utf-8")
     handler.setLevel(logging.INFO)
     handler.setFormatter(_make_formatter())
+    logging.getLogger().setLevel(logging.INFO)
     logging.getLogger().addHandler(handler)
     return handler
