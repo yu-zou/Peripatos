@@ -12,26 +12,23 @@ pip install -e .
 
 ## Running Tests
 
-All tests run inside Docker:
-
 ```bash
 # Unit tests (mocked providers)
-docker compose run --rm test pytest -v
+pytest -v
 
 # Integration tests (requires real API keys in config)
-RUN_INTEGRATION=1 docker compose run --rm test pytest -v -m integration
+RUN_INTEGRATION=1 pytest -v -m integration
 
 # Real-LLM end-to-end test
-# Requires Peripatos/config.test.json with API key
-RUN_INTEGRATION=1 docker compose run --rm test pytest -v tests/test_e2e.py
-
-# Python 3.14 wheel-install smoke test (optional)
-docker compose run --rm install-test
+# Requires config.test.json with API key in the project root
+RUN_INTEGRATION=1 pytest -v tests/test_e2e.py
 ```
 
-The `install-test` service builds a wheel from source, installs it into a fresh
-Python 3.14 environment, and verifies `peripatos --help`, `list-archetypes`,
-and provider imports all work correctly.
+Install dev dependencies first:
+
+```bash
+pip install -e ".[dev]"
+```
 
 ## Code Quality
 
