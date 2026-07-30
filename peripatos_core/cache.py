@@ -79,10 +79,16 @@ class CacheManager:
     # -- Dialogue cache ------------------------------------------------------
 
     def dialogue_key(
-        self, llm_model: str, archetype: str, language: str, paper_content: str
+        self,
+        llm_model: str,
+        archetype: str,
+        language: str,
+        paper_content: str,
+        *,
+        prompt_version: str = "",
     ) -> str:
         """Compute cache key for a dialogue script."""
-        raw = f"{llm_model}|{archetype}|{language}|{paper_content}"
+        raw = f"{llm_model}|{archetype}|{language}|{prompt_version}|{paper_content}"
         return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
 
     def _dialogue_dir(self) -> Path:

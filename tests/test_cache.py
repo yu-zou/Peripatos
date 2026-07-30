@@ -91,6 +91,18 @@ class TestCacheManagerDialogue:
         k2 = mgr.dialogue_key("claude", "peer", "en", "content")
         assert k1 != k2
 
+    def test_dialogue_key_changes_with_prompt_version(self, tmp_path):
+        mgr = CacheManager(tmp_path)
+        k1 = mgr.dialogue_key("gpt-4", "peer", "en", "content", prompt_version="aaaa")
+        k2 = mgr.dialogue_key("gpt-4", "peer", "en", "content", prompt_version="bbbb")
+        assert k1 != k2
+
+    def test_dialogue_key_default_version_backward_compatible(self, tmp_path):
+        mgr = CacheManager(tmp_path)
+        # 4-positional-arg call (existing call style) must still work
+        k = mgr.dialogue_key("gpt-4", "peer", "en", "content")
+        assert isinstance(k, str) and len(k) == 16
+
     def test_dialogue_put_and_get_roundtrip(self, tmp_path):
         mgr = CacheManager(tmp_path)
         script = self._make_script("My Paper")

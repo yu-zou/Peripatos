@@ -68,6 +68,15 @@ def test_intro_prompt_forbids_dr_and_arxiv_id():
     assert "{guest_name}" in text
 
 
+def test_prompts_version_is_stable_and_hex():
+    from peripatos_core.prompts import prompts_version
+    v1 = prompts_version()
+    v2 = prompts_version()
+    assert v1 == v2
+    assert len(v1) >= 8
+    int(v1, 16)  # hex-decodable
+
+
 def test_outro_prompt_no_show_notes():
     """Outro prompt should instruct NOT to reference show notes."""
     p = PROMPTS_DIR / "outro.txt"

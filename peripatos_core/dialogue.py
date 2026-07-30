@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 from peripatos_core.archetypes import ArchetypeLoader
 from peripatos_core.config import Settings, get_language_instruction
-from peripatos_core.prompts import load_react_system
+from peripatos_core.prompts import load_react_system, prompts_version
 from peripatos_core.providers.llm import LLMProvider
 from peripatos_core.timing import timed, timed_block
 from peripatos_core.rag.chunker import chunk_text
@@ -308,6 +308,7 @@ class DialogueGenerator:
                     archetype=archetype_id.value,
                     language=self._settings.language,
                     paper_content=paper_content,
+                    prompt_version=prompts_version(),
                 )
                 cached_script = self._cache_mgr.dialogue_get(cache_key)
                 if cached_script is not None:
