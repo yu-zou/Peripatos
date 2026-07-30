@@ -94,6 +94,8 @@ LANGUAGE_INSTRUCTIONS = {
         "common words, and descriptive or explanatory phrases in Chinese — "
         "including words like 'intuition' (直觉) and 'topic' (领域), and full "
         "phrases such as 'there is no notion of similarity between words'. "
+        "Also translate role and common nouns into Chinese — for example "
+        "'host' → 主持人, 'guest' → 嘉宾, 'listeners' → 听众. "
         "Keep in English ONLY established proper nouns, model or algorithm "
         "names, and initialisms that are conventionally written in English "
         "(for example: Skip-gram, CBOW, NLP, Softmax, N-gram, Transformer). "

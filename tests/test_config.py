@@ -375,3 +375,11 @@ def test_zh_cn_instruction_is_option_b():
 def test_en_instruction_unchanged():
     from peripatos_core.config import LANGUAGE_INSTRUCTIONS
     assert LANGUAGE_INSTRUCTIONS["en"] == "Respond in English."
+
+
+def test_zh_cn_instruction_translates_role_words():
+    from peripatos_core.config import LANGUAGE_INSTRUCTIONS
+    instr = LANGUAGE_INSTRUCTIONS["zh-CN"]
+    assert "主持人" in instr  # role words like 'host' must be translated
+    assert "code-switching" not in instr.lower()
+    assert "Mandarin" in instr  # preserve dependency in test_dialogue
